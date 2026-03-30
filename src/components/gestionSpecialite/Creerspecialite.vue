@@ -1,138 +1,97 @@
 <template>
-  <div class="page-wrapper">
-    <div class="form-card">
+  <div class="page-content">
+    <div class="page-header-block">
+      <div>
+        <h2 class="page-title">Créer une spécialité</h2>
+        <p class="page-sub">Ajoutez une nouvelle spécialité au département</p>
+      </div>
+    </div>
 
-      <!-- Header -->
-      <div class="form-card-header">
-        <div class="header-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            <line x1="12" y1="11" x2="12" y2="17"/>
-            <line x1="9" y1="14" x2="15" y2="14"/>
-          </svg>
-        </div>
-        <div>
-          <h2 class="card-title">Créer une spécialité</h2>
-          <p class="card-sub">Remplissez les informations pour ajouter une nouvelle spécialité académique.</p>
-        </div>
+    <div class="form-card">
+      <div class="field-block">
+        <label class="field-label">Nom de la spécialité <span class="req">*</span></label>
+        <input v-model="form.nom" class="field-input" :class="{'field-error': errors.nom}"
+          type="text" placeholder="Ex : Génie Logiciel"/>
+        <p class="err-msg" v-if="errors.nom">{{ errors.nom }}</p>
       </div>
 
-      <!-- Toast succès inline -->
-      <transition name="toast-slide">
-        <div v-if="successMsg" class="inline-success">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          {{ successMsg }}
-        </div>
-      </transition>
+      <div class="field-block">
+        <label class="field-label">Code <span class="req">*</span></label>
+        <input v-model="form.code" class="field-input" :class="{'field-error': errors.code}"
+          type="text" placeholder="Ex : GL2025"/>
+        <p class="err-msg" v-if="errors.code">{{ errors.code }}</p>
+      </div>
 
-      <form @submit.prevent="valider" @reset.prevent="annuler" novalidate>
+      <div class="field-block">
+        <label class="field-label">Description</label>
+        <textarea v-model="form.description" class="field-input field-textarea" rows="3"
+          placeholder="Description de la spécialité..."/>
+      </div>
 
-        <!-- Nom -->
-        <div class="field-block">
-          <label class="lbl">Nom de la spécialité <span class="req">*</span></label>
-          <input v-model="form.nom" type="text" placeholder="Ex : Génie Logiciel"
-            :class="{ 'input-err': errors.nom }"/>
-          <p class="err" v-if="errors.nom">{{ errors.nom }}</p>
-        </div>
+      <div class="field-block">
+        <label class="field-label">Date de création</label>
+        <input v-model="form.dateCreation" class="field-input" type="date"/>
+      </div>
 
-        <!-- Code -->
-        <div class="field-block">
-          <label class="lbl">Code de la spécialité <span class="req">*</span></label>
-          <input v-model="form.code" type="text" placeholder="Ex : GL2024"
-            :class="{ 'input-err': errors.code }"
-            @input="form.code = form.code.toUpperCase()"/>
-          <p class="field-hint" v-if="!errors.code">Lettres majuscules et chiffres uniquement (ex : GL2024)</p>
-          <p class="err" v-if="errors.code">{{ errors.code }}</p>
-        </div>
-
-        <!-- Description -->
-        <div class="field-block">
-          <label class="lbl">Description <span class="req">*</span></label>
-          <textarea v-model="form.description" placeholder="Décrivez brièvement cette spécialité..."
-            rows="4" :class="{ 'input-err': errors.description }"></textarea>
-          <p class="err" v-if="errors.description">{{ errors.description }}</p>
-        </div>
-
-        <!-- Actions -->
-        <div class="form-actions">
-          <button type="submit" class="btn-gold">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            Enregistrer
-          </button>
-          <button type="reset" class="btn-outline">Annuler</button>
-        </div>
-
-      </form>
+      <div class="form-footer">
+        <button class="btn-outline" @click="$emit('navigate','spec-list')">Annuler</button>
+        <button class="btn-primary" @click="soumettre" :disabled="saving">
+          <span v-if="saving" class="spinner"></span>
+          {{ saving ? 'Création...' : 'Créer la spécialité' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'CreerSpecialite',
-  props: {
-    specialitesExistantes: { type: Array, default: () => [] },
-  },
-  emits: ['created'],
+  name: 'Creerspecialite',
+  emits: ['specialite-creee', 'navigate'],
   data() {
     return {
-      form: { nom: '', code: '', description: '' },
-      errors: {},
-      successMsg: '',
+      saving: false,
+      form: { nom: '', code: '', description: '', dateCreation: '' },
+      errors: {}
     }
   },
   methods: {
-    valider() {
-      this.form.nom         = this.form.nom.trim()
-      this.form.code        = this.form.code.trim().toUpperCase()
-      this.form.description = this.form.description.trim()
+    soumettre() {
       this.errors = {}
-      this.successMsg = ''
-
-      if (!this.form.nom)         this.errors.nom         = 'Le nom est obligatoire.'
-      if (!this.form.code)        this.errors.code        = 'Le code est obligatoire.'
-      if (!this.form.description) this.errors.description = 'La description est obligatoire.'
-
-      if (this.form.code && !/^[A-Z0-9]+$/.test(this.form.code))
-        this.errors.code = 'Le code doit contenir uniquement des lettres majuscules et des chiffres.'
-
-      if (this.form.code && !this.errors.code) {
-        const codeExiste = this.specialitesExistantes.some(s => s.code.toUpperCase() === this.form.code)
-        if (codeExiste) this.errors.code = 'Ce code de spécialité existe déjà.'
-      }
-      if (this.form.nom && !this.errors.nom) {
-        const nomExiste = this.specialitesExistantes.some(s => s.nom.toLowerCase() === this.form.nom.toLowerCase())
-        if (nomExiste) this.errors.nom = 'Cette spécialité existe déjà.'
-      }
-
-      if (Object.keys(this.errors).length > 0) return
-
-      const nouvelle = {
-        id: Date.now(),
-        ...this.form,
-        dateCreation: new Date().toLocaleDateString('fr-FR'),
-        chefs: [],
-      }
-      this.$emit('created', nouvelle)
-      this.successMsg = 'Spécialité créée avec succès.'
-      this.reinitialiser()
-      setTimeout(() => { this.successMsg = '' }, 3500)
-    },
-    annuler()      { this.reinitialiser() },
-    reinitialiser() { Object.assign(this.form, { nom: '', code: '', description: '' }); this.errors = {} },
-  },
+      if (!this.form.nom.trim())  this.errors.nom  = 'Le nom est obligatoire'
+      if (!this.form.code.trim()) this.errors.code = 'Le code est obligatoire'
+      if (Object.keys(this.errors).length) return
+      this.saving = true
+      this.$emit('specialite-creee', { ...this.form })
+      // Le parent gère l'appel API et la navigation
+      setTimeout(() => { this.saving = false }, 1500)
+    }
+  }
 }
 </script>
 
 <style scoped>
-.page-wrapper { min-height: 100%; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; }
-.form-card    { max-width: 620px; animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both; }
-@keyframes cardIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600&family=Merriweather:wght@700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.page-content{padding:32px;font-family:'Source Sans 3',sans-serif;max-width:640px}
+.page-header-block{margin-bottom:24px}
+.page-title{font-family:'Merriweather',serif;font-size:20px;color:#1e2a35;margin-bottom:4px}
+.page-sub{font-size:13.5px;color:#8a9aaa}
+.form-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.field-block{margin-bottom:20px}
+.field-label{display:block;font-size:13px;font-weight:600;color:#1e2a35;margin-bottom:6px}
+.req{color:#c0392b}
+.field-input{width:100%;padding:10px 13px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13.5px;color:#1e2a35;font-family:inherit;transition:border-color 0.18s}
+.field-input:focus{outline:none;border-color:#3d6080}
+.field-textarea{resize:vertical;min-height:80px}
+.field-error{border-color:#c0392b}
+.err-msg{font-size:12px;color:#c0392b;margin-top:4px}
+.form-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1.5px solid #c8c4bc}
+.btn-primary{display:flex;align-items:center;gap:8px;padding:10px 22px;background:#3d6080;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.18s}
+.btn-primary:hover{background:#2f4f6a}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
+.btn-outline{padding:10px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:10px;font-size:14px;color:#4a5a6a;cursor:pointer;font-family:inherit;transition:all 0.18s}
+.btn-outline:hover{border-color:#3d6080;color:#3d6080}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>

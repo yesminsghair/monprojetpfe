@@ -192,8 +192,7 @@
       <h3>Vérifiez votre boîte mail</h3>
       <p>Un lien de confirmation a été envoyé à<br/><strong>{{ form.email }}</strong></p>
       <div class="s-actions">
-        <button class="btn-gold" @click="simulerClicLien">Confirmer le lien</button>
-        <button class="btn-outline" @click="simulerLienExpire">Tester : lien expiré</button>
+        <button class="btn-outline" @click="$router.push('/login')">Retour à la connexion</button>
       </div>
     </div>
     </transition>
@@ -237,6 +236,13 @@
 </template>
 
 <script>
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+
 export default {
   name: 'InscriptionForm',
   data() {
@@ -244,15 +250,12 @@ export default {
       etape: 'formulaire',
       showPw: false,
       showCfm: false,
+      loading: false,
       roles: [
-        { value: 'Etudiant',        label: 'Étudiant' },
-        { value: 'Enseignant',      label: 'Enseignant' },
-        { value: 'Encadrant',       label: 'Encadrant' },
-        { value: 'DirecteurStage',  label: 'Dir. de stage' },
-        { value: 'ChefDepartement', label: 'Chef de dept.' },
-        { value: 'MembreJury',      label: 'Membre du jury' },
+        { value: 'etudiant',   label: 'Étudiant' },
+        { value: 'enseignant', label: 'Enseignant' },
+        { value: 'encadrant',  label: 'Encadrant' },
       ],
-      // Liste des spécialités disponibles pour l'inscription
       specialitesDisponibles: [
         { value: 'GL',   label: 'Génie Logiciel' },
         { value: 'IA',   label: 'Intelligence Artificielle' },
@@ -270,7 +273,6 @@ export default {
         role: '', numero: '', specialite: '', conditions: false,
       },
       errors: {},
-      emailsExistants: ['test@example.com', 'admin@platform.com'],
     }
   },
 
@@ -295,7 +297,7 @@ export default {
       return i <= this.strengthScore ? colors[this.strengthScore] : 'bar-empty'
     },
 
-    validerForm() {
+    async validerForm() {
       this.form.nom    = this.form.nom.trim()
       this.form.prenom = this.form.prenom.trim()
       this.form.email  = this.form.email.trim()
@@ -314,11 +316,7 @@ export default {
       const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (this.form.email && !emailRx.test(this.form.email))
         this.errors.email = 'Le format de cette adresse mail est invalide.'
-      if (this.form.email && emailRx.test(this.form.email) &&
-          this.emailsExistants.map(e => e.toLowerCase()).includes(this.form.email.toLowerCase()))
-        this.errors.email = 'Cette adresse mail est déjà associée à un compte.'
 
-      // Validation renforcée mot de passe : min 8 car, majuscule, minuscule, chiffre, caractère spécial
       if (this.form.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(this.form.password))
         this.errors.password = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.'
 
@@ -329,7 +327,33 @@ export default {
       if (!this.form.conditions)
         this.errors.conditions = "Vous devez accepter les conditions d'utilisation pour continuer."
 
-      if (Object.keys(this.errors).length === 0) this.etape = 'attente'
+      if (Object.keys(this.errors).length > 0) return
+
+      // ── Appel API ──
+      this.loading = true
+      try {
+        await api.post('/inscription', {
+          nom:        this.form.nom,
+          prenom:     this.form.prenom,
+          email:      this.form.email,
+          password:   this.form.password,
+          role:       this.form.role,
+          matricule:  this.form.numero,
+          specialite: this.form.specialite,
+        })
+        this.etape = 'attente'
+      } catch (error) {
+        if (error.response?.status === 422) {
+          const errs = error.response.data.errors
+          if (errs?.email)     this.errors.email    = errs.email[0]
+          if (errs?.password)  this.errors.password = errs.password[0]
+          if (errs?.matricule) this.errors.numero   = errs.matricule[0]
+        } else {
+          this.errors.email = 'Erreur de connexion. Réessayez plus tard.'
+        }
+      } finally {
+        this.loading = false
+      }
     },
 
     annuler() {
@@ -342,8 +366,6 @@ export default {
       this.$router.push('/')
     },
 
-    simulerClicLien()   { this.etape = 'succes' },
-    simulerLienExpire() { this.etape = 'expire' },
     redirectConnexion() { this.$router.push('/login') },
   },
 }

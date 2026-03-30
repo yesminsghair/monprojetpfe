@@ -220,8 +220,22 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+api.interceptors.request.use(config => {
+  const u = localStorage.getItem('user')
+  if (u) {
+    const token = JSON.parse(u).token
+    if (token) config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 import GererDemandesCreation from './GestionComptes/GererDemandesCreation.vue'
 import ConsulterComptes      from './GestionComptes/ConsulterComptes.vue'
@@ -285,17 +299,23 @@ const BD_ETABLISSEMENT = [
   { matricule: 'ENC-2023-005', email: 'f.belhadj@univ.dz',     nom:'Belhadj', prenom:'Fatima', role:'encadrant'  },
 ]
 
-const users = ref([
-  { id:1, nom:'Benali',  prenom:'Ali',    email:'ali.benali@univ.dz',   matricule:'ETU-2024-001', role:'etudiant',   etablissement:'Université Alger 1', status:'pending',  inBD:null,  createdAt:'2024-03-01', activatedAt:null },
-  { id:2, nom:'Hadj',    prenom:'Sara',   email:'sara.hadj@univ.dz',    matricule:'ETU-2024-002', role:'etudiant',   etablissement:'Université Alger 1', status:'pending',  inBD:null,  createdAt:'2024-03-02', activatedAt:null },
-  { id:3, nom:'Meziane', prenom:'Karim',  email:'k.meziane@univ.dz',    matricule:'ENS-2023-010', role:'enseignant', etablissement:'Université Alger 1', status:'pending',  inBD:null,  createdAt:'2024-03-03', activatedAt:null },
-  { id:4, nom:'Amara',   prenom:'Youcef', email:'youcef.amara@univ.dz', matricule:'ETU-2024-003', role:'etudiant',   etablissement:'Université Alger 1', status:'pending',  inBD:null,  createdAt:'2024-03-04', activatedAt:null },
-  { id:5, nom:'Boudali', prenom:'Nadia',  email:'n.boudali@univ.dz',    matricule:'ENS-2023-011', role:'enseignant', etablissement:'Université Alger 1', status:'active',   inBD:true,  createdAt:'2024-02-10', activatedAt:'2024-02-12' },
-  { id:6, nom:'Cherif',  prenom:'Ahmed',  email:'a.cherif@univ.dz',     matricule:'DIR-2022-001', role:'directeur',  etablissement:'Université Alger 1', status:'active',   inBD:true,  createdAt:'2024-01-05', activatedAt:'2024-01-06' },
-  { id:7, nom:'Belhadj', prenom:'Fatima', email:'f.belhadj@univ.dz',    matricule:'ENC-2023-005', role:'encadrant',  etablissement:'Université Alger 1', status:'active',   inBD:true,  createdAt:'2024-02-20', activatedAt:'2024-02-21' },
-  { id:8, nom:'Ouali',   prenom:'Rachid', email:'r.ouali@gmail.com',     matricule:'ETU-9999-999', role:'etudiant',   etablissement:'Autre établissement', status:'pending', inBD:null,  createdAt:'2024-03-05', activatedAt:null },
-  { id:9, nom:'Saadi',   prenom:'Leila',  email:'l.saadi@hotmail.com',   matricule:'',             role:'etudiant',   etablissement:'Université Alger 1', status:'inactive', inBD:false, createdAt:'2024-02-01', activatedAt:null },
-])
+const users = ref([])
+
+const loadUsers = async () => {
+  try {
+    const res = await api.get('/utilisateurs')
+    users.value = res.data.map(u => ({
+      ...u,
+      inBD: null,
+      createdAt: u.created_at,
+      activatedAt: u.updated_at,
+    }))
+  } catch (e) {
+    console.error('Erreur chargement utilisateurs:', e)
+  }
+}
+
+onMounted(() => loadUsers())
 
 const pendingCount  = computed(() => users.value.filter(u => u.status === 'pending').length)
 const activeCount   = computed(() => users.value.filter(u => u.status === 'active').length)

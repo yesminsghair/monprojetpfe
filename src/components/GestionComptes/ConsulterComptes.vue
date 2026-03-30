@@ -135,12 +135,38 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+api.interceptors.request.use(config => {
+  const u = localStorage.getItem('user')
+  if (u) {
+    const token = JSON.parse(u).token
+    if (token) config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 const props = defineProps({
-  users: { type: Array, required: true }
+  users: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:users'])
+
+const localUsers = ref([])
+
+const chargerUtilisateurs = async () => {
+  try {
+    const res = await api.get('/utilisateurs')
+    localUsers.value = res.data
+    emit('update:users', res.data)
+  } catch (e) { console.error('Erreur chargement utilisateurs:', e) }
+}
+
+onMounted(() => { chargerUtilisateurs() })
 
 const searchQuery  = ref('')
 const roleFilter   = ref('tous')
@@ -171,7 +197,7 @@ const applyFilters = (list) => {
 
 // Affiche tous les comptes sauf "pending"
 const usersFiltered = computed(() =>
-  applyFilters(props.users.filter(u => u.status !== 'pending'))
+  applyFilters((localUsers.value.length ? localUsers.value : props.users).filter(u => u.status !== 'pending'))
 )
 
 const activeCount   = computed(() => usersFiltered.value.filter(u => u.status === 'active').length)
@@ -203,10 +229,15 @@ const toggleStatut = (u) => {
       message: `Vous allez suspendre l'accès de ${u.prenom} ${u.nom} (${u.email}). L'utilisateur ne pourra plus se connecter.`,
       icon: '🔒',
       confirmLabel: 'Désactiver', confirmClass: 'btn-confirm-orange',
-      onConfirm: () => {
-        emit('update:users', props.users.map(x => x.id === u.id ? { ...x, status: 'inactive' } : x))
-        modal.value.visible = false
-        showToast(`Compte de ${u.prenom} ${u.nom} désactivé.`, 'toast-err')
+      onConfirm: async () => {
+        try {
+          await api.post(`/utilisateurs/${u.id}/rejeter`)
+          const updated = (localUsers.value.length ? localUsers.value : props.users).map(x => x.id === u.id ? { ...x, status: 'inactive' } : x)
+          localUsers.value = updated
+          emit('update:users', updated)
+          modal.value.visible = false
+          showToast(`Compte de ${u.prenom} ${u.nom} désactivé.`, 'toast-err')
+        } catch (e) { showToast('Erreur lors de la désactivation.', 'toast-err') }
       }
     })
   } else {
@@ -215,11 +246,16 @@ const toggleStatut = (u) => {
       message: `Vous allez réactiver l'accès de ${u.prenom} ${u.nom} (${u.email}).`,
       icon: '✅',
       confirmLabel: 'Activer', confirmClass: 'btn-confirm-green',
-      onConfirm: () => {
-        const today = new Date().toISOString().split('T')[0]
-        emit('update:users', props.users.map(x => x.id === u.id ? { ...x, status: 'active', activatedAt: today } : x))
-        modal.value.visible = false
-        showToast(`Compte de ${u.prenom} ${u.nom} activé.`, 'toast-ok')
+      onConfirm: async () => {
+        try {
+          await api.post(`/utilisateurs/${u.id}/valider`)
+          const today = new Date().toISOString().split('T')[0]
+          const updated = (localUsers.value.length ? localUsers.value : props.users).map(x => x.id === u.id ? { ...x, status: 'active', activatedAt: today } : x)
+          localUsers.value = updated
+          emit('update:users', updated)
+          modal.value.visible = false
+          showToast(`Compte de ${u.prenom} ${u.nom} activé.`, 'toast-ok')
+        } catch (e) { showToast('Erreur lors de l\'activation.', 'toast-err') }
       }
     })
   }
@@ -232,11 +268,16 @@ const supprimerCompte = (u) => {
     message: `Vous allez supprimer définitivement le compte de ${u.prenom} ${u.nom} (${u.email}). Cette action est irréversible.`,
     icon: '⚠️',
     confirmLabel: 'Supprimer', confirmClass: 'btn-confirm-red',
-    onConfirm: () => {
-      emit('update:users', props.users.filter(x => x.id !== u.id))
-      modal.value.visible = false
-      showToast(`Compte de ${u.prenom} ${u.nom} supprimé.`, 'toast-err')
-    }
+    onConfirm: async () => {
+        try {
+          await api.delete(`/utilisateurs/${u.id}`)
+          const updated = (localUsers.value.length ? localUsers.value : props.users).filter(x => x.id !== u.id)
+          localUsers.value = updated
+          emit('update:users', updated)
+          modal.value.visible = false
+          showToast(`Compte de ${u.prenom} ${u.nom} supprimé.`, 'toast-err')
+        } catch (e) { showToast('Erreur lors de la suppression.', 'toast-err') }
+      }
   })
 }
 </script>

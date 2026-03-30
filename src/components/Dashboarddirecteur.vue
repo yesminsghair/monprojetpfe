@@ -280,6 +280,17 @@ import AjouterChef      from './gestionChefs/Ajouterchef.vue'
 import ConsulterChefs   from './gestionChefs/ListeChefs.vue'
 import ConsulterProfil  from './ConsulterProfil.vue'
 import ModifierProfil   from './ModifierProfil.vue'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+api.interceptors.request.use(config => {
+  const u = localStorage.getItem('user')
+  if (u) { const token = JSON.parse(u).token; if (token) config.headers.Authorization = `Bearer ${token}` }
+  return config
+})
 
 export default {
   name: 'DashboardDirecteur',
@@ -291,33 +302,12 @@ export default {
       openGroup: null,
       currentPage: 'home',
       profilPage: 'consulter',
-      currentUser: (() => {
-        const stored = localStorage.getItem('user')
-        const base = stored ? JSON.parse(stored) : {}
-        return Object.assign({
-          prenom: 'Amina', nom: 'Benali',
-          email: 'directeur@univ.dz', role: 'directeur',
-          matricule: 'DIR-001', telephone: '0555001122',
-          adresse: 'Alger, Algérie', dateNaissance: '1978-05-14',
-          sexe: 'Féminin', specialite: '', domaineExpertise: 'Génie Logiciel',
-          dateInscription: '01/09/2020',
-        }, base)
-      })(),
+      currentUser: JSON.parse(localStorage.getItem('user') || '{}'),
       toast: { visible: false, type: 'toast-ok', message: '' },
 
       // ══ ÉTAT PARTAGÉ ══
-      specialites: [
-        { id: 1, nom: 'Génie Logiciel',           code: 'GL2024',  description: 'Formation en développement logiciel.',        dateCreation: '01/01/2024', chefs: [] },
-        { id: 2, nom: 'Réseaux & Télécoms',       code: 'RES2023', description: 'Spécialité réseaux et télécommunications.',   dateCreation: '15/03/2023', chefs: [{ id: 10, nom: 'Benali' }] },
-        { id: 3, nom: 'Intelligence Artificielle', code: 'IA2024',  description: 'Machine learning et systèmes intelligents.', dateCreation: '10/09/2023', chefs: [] },
-        { id: 4, nom: 'Sécurité Informatique',    code: 'SEC22',   description: 'Cybersécurité et sécurité des systèmes.',     dateCreation: '10/09/2022', chefs: [] },
-      ],
-
-      chefs: [
-        { id: 10, nom: 'Benali',  prenom: 'Karim',  email: 'k.benali@univ.dz',  telephone: '0555001122', specialiteId: 2, specialiteNom: 'Réseaux & Télécoms',       specialiteCode: 'RES2023', dateAffectation: '01/03/2023', historique: [{ specialite: 'Réseaux & Télécoms', date: '01/03/2023', motif: 'Affectation initiale' }] },
-        { id: 11, nom: 'Meziane', prenom: 'Samira', email: 's.meziane@univ.dz', telephone: '0666334455', specialiteId: 1, specialiteNom: 'Génie Logiciel',           specialiteCode: 'GL2024',  dateAffectation: '15/09/2023', historique: [{ specialite: 'Génie Logiciel', date: '15/09/2023', motif: 'Affectation initiale' }] },
-        { id: 12, nom: 'Hadj',    prenom: 'Younes', email: 'y.hadj@univ.dz',   telephone: '0777556677', specialiteId: null, specialiteNom: '', specialiteCode: '', dateAffectation: '20/01/2024', historique: [] },
-      ],
+      specialites: [],
+      chefs: [],
     }
   },
 
@@ -363,42 +353,98 @@ export default {
     },
 
     // ══ SPÉCIALITÉS ══
-    onSpecialiteCreee(spec) {
-      this.specialites.push(spec)
-      this.afficherToast({ message: `Spécialité "${spec.nom}" créée avec succès.`, type: 'toast-ok' })
-      this.navigate('spec-list')
+    async chargerSpecialites() {
+      try {
+        const res = await api.get('/specialites')
+        this.specialites = res.data.map(s => ({ ...s, chefs: s.chefs || [] }))
+      } catch (e) { console.error('Erreur chargement spécialités:', e) }
     },
-    onSpecialiteModifiee(updated) {
-      const i = this.specialites.findIndex(s => s.id === updated.id)
-      if (i !== -1) this.specialites.splice(i, 1, updated)
-      this.afficherToast({ message: `Spécialité "${updated.nom}" modifiée avec succès.`, type: 'toast-ok' })
+    async onSpecialiteCreee(spec) {
+      try {
+        const res = await api.post('/specialites', {
+          nom: spec.nom, code: spec.code,
+          description: spec.description,
+          date_creation: spec.dateCreation || null,
+        })
+        this.specialites.push({ ...res.data, chefs: [] })
+        this.afficherToast({ message: `Spécialité "${res.data.nom}" créée avec succès.`, type: 'toast-ok' })
+        this.navigate('spec-list')
+      } catch (e) {
+        this.afficherToast({ message: 'Erreur lors de la création.', type: 'toast-err' })
+      }
     },
-    onSpecialiteSupprimee(id) {
-      this.specialites = this.specialites.filter(s => s.id !== id)
-      this.afficherToast({ message: 'Spécialité supprimée avec succès.', type: 'toast-ok' })
+    async onSpecialiteModifiee(updated) {
+      try {
+        const res = await api.put(`/specialites/${updated.id}`, {
+          nom: updated.nom, code: updated.code,
+          description: updated.description,
+          date_creation: updated.dateCreation || null,
+        })
+        const i = this.specialites.findIndex(s => s.id === updated.id)
+        if (i !== -1) this.specialites.splice(i, 1, { ...res.data, chefs: this.specialites[i].chefs || [] })
+        this.afficherToast({ message: `Spécialité "${res.data.nom}" modifiée avec succès.`, type: 'toast-ok' })
+      } catch (e) {
+        this.afficherToast({ message: 'Erreur lors de la modification.', type: 'toast-err' })
+      }
+    },
+    async onSpecialiteSupprimee(id) {
+      try {
+        await api.delete(`/specialites/${id}`)
+        this.specialites = this.specialites.filter(s => s.id !== id)
+        this.afficherToast({ message: 'Spécialité supprimée avec succès.', type: 'toast-ok' })
+      } catch (e) {
+        this.afficherToast({ message: 'Erreur lors de la suppression.', type: 'toast-err' })
+      }
     },
 
     // ══ CHEFS ══
-    onChefAjoute(chef) {
-      // Sync specialite name
-      const sp = this.specialites.find(s => s.id === chef.specialiteId)
-      if (sp) {
-        chef.specialiteNom  = sp.nom
-        chef.specialiteCode = sp.code
-        sp.chefs = [...(sp.chefs || []), { id: chef.id, nom: chef.nom }]
+    async chargerChefs() {
+      try {
+        const res = await api.get('/chefs')
+        this.chefs = res.data
+        this.syncSpecialitesChefs(res.data)
+      } catch (e) { console.error('Erreur chargement chefs:', e) }
+    },
+    syncSpecialitesChefs(chefs) {
+      this.specialites = this.specialites.map(sp => ({
+        ...sp,
+        chefs: chefs.filter(c => c.specialiteId === sp.id).map(c => ({ id: c.id, nom: c.nom })),
+      }))
+    },
+    async onChefAjoute(payload) {
+      // Action: rechercher
+      if (payload.action === 'rechercher') {
+        try {
+          const res = await api.get('/chefs/rechercher', { params: { q: payload.q } })
+          payload.callback(res.data, null)
+        } catch (e) {
+          const msg = e.response?.data?.message || 'Utilisateur introuvable.'
+          payload.callback(null, msg)
+        }
+        return
       }
-      this.chefs.push(chef)
-      this.afficherToast({ message: `Chef ${chef.prenom} ${chef.nom} ajouté avec succès.`, type: 'toast-ok' })
+
+      // Action: promouvoir
+      if (payload.action === 'promouvoir') {
+        try {
+          const res = await api.post('/chefs/promouvoir', {
+            utilisateurId: payload.utilisateur.id,
+            domaineExpertise: payload.domaineExpertise || '',
+          })
+          this.chefs.push(res.data)
+          this.syncSpecialitesChefs(this.chefs)
+          this.afficherToast({ message: `${res.data.prenom} ${res.data.nom} promu chef avec succès.`, type: 'toast-ok' })
+          this.navigate('chef-list')
+        } catch (e) {
+          const msg = e.response?.data?.message || "Erreur lors de la promotion."
+          this.afficherToast({ message: msg, type: 'toast-err' })
+          if (payload.resetChargement) payload.resetChargement()
+        }
+      }
     },
     onChefsMaj(updatedChefs) {
       this.chefs = updatedChefs
-      // Resync specialites.chefs
-      this.specialites = this.specialites.map(sp => ({
-        ...sp,
-        chefs: updatedChefs
-          .filter(c => c.specialiteId === sp.id)
-          .map(c => ({ id: c.id, nom: c.nom })),
-      }))
+      this.syncSpecialitesChefs(updatedChefs)
     },
 
     // ══ TOAST ══
@@ -406,6 +452,11 @@ export default {
       this.toast = { visible: true, type, message }
       setTimeout(() => { this.toast.visible = false }, 3500)
     },
+  },
+
+  mounted() {
+    this.chargerSpecialites()
+    this.chargerChefs()
   },
 }
 </script>

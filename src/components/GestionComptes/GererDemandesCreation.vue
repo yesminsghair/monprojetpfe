@@ -117,13 +117,43 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+
+api.interceptors.request.use(config => {
+  const user = localStorage.getItem('user')
+  if (user) {
+    const token = JSON.parse(user).token
+    if (token) config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 const props = defineProps({
   users:           { type: Array, required: true },
   bdEtablissement: { type: Array, required: true }
 })
 const emit = defineEmits(['update:users'])
+
+// Charger les demandes pending depuis l'API
+const loadPending = async () => {
+  try {
+    const res = await api.get('/utilisateurs/pending')
+    emit('update:users', [
+      ...props.users.filter(u => u.status !== 'pending'),
+      ...res.data
+    ])
+  } catch (e) {
+    console.error('Erreur chargement demandes:', e)
+  }
+}
+
+onMounted(() => loadPending())
 
 const searchQuery = ref('')
 const roleFilter  = ref('tous')
@@ -193,14 +223,19 @@ const accepterCompte = (u) => {
     message: `Vous allez accepter la demande de création de compte de ${u.prenom} ${u.nom} (${u.email}). L'utilisateur pourra se connecter à la plateforme.`,
     icon: '✅',
     confirmLabel: 'Accepter', confirmClass: 'btn-confirm-green',
-    onConfirm: () => {
-      const today   = new Date().toISOString().split('T')[0]
-      const updated = props.users.map(x =>
-        x.id === u.id ? { ...x, status: 'active', activatedAt: today, inBD: x.inBD ?? true } : x
-      )
-      emit('update:users', updated)
-      modal.value.visible = false
-      showToast(`Demande de ${u.prenom} ${u.nom} acceptée avec succès.`)
+    onConfirm: async () => {
+      try {
+        await api.post(`/utilisateurs/${u.id}/valider`)
+        const today   = new Date().toISOString().split('T')[0]
+        const updated = props.users.map(x =>
+          x.id === u.id ? { ...x, status: 'active', activatedAt: today } : x
+        )
+        emit('update:users', updated)
+        modal.value.visible = false
+        showToast(`Demande de ${u.prenom} ${u.nom} acceptée avec succès.`)
+      } catch (e) {
+        showToast('Erreur lors de la validation.', 'toast-err')
+      }
     }
   })
 }
@@ -212,10 +247,15 @@ const rejeterCompte = (u) => {
     message: `Vous allez rejeter et supprimer la demande d'inscription de ${u.prenom} ${u.nom}. Cette action est irréversible.`,
     icon: '🗑',
     confirmLabel: 'Rejeter', confirmClass: 'btn-confirm-red',
-    onConfirm: () => {
-      emit('update:users', props.users.filter(x => x.id !== u.id))
-      modal.value.visible = false
-      showToast(`Demande de ${u.prenom} ${u.nom} rejetée.`, 'toast-err')
+    onConfirm: async () => {
+      try {
+        await api.post(`/utilisateurs/${u.id}/rejeter`)
+        emit('update:users', props.users.filter(x => x.id !== u.id))
+        modal.value.visible = false
+        showToast(`Demande de ${u.prenom} ${u.nom} rejetée.`, 'toast-err')
+      } catch (e) {
+        showToast('Erreur lors du rejet.', 'toast-err')
+      }
     }
   })
 }

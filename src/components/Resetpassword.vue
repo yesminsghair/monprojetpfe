@@ -177,9 +177,16 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
 
 const router = useRouter()
+const route  = useRoute()   // Pour lire le token et email depuis l'URL
 
 const step     = ref('email')
 const email    = ref('')
@@ -197,8 +204,9 @@ const showConfirm = ref(false)
 const stepsList = ['Email', 'Lien envoyé', 'Nouveau mot de passe', 'Succès']
 const stepIndex = computed(() => ({ email:0, sent:1, expired:1, newPassword:2, success:3 }[step.value] ?? 0))
 
-// Emails existants simulés
-const EMAILS = ['admin@gmail.com','directeur@univ.dz','etudiant@univ.dz','enseignant@univ.dz']
+// resetToken et email lus depuis l'URL quand l'utilisateur arrive via le lien email
+const resetToken = route.params.token || ''
+const resetEmail = route.query.email || ''
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Indicateur de force
@@ -234,38 +242,60 @@ const validateConfirm = () => {
 }
 
 // ── Handlers
-const handleSendEmail = () => {
+const handleSendEmail = async () => {
   validateEmail()
-  if (emailError.value) return           // 6.a retour étape 4
+  if (emailError.value) return           // 6.a champ vide/invalide
   loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    if (!EMAILS.includes(email.value)) { // 6.b email inexistant
-      emailError.value = "Aucun compte trouvé avec cet email"
-      return
-    }
-    step.value = 'sent'                  // étape 7 : lien envoyé
+  try {
+    await api.post('/forgot-password', { email: email.value })
+    // Même réponse succès si email existe ou non (sécurité)
+    step.value = 'sent'                  // Étape 7 : lien envoyé
     startResendTimer()
-  }, 900)
+  } catch (e) {
+    emailError.value = "Erreur de connexion. Réessayez plus tard."
+  } finally {
+    loading.value = false
+  }
 }
 
-const simulerLienValide  = () => { step.value = 'newPassword' }  // étape 8-9
-const simulerLienExpire  = () => { step.value = 'expired' }      // scénario 8.a
+// Si l'URL contient un token de reset (l'utilisateur arrive via le lien email)
+// On passe directement à l'étape 'newPassword'
+if (resetToken && resetEmail) {
+  step.value = 'newPassword'
+}
 
 const resendAndGoToSent = () => { step.value = 'sent'; startResendTimer() }
 
-const handleChangePassword = () => {
+const handleChangePassword = async () => {
   validateNewPassword(); validateConfirm()
   if (newPasswordError.value || confirmError.value) return   // 12.a
   loading.value = true
-  setTimeout(() => {
+  try {
+    await api.post('/reset-password', {
+      email:    resetEmail,
+      token:    resetToken,
+      password: newPassword.value,
+    })
+    step.value = 'success'               // Étape 13-14
+  } catch (e) {
+    if (e.response?.data?.message === 'expired') {
+      step.value = 'expired'             // Scénario 8.a : lien expiré
+    } else {
+      newPasswordError.value = e.response?.data?.message || "Erreur. Réessayez."
+    }
+  } finally {
     loading.value = false
-    step.value = 'success'               // étape 13-14
-  }, 900)
+  }
 }
 
 const backToEmail  = () => { step.value = 'email'; emailError.value = '' }
-const resendEmail  = () => { if (resendTimer.value > 0) return; startResendTimer() }
+const resendEmail = async () => {
+  if (resendTimer.value > 0) return
+  try {
+    await api.post('/forgot-password', { email: email.value })
+  } catch (e) { /* silencieux */ }
+  startResendTimer()
+}
 const goToLogin    = () => router.push('/login')
 
 const startResendTimer = () => {

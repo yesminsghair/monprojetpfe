@@ -126,6 +126,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
 
 const router  = useRouter()
 const email   = ref('')
@@ -137,14 +143,15 @@ const showPw  = ref(false)
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const COMPTES = [
-  { email: 'admin@gmail.com',      password: 'admin123', role: 'admin',      label: 'Admin'       },
-  { email: 'directeur@univ.dz',    password: 'dir123',   role: 'directeur',  label: 'Directeur'   },
-  { email: 'etudiant@univ.dz',     password: 'etu123',   role: 'etudiant',   label: 'Étudiant'    },
-  { email: 'enseignant@univ.dz',   password: 'ens123',   role: 'enseignant', label: 'Enseignant'  },
+const testComptes = [
+  { email: 'admin@gmail.com',       password: 'admin123', label: 'Admin'      },
+  { email: 'directeur@isimm.tn',    password: 'dir123',   label: 'Directeur'  },
+  { email: 'chef@isimm.tn',         password: 'chef123',  label: 'Chef Dépt'  },
+  { email: 'encadrant@isimm.tn',    password: 'enc123',   label: 'Encadrant'  },
+  { email: 'enseignant@isimm.tn',   password: 'ens123',   label: 'Enseignant' },
+  { email: 'etudiant@isimm.tn',     password: 'etu123',   label: 'Étudiant'   },
+  { email: 'jury@isimm.tn',         password: 'jury123',  label: 'Jury'       },
 ]
-
-const testComptes = COMPTES
 
 const fillCompte = (c) => {
   email.value    = c.email
@@ -171,7 +178,7 @@ const validatePassword = () => {
     passwordError.value = ''
 }
 
-const handleLogin = () => {
+const handleLogin = async () => {
   emailError.value    = ''
   passwordError.value = ''
   validateEmail()
@@ -180,32 +187,44 @@ const handleLogin = () => {
 
   loading.value = true
 
-  setTimeout(() => {
-    loading.value = false
+  try {
+    const response = await api.post('/login', {
+      email:    email.value,
+      password: password.value,
+    })
 
-    const emailExists = COMPTES.some(c => c.email === email.value)
-    if (!emailExists) {
-      emailError.value = "Aucun compte trouvé avec cet email"
-      return
-    }
-
-    const compte = COMPTES.find(
-      c => c.email === email.value && c.password === password.value
-    )
-    if (!compte) {
-      passwordError.value = 'Mot de passe incorrect'
-      return
-    }
+    // AuthController retourne { id, nom, prenom, email, role, token, isAdmin }
+    // directement (pas imbriqué sous une clé 'user')
+    const data = response.data
 
     localStorage.setItem('user', JSON.stringify({
-      email: compte.email, role: compte.role, isAdmin: compte.role === 'admin'
+      ...data,
+      isAdmin: data.role === 'admin',
     }))
+
     const routes = {
-      admin: '/admin', directeur: '/dashboard',
-      etudiant: '/dashboard', enseignant: '/dashboard',
+      admin:      '/admin',
+      directeur:  '/dashboard/directeur',
+      chef:       '/dashboard/chef',
+      encadrant:  '/dashboard/encadrant',
+      enseignant: '/dashboard/enseignant',
+      etudiant:   '/dashboard/etudiant',
+      jury:       '/dashboard/jury',
     }
-    router.push(routes[compte.role] ?? '/dashboard')
-  }, 800)
+
+    router.push(routes[data.role] ?? '/login')
+
+  } catch (error) {
+    if (error.response?.status === 401) {
+      passwordError.value = 'Email ou mot de passe incorrect'
+    } else if (error.response?.status === 403) {
+      emailError.value = "Compte non activé. Contactez l'administrateur."
+    } else {
+      emailError.value = 'Erreur de connexion. Vérifiez votre réseau.'
+    }
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -339,7 +358,7 @@ input:focus { outline:none; border-color: #3d6080; background: #fff; box-shadow:
   border: 1.5px dashed #c8c4bc;
 }
 .test-title { font-size: 12px; font-weight: 600; color: #8a9aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.test-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.test-grid  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
 .test-btn   {
   padding: 8px 10px; background: #ddd9d1; border: 1.5px solid #c8c4bc;
   border-radius: 8px; cursor:pointer; text-align:left; transition:all 0.18s;

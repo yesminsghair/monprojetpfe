@@ -1,319 +1,238 @@
 <template>
   <div class="page-content">
-
-    <!-- Toolbar : recherche seulement (bouton ajouter retiré) -->
-    <div class="toolbar-row">
-      <RechercherChef
-        v-model:recherche="recherche"
-        v-model:filtreSpecialite="filtreSpecialite"
-        v-model:dateDebut="dateDebut"
-        v-model:dateFin="dateFin"
-        :specialites="specialites"
-        @exporter="exporterCSV"
-      />
+    <div class="page-header-block">
+      <div>
+        <h2 class="page-title">Liste des chefs de département</h2>
+        <p class="page-sub">{{ chefs.length }} chef(s) enregistré(s)</p>
+      </div>
+      <button class="btn-primary" @click="$emit('navigate','chef-create')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Ajouter un chef
+      </button>
     </div>
 
-    <!-- Compteur -->
-    <p class="result-count" v-if="recherche || filtreSpecialite">
-      <strong>{{ chefsFiltres.length }}</strong> résultat(s)
-      <button class="reset-link" @click="resetFiltres">· Réinitialiser</button>
-    </p>
-
-    <!-- Aucun chef -->
-    <div v-if="chefsFiltres.length === 0" class="empty-state">
-      <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <p v-if="recherche || filtreSpecialite">Aucun chef ne correspond à votre recherche.</p>
-      <p v-else>Aucun chef de département trouvé.</p>
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
     </div>
 
-    <!-- Table -->
-    <div v-else class="table-wrap">
-      <table class="chef-table">
-        <thead>
-          <tr>
-            <th>Chef de département</th>
-            <th>Email</th>
-            <th>Téléphone</th>
-            <th>Domaine d'expertise</th>
-            <th>Spécialité affectée</th>
-            <th>Date affectation</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="chef in chefsPagines" :key="chef.id"
-            class="table-row" @click="voirDetails(chef)">
-            <td>
-              <div class="chef-cell">
-                <div class="chef-avatar">{{ initiales(chef) }}</div>
-                <div>
-                  <p class="chef-name">{{ chef.prenom }} {{ chef.nom }}</p>
-                </div>
-              </div>
-            </td>
-            <td class="td-email">{{ chef.email }}</td>
-            <td>{{ chef.telephone || '—' }}</td>
-            <td>
-              <span v-if="chef.domaineExpertise" class="domaine-badge">{{ chef.domaineExpertise }}</span>
-              <span v-else class="no-spec">Non renseigné</span>
-            </td>
-            <td>
-              <span v-if="chef.specialiteNom" class="spec-badge">
-                <span class="spec-code">{{ chef.specialiteCode }}</span>
-                {{ chef.specialiteNom }}
-              </span>
-              <span v-else class="no-spec">Non affecté</span>
-            </td>
-            <td>{{ chef.dateAffectation }}</td>
-            <td @click.stop class="td-actions">
-              <button class="action-btn btn-affect" @click="ouvrirAffecter(chef)" title="Affecter à une spécialité">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                Affecter
-              </button>
-              <button class="action-btn btn-edit" @click="ouvrirModifier(chef)" title="Modifier">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Modifier
-              </button>
-              <button class="action-btn btn-del"
-                :disabled="!chef.specialiteId"
-                @click="ouvrirRetirer(chef)"
-                :title="!chef.specialiteId ? 'Ce chef n\'est affecté à aucune spécialité' : 'Retirer du poste'">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                Retirer
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else-if="!chefs.length" class="empty-state">
+      <div class="empty-icon">👤</div>
+      <p>Aucun chef de département. Ajoutez-en un.</p>
+    </div>
 
-      <!-- Pagination -->
-      <div class="pagination" v-if="totalPages > 1">
-        <button class="page-btn" :disabled="page === 1" @click="page--">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <button v-for="p in totalPages" :key="p"
-          class="page-btn" :class="{ 'page-active': p === page }" @click="page = p">{{ p }}</button>
-        <button class="page-btn" :disabled="page === totalPages" @click="page++">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-        <span class="page-info">Page {{ page }} / {{ totalPages }}</span>
+    <div v-else class="chefs-list">
+      <div v-for="c in chefs" :key="c.id" class="chef-card">
+
+        <!-- Mode lecture -->
+        <template v-if="editId !== c.id">
+          <div class="chef-top">
+            <div class="chef-av">{{ initiales(c.prenom + ' ' + c.nom) }}</div>
+            <div class="chef-info">
+              <div class="chef-nom">{{ c.prenom }} {{ c.nom }}</div>
+              <div class="chef-email">{{ c.email }}</div>
+              <div class="chef-domaine" v-if="c.domaineExpertise">{{ c.domaineExpertise }}</div>
+            </div>
+            <div class="chef-actions">
+              <button class="icon-btn" @click="startEdit(c)" title="Modifier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="icon-btn icon-danger" @click="confirmerRetrait(c)" title="Retirer le rôle chef">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="chef-meta">
+            <span v-if="c.specialiteNom" class="spec-pill">
+              🎓 {{ c.specialiteNom }} ({{ c.specialiteCode }})
+            </span>
+            <span v-else class="no-spec">Aucune spécialité assignée</span>
+            <span v-if="c.dateAffectation" class="date-pill">📅 Depuis le {{ c.dateAffectation }}</span>
+          </div>
+
+          <!-- Affecter spécialité -->
+          <div class="affect-row" v-if="specialites.length">
+            <select v-model="c._selectedSpec" class="spec-select">
+              <option value="">— Choisir une spécialité —</option>
+              <option v-for="s in specialites" :key="s.id" :value="s.id">{{ s.nom }}</option>
+            </select>
+            <button class="btn-affecter" @click="affecterSpec(c)" :disabled="!c._selectedSpec">
+              Affecter
+            </button>
+          </div>
+        </template>
+
+        <!-- Mode édition -->
+        <template v-else>
+          <div class="edit-form">
+            <div class="edit-row">
+              <div class="field-block-sm"><label class="fl-sm">Prénom</label><input v-model="editForm.prenom" class="fi-sm"/></div>
+              <div class="field-block-sm"><label class="fl-sm">Nom</label><input v-model="editForm.nom" class="fi-sm"/></div>
+            </div>
+            <div class="field-block-sm"><label class="fl-sm">Email</label><input v-model="editForm.email" class="fi-sm"/></div>
+            <div class="field-block-sm"><label class="fl-sm">Domaine d'expertise</label><input v-model="editForm.domaineExpertise" class="fi-sm"/></div>
+            <div class="edit-actions">
+              <button class="btn-outline-sm" @click="editId=null">Annuler</button>
+              <button class="btn-save-sm" @click="sauvegarder(c)">Enregistrer</button>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
-    <!-- MODAL DÉTAILS -->
+    <!-- Modale retrait chef -->
     <transition name="modal-fade">
-    <div v-if="chefDetails" class="modal-overlay" @click.self="chefDetails = null">
-      <div class="modal-box modal-details">
-        <div class="modal-header">
-          <h3>Détails du chef</h3>
-          <button class="modal-close" @click="chefDetails = null">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="detail-hero">
-            <div class="detail-avatar">{{ initiales(chefDetails) }}</div>
-            <div>
-              <p class="detail-fullname">{{ chefDetails.prenom }} {{ chefDetails.nom }}</p>
-              <p class="detail-email">{{ chefDetails.email }}</p>
-            </div>
+      <div v-if="modalRetrait" class="overlay" @click.self="modalRetrait=null">
+        <div class="confirm-modal">
+          <div class="confirm-icon warn-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </div>
-          <div class="detail-row"><span class="dk">Téléphone</span><span>{{ chefDetails.telephone || '—' }}</span></div>
-          <div class="detail-row">
-            <span class="dk">Domaine d'expertise</span>
-            <span>{{ chefDetails.domaineExpertise || '—' }}</span>
+          <h4>Retirer le rôle chef ?</h4>
+          <p>{{ modalRetrait?.prenom }} {{ modalRetrait?.nom }} redeviendra enseignant/encadrant. Sa spécialité sera libérée.</p>
+          <div class="confirm-btns">
+            <button class="btn-outline" @click="modalRetrait=null">Annuler</button>
+            <button class="btn-danger" @click="retirerChef">Confirmer</button>
           </div>
-          <div class="detail-row">
-            <span class="dk">Spécialité</span>
-            <span v-if="chefDetails.specialiteNom" class="spec-badge"><span class="spec-code">{{ chefDetails.specialiteCode }}</span>{{ chefDetails.specialiteNom }}</span>
-            <span v-else class="no-spec">Non affecté</span>
-          </div>
-          <div class="detail-row"><span class="dk">Date affectation</span><span>{{ chefDetails.dateAffectation }}</span></div>
-
-          <div v-if="chefDetails.historique && chefDetails.historique.length" class="historique-section">
-            <p class="histo-title">Historique des affectations</p>
-            <div v-for="(h, i) in chefDetails.historique" :key="i" class="histo-item">
-              <span class="histo-date">{{ h.date }}</span>
-              <span>{{ h.specialite }}</span>
-              <span class="histo-motif" v-if="h.motif">· {{ h.motif }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-gold" @click="ouvrirModifier(chefDetails); chefDetails = null">Modifier</button>
-          <button class="btn-outline" @click="chefDetails = null">Fermer</button>
         </div>
       </div>
-    </div>
     </transition>
-
-    <!-- MODAL AFFECTER -->
-    <AffecterChef
-      v-if="chefAffecter"
-      :chef="chefAffecter"
-      :specialites="specialites"
-      :chefs="chefs"
-      @fermer="chefAffecter = null"
-      @affecte="onAffecte"
-    />
-
-    <!-- MODAL MODIFIER -->
-    <ModifierChef
-      v-if="chefModifier"
-      :chef="chefModifier"
-      :chefs="chefs"
-      @fermer="chefModifier = null"
-      @modifie="onModifie"
-    />
-
-    <!-- MODAL RETIRER -->
-    <RetirerChef
-      v-if="chefRetirer"
-      :chef="chefRetirer"
-      @fermer="chefRetirer = null"
-      @retire="onRetire"
-    />
-
   </div>
 </template>
 
 <script>
-import RechercherChef from './RechercherChef.vue'
-import AffecterChef   from './Affecterchef.vue'
-import ModifierChef   from './Modifierchef.vue'
-import RetirerChef    from './RetirerChef.vue'
-
-const PAR_PAGE = 20
+import axios from 'axios'
+const api = axios.create({
+  baseURL: 'http://127.0.0.1:8000/api',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+})
+api.interceptors.request.use(cfg => {
+  const u = localStorage.getItem('user')
+  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
+  return cfg
+})
 
 export default {
   name: 'ListeChefs',
-  components: { RechercherChef, AffecterChef, ModifierChef, RetirerChef },
   props: {
     chefs:       { type: Array, default: () => [] },
     specialites: { type: Array, default: () => [] },
   },
-  emits: ['chefs-maj', 'toast', 'navigate'],
+  emits: ['chefs-maj', 'navigate'],
   data() {
     return {
-      recherche: '', filtreSpecialite: '', dateDebut: '', dateFin: '',
-      page: 1,
-      chefDetails: null, chefAffecter: null, chefModifier: null, chefRetirer: null,
+      loading: false,
+      editId: null,
+      editForm: {},
+      modalRetrait: null,
     }
   },
-  computed: {
-    chefsFiltres() {
-      const q = this.recherche.toLowerCase()
-      return this.chefs.filter(c => {
-        const matchQ  = !q || c.nom.toLowerCase().includes(q) || c.prenom.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
-        const matchSp = !this.filtreSpecialite || c.specialiteId === this.filtreSpecialite
-        return matchQ && matchSp
-      })
-    },
-    totalPages() { return Math.max(1, Math.ceil(this.chefsFiltres.length / PAR_PAGE)) },
-    chefsPagines() {
-      const s = (this.page - 1) * PAR_PAGE
-      return this.chefsFiltres.slice(s, s + PAR_PAGE)
-    },
-  },
-  watch: {
-    recherche()        { this.page = 1 },
-    filtreSpecialite() { this.page = 1 },
-  },
   methods: {
-    initiales(c) { return ((c.prenom||'')[0] + (c.nom||'')[0]).toUpperCase() },
-    resetFiltres() { this.recherche = ''; this.filtreSpecialite = ''; this.dateDebut = ''; this.dateFin = '' },
-    voirDetails(c)   { this.chefDetails = { ...c } },
-    ouvrirAffecter(c) { this.chefAffecter = c },
-    ouvrirModifier(c) { this.chefModifier = c },
-    ouvrirRetirer(c) {
-      if (!c.specialiteId) { this.$emit('toast', { message: 'Ce chef n\'est affecté à aucune spécialité.', type: 'toast-err' }); return }
-      this.chefRetirer = c
+    initiales(n) {
+      return (n||'?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2)
     },
-    onAffecte({ chefId, specialiteId, specialiteNom, specialiteCode, conflitChefId }) {
-      const date = new Date().toLocaleDateString('fr-FR')
-      const maj = this.chefs.map(c => {
-        if (c.id === conflitChefId) return { ...c, specialiteId: null, specialiteNom: '', specialiteCode: '', historique: [...(c.historique||[]), { specialite: specialiteNom, date, motif: 'Remplacé' }] }
-        if (c.id === chefId)        return { ...c, specialiteId, specialiteNom, specialiteCode, dateAffectation: date, historique: [...(c.historique||[]), { specialite: specialiteNom, date, motif: 'Nouvelle affectation' }] }
-        return c
-      })
-      this.$emit('chefs-maj', maj)
-      this.$emit('toast', { message: 'Chef affecté avec succès.', type: 'toast-ok' })
-      this.chefAffecter = null
+    startEdit(c) {
+      this.editId   = c.id
+      this.editForm = { prenom: c.prenom, nom: c.nom, email: c.email, domaineExpertise: c.domaineExpertise || '', telephone: c.telephone || '' }
     },
-    onModifie({ id, nom, prenom, email, telephone, domaineExpertise }) {
-      const maj = this.chefs.map(c => c.id === id ? { ...c, nom, prenom, email, telephone, domaineExpertise } : c)
-      this.$emit('chefs-maj', maj)
-      this.$emit('toast', { message: 'Informations modifiées avec succès.', type: 'toast-ok' })
-    },
-    onRetire({ chefId, motif, supprimerCompte, dateRetrait }) {
-      let maj
-      if (supprimerCompte) {
-        maj = this.chefs.filter(c => c.id !== chefId)
-        this.$emit('toast', { message: 'Chef retiré et compte supprimé.', type: 'toast-ok' })
-      } else {
-        maj = this.chefs.map(c => {
-          if (c.id !== chefId) return c
-          return { ...c, specialiteId: null, specialiteNom: '', specialiteCode: '', historique: [...(c.historique||[]), { specialite: c.specialiteNom, date: dateRetrait, motif: motif || 'Retrait du poste' }] }
+    async sauvegarder(c) {
+      try {
+        const res = await api.put(`/chefs/${c.id}/modifier`, {
+          nom:              this.editForm.nom,
+          prenom:           this.editForm.prenom,
+          email:            this.editForm.email,
+          domaineExpertise: this.editForm.domaineExpertise,
+          telephone:        this.editForm.telephone,
         })
-        this.$emit('toast', { message: 'Chef retiré avec succès.', type: 'toast-ok' })
+        const updated = this.chefs.map(x => x.id === c.id ? { ...x, ...res.data } : x)
+        this.$emit('chefs-maj', updated)
+        this.editId = null
+      } catch (e) {
+        console.error('Erreur modification chef:', e.response?.data?.message)
       }
-      this.$emit('chefs-maj', maj)
     },
-    exporterCSV() {
-      const lignes = ['Nom;Prénom;Email;Téléphone;Domaine expertise;Spécialité;Date affectation']
-      this.chefsFiltres.forEach(c => {
-        lignes.push(`${c.nom};${c.prenom};${c.email};${c.telephone||''};${c.domaineExpertise||''};${c.specialiteNom||''};${c.dateAffectation}`)
-      })
-      const blob = new Blob(['\uFEFF' + lignes.join('\n')], { type: 'text/csv;charset=utf-8;' })
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a'); a.href = url; a.download = 'chefs_departement.csv'; a.click()
-      URL.revokeObjectURL(url)
-      this.$emit('toast', { message: 'Export CSV téléchargé.', type: 'toast-ok' })
+    async affecterSpec(c) {
+      if (!c._selectedSpec) return
+      try {
+        const res = await api.post(`/chefs/${c.id}/affecter`, { specialiteId: c._selectedSpec })
+        const updated = this.chefs.map(x => x.id === c.id ? { ...x, ...res.data } : x)
+        this.$emit('chefs-maj', updated)
+      } catch (e) {
+        console.error('Erreur affectation:', e.response?.data?.message)
+      }
     },
-  },
+    confirmerRetrait(c) { this.modalRetrait = c },
+    async retirerChef() {
+      try {
+        await api.post(`/chefs/${this.modalRetrait.id}/retirer`)
+        const updated = this.chefs.filter(x => x.id !== this.modalRetrait.id)
+        this.$emit('chefs-maj', updated)
+        this.modalRetrait = null
+      } catch (e) {
+        console.error('Erreur retrait chef:', e.response?.data?.message)
+      }
+    }
+  }
 }
 </script>
 
 <style scoped>
-.page-content { flex: 1; padding: 32px; font-family: 'Source Sans 3', sans-serif; }
-.result-count { font-size: 13px; color: #8a9aaa; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
-.reset-link { background: none; border: none; color: #c0392b; font-size: 13px; cursor: pointer; padding: 0; font-family: 'Source Sans 3', sans-serif; text-decoration: underline; }
-
-/* Table */
-.chef-table { width: 100%; border-collapse: collapse; }
-.chef-table thead tr { background: #3d6080; }
-.chef-table th { padding: 13px 16px; text-align: left; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
-.chef-table tbody tr { border-bottom: 1px solid #c8c4bc; cursor: pointer; transition: background 0.15s; }
-.chef-table tbody tr:last-child { border-bottom: none; }
-.chef-table tbody tr:hover { background: rgba(61,96,128,0.07); }
-.chef-table td { padding: 12px 16px; font-size: 13.5px; color: #1e2a35; vertical-align: middle; }
-.td-email { color: #6a7a8a; font-size: 13px; }
-.td-actions { white-space: nowrap; }
-
-.domaine-badge { display: inline-block; background: rgba(142,68,173,0.10); color: #8e44ad; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(142,68,173,0.18); }
-
-/* Action buttons */
-.action-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; font-size: 12px; font-family: 'Source Sans 3', sans-serif; font-weight: 500; cursor: pointer; border: 1.5px solid; transition: background 0.15s; margin-right: 5px; }
-.btn-affect { border-color: #f5a623; color: #d98e1a; background: rgba(245,166,35,0.08); }
-.btn-affect:hover { background: rgba(245,166,35,0.18); }
-.btn-edit   { border-color: #3d6080; color: #3d6080; background: rgba(61,96,128,0.07); }
-.btn-edit:hover   { background: rgba(61,96,128,0.16); }
-.btn-del    { border-color: #c0392b; color: #c0392b; background: rgba(192,57,43,0.07); }
-.btn-del:hover:not(:disabled) { background: rgba(192,57,43,0.15); }
-.btn-del:disabled { opacity: 0.32; cursor: not-allowed; }
-
-/* Detail modal extras */
-.detail-hero { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(61,96,128,0.08); border-radius: 10px; margin-bottom: 16px; }
-.detail-avatar { width: 48px; height: 48px; border-radius: 50%; background: #3d6080; color: #fff; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.detail-fullname { font-weight: 700; color: #1e2a35; font-size: 15px; }
-.detail-email    { font-size: 12.5px; color: #8a9aaa; margin-top: 2px; }
-.detail-row { display: flex; align-items: flex-start; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(200,196,188,0.5); }
-.detail-row:last-of-type { border-bottom: none; }
-.dk { font-size: 12px; font-weight: 600; color: #8a9aaa; text-transform: uppercase; letter-spacing: 0.05em; width: 150px; flex-shrink: 0; padding-top: 2px; }
-.historique-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid #c8c4bc; }
-.histo-title { font-size: 11.5px; font-weight: 700; color: #8a9aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
-.histo-item  { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #4a5a6a; padding: 6px 0; border-bottom: 1px solid rgba(200,196,188,0.35); }
-.histo-item:last-child { border-bottom: none; }
-.histo-date  { color: #3d6080; font-weight: 600; min-width: 80px; font-size: 12px; flex-shrink: 0; }
-.histo-motif { color: #8a9aaa; font-style: italic; font-size: 12.5px; }
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600&family=Merriweather:wght@700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.page-content{padding:32px;font-family:'Source Sans 3',sans-serif}
+.page-header-block{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Merriweather',serif;font-size:20px;color:#1e2a35;margin-bottom:4px}
+.page-sub{font-size:13.5px;color:#8a9aaa}
+.btn-primary{display:flex;align-items:center;gap:8px;padding:10px 20px;background:#3d6080;color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.18s}
+.btn-primary:hover{background:#2f4f6a}
+.loading-state{text-align:center;padding:60px;color:#8a9aaa}
+.spinner{width:32px;height:32px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:60px;color:#8a9aaa}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.chefs-list{display:flex;flex-direction:column;gap:14px}
+.chef-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:20px;transition:box-shadow 0.18s}
+.chef-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.chef-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.chef-av{width:44px;height:44px;border-radius:10px;background:#3d6080;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chef-info{flex:1}
+.chef-nom{font-size:15px;font-weight:700;color:#1e2a35}
+.chef-email{font-size:12.5px;color:#4a5a6a;margin-top:2px}
+.chef-domaine{font-size:12px;color:#8a9aaa;margin-top:2px;font-style:italic}
+.chef-actions{display:flex;gap:6px}
+.icon-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid #c8c4bc;background:#e8e4dc;color:#4a5a6a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.icon-btn:hover{border-color:#3d6080;color:#3d6080}
+.icon-danger:hover{border-color:#c0392b;color:#c0392b}
+.chef-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.spec-pill{padding:4px 12px;background:rgba(61,96,128,0.1);color:#3d6080;border-radius:20px;font-size:12.5px;font-weight:600}
+.no-spec{font-size:12.5px;color:#c8c4bc;font-style:italic}
+.date-pill{font-size:12px;color:#8a9aaa}
+.affect-row{display:flex;gap:8px;align-items:center;padding-top:14px;border-top:1.5px solid #c8c4bc}
+.spec-select{flex:1;padding:8px 12px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:8px;font-size:13px;color:#1e2a35;font-family:inherit}
+.spec-select:focus{outline:none;border-color:#3d6080}
+.btn-affecter{padding:8px 16px;background:#3d6080;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn-affecter:hover{background:#2f4f6a}
+.btn-affecter:disabled{opacity:0.5;cursor:not-allowed}
+.edit-form{display:flex;flex-direction:column;gap:10px}
+.edit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-block-sm{display:flex;flex-direction:column;gap:4px}
+.fl-sm{font-size:12px;font-weight:600;color:#4a5a6a}
+.fi-sm{padding:7px 10px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:7px;font-size:13px;color:#1e2a35;font-family:inherit;width:100%}
+.fi-sm:focus{outline:none;border-color:#3d6080}
+.edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.btn-outline-sm{padding:6px 14px;background:transparent;border:1.5px solid #c8c4bc;border-radius:8px;font-size:12.5px;color:#4a5a6a;cursor:pointer;font-family:inherit}
+.btn-save-sm{padding:6px 14px;background:#3d6080;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999}
+.confirm-modal{background:#ddd9d1;border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.confirm-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.warn-icon{background:rgba(245,166,35,0.15);color:#d98e1a}
+.confirm-modal h4{font-size:17px;font-weight:700;color:#1e2a35;margin-bottom:8px}
+.confirm-modal p{font-size:13.5px;color:#4a5a6a;line-height:1.6;margin-bottom:22px}
+.confirm-btns{display:flex;gap:10px;justify-content:center}
+.btn-outline{padding:9px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13.5px;color:#4a5a6a;cursor:pointer;font-family:inherit}
+.btn-outline:hover{border-color:#3d6080;color:#3d6080}
+.btn-danger{padding:9px 18px;background:#c0392b;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-danger:hover{background:#a93226}
+.modal-fade-enter-active{transition:opacity 0.25s}.modal-fade-leave-active{transition:opacity 0.2s}
+.modal-fade-enter-from,.modal-fade-leave-to{opacity:0}
 </style>

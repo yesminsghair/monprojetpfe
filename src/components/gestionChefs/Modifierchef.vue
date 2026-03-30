@@ -60,6 +60,11 @@
             <p class="err" v-if="errors.telephone">{{ errors.telephone }}</p>
           </div>
 
+          <div class="field-block">
+            <label class="lbl">Domaine d'expertise</label>
+            <input v-model="form.domaineExpertise" type="text" placeholder="Ex : Intelligence Artificielle, Réseaux…"/>
+          </div>
+
         </form>
       </div>
 
@@ -87,7 +92,7 @@ export default {
 
   data() {
     return {
-      form: { nom: '', prenom: '', email: '', telephone: '' },
+      form: { nom: '', prenom: '', email: '', telephone: '', domaineExpertise: '' },
       errors: {},
     }
   },
@@ -104,7 +109,7 @@ export default {
       immediate: true,
       handler(val) {
         if (val) {
-          this.form = { nom: val.nom, prenom: val.prenom, email: val.email, telephone: val.telephone || '' }
+          this.form = { nom: val.nom, prenom: val.prenom, email: val.email, telephone: val.telephone || '', domaineExpertise: val.domaineExpertise || '' }
           this.errors = {}
         }
       },
@@ -145,6 +150,7 @@ export default {
         prenom: this.form.prenom,
         email: this.form.email,
         telephone: this.form.telephone,
+        domaineExpertise: this.form.domaineExpertise,
       })
       this.$emit('fermer')
     },
