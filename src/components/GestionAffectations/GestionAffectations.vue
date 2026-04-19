@@ -42,7 +42,6 @@
         </div>
       </div>
 
-      <!-- Note accord mutuel -->
       <div class="mode-note" v-if="modeChoisi === 'manuel'">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Dans ce mode, les étudiants enverront eux-mêmes leurs demandes aux encadrants disponibles. L'affectation finale sera automatisée à partir des demandes acceptées.
@@ -114,13 +113,12 @@
         <div class="mode-tag">{{ modeIcon }} {{ modeLabel }}</div>
       </div>
 
-      <!-- Loading -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p>Chargement des données...</p>
       </div>
 
-      <!-- Mode accord mutuel : affiche les demandes acceptées -->
+      <!-- Mode accord mutuel -->
       <div v-else-if="modeChoisi === 'manuel'" class="accord-info">
         <div class="accord-banner">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -173,13 +171,23 @@
         </div>
         <div v-if="affectations.length" class="aff-table-wrap">
           <table class="table">
-            <thead><tr><th>Étudiant</th><th>Spécialité</th><th>Encadrant assigné</th><th>Statut</th></tr></thead>
+            <thead><tr><th>Étudiant</th><th>Spécialité</th><th>Encadrant assigné</th><th>Statut</th><th>Modifier</th></tr></thead>
             <tbody>
-              <tr v-for="aff in affectations" :key="aff.etudiant_id">
+              <tr v-for="(aff, i) in affectations" :key="aff.etudiant_id">
                 <td><div class="etud-nom">{{ aff.etudiant }}</div><div class="etud-mat">{{ aff.matricule }}</div></td>
                 <td><span class="sp-badge">{{ aff.specialite || '—' }}</span></td>
-                <td>{{ aff.encadrant || '—' }}</td>
+                <td>
+                  <select v-model="aff.encadrant_id" @change="updateEncadrantNom(aff)" class="field-input-sm">
+                    <option value="">— Non affecté —</option>
+                    <option v-for="enc in encadrants" :key="enc.id" :value="enc.id">{{ enc.nom_complet }}</option>
+                  </select>
+                </td>
                 <td><span class="aff-status" :class="aff.encadrant_id ? 'status-ok' : 'status-pending'">{{ aff.encadrant_id ? 'Affecté' : 'En attente' }}</span></td>
+                <td>
+                  <button class="icon-btn-sm danger" @click="retirerAffectation(i)" title="Retirer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -306,216 +314,337 @@
 
   </div>
 </template>
-
 <script>
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-})
-api.interceptors.request.use(config => {
-  const u = localStorage.getItem('user')
-  if (u) config.headers.Authorization = `Bearer ${JSON.parse(u).token}`
-  return config
-})
+import api from '@/services/api.js'
 
 export default {
   name: 'GestionAffectations',
+
   data() {
     return {
       etape: 'mode',
+
       etapes: [
-        { key: 'mode',        label: 'Mode' },
+        { key: 'mode', label: 'Mode' },
         { key: 'contraintes', label: 'Contraintes' },
         { key: 'affectation', label: 'Affectation' },
-        { key: 'validation',  label: 'Validation' },
+        { key: 'validation', label: 'Validation' },
       ],
+
       modeChoisi: '',
+
       modes: [
         {
           key: 'manuel',
           icon: '🤝',
           nom: 'Accord mutuel enseignant / étudiant',
-          desc: 'L\'étudiant choisit son encadrant parmi les disponibles et envoie une demande. L\'encadrant accepte ou refuse.',
+          desc: "L'étudiant choisit son encadrant parmi les disponibles et envoie une demande.",
         },
         {
           key: 'aleatoire',
           icon: '🎲',
           nom: 'Affectation automatique',
-          desc: 'L\'algorithme distribue automatiquement les étudiants aux encadrants en respectant les vœux et contraintes.',
+          desc: "Distribution automatique selon contraintes.",
         },
         {
           key: 'semi',
           icon: '⚡',
           nom: 'Semi-automatique',
-          desc: 'Pré-remplissage automatique d\'un quota, puis ajustement manuel pour le reste.',
+          desc: "Pré-remplissage + ajustement manuel.",
         },
       ],
+
       contraintes: [],
       showContrainteForm: false,
       nouvelleContrainte: { type: 'specialite', valeur: '' },
+
+      // ✅ FIX ADDED
+      editingContrainteIndex: null,
+
       affectations: [],
       encadrants: [],
+
       nbPreFill: 3,
       loading: false,
       saving: false,
       diffuse: false,
+
       showReinitModal: false,
       reinitEnCours: false,
     }
   },
-  computed: {
-    etapeIndex() { return this.etapes.findIndex(e => e.key === this.etape) },
-    modeLabel() { return this.modes.find(m => m.key === this.modeChoisi)?.nom || '' },
-    modeIcon()  { return this.modes.find(m => m.key === this.modeChoisi)?.icon || '' },
-  },
-  async created() {
-    // Charger les encadrants disponibles
-    try {
-      const res = await api.get('/affectations/encadrants-disponibles')
-      this.encadrants = res.data.map(e => ({
-        id: e.id,
-        nom_complet: e.prenom + ' ' + e.nom,
-        domaine: e.domaine,
-        nb_affectes: e.nb_affectes,
-      }))
-    } catch (e) { console.error('Erreur encadrants:', e) }
 
-    // Charger les affectations existantes
-    try {
-      const res = await api.get('/affectations')
-      if (res.data && res.data.length) {
-        this.affectations = res.data.map(a => ({
-          id:           a.id,
-          etudiant_id:  a.etudiant_id,
-          etudiant:     a.etudiant,
-          matricule:    a.matricule || '',
-          specialite:   a.specialite || '',
-          encadrant_id: a.encadrant_id,
-          encadrant:    a.encadrant || '',
-        }))
-        if (res.data[0]?.mode) this.modeChoisi = res.data[0].mode
-        if (res.data[0]?.statut === 'diffusee') {
-          this.etape   = 'validation'
-          this.diffuse = true
-        }
-      }
-    } catch (e) { /* pas encore d'affectations */ }
+  computed: {
+    etapeIndex() {
+      return this.etapes.findIndex(e => e.key === this.etape)
+    },
+    modeLabel() {
+      return this.modes.find(m => m.key === this.modeChoisi)?.nom || ''
+    },
+    modeIcon() {
+      return this.modes.find(m => m.key === this.modeChoisi)?.icon || ''
+    },
   },
+
+  async created() {
+    await this.initData()
+  },
+
   methods: {
-    confirmerMode() { this.etape = 'contraintes' },
+
+    async initData() {
+      await this.loadEncadrants()
+      await this.loadAffectations()
+    },
+
+    async loadEncadrants() {
+      try {
+        const res = await api.get('/affectations/encadrants-disponibles')
+
+        this.encadrants = (res.data || []).map(e => ({
+          id: e.id,
+          nom_complet: e.nom_complet,
+          nb_affectes: e.nb_affectes,
+        }))
+
+      } catch (e) {
+        console.error('Erreur encadrants:', e)
+      }
+    },
+
+    async loadAffectations() {
+      try {
+        // Load the saved mode first (from chef_mode_settings)
+        const modeRes = await api.get('/affectations/mode').catch(() => ({ data: { mode: null } }))
+        const savedMode = modeRes.data?.mode
+        if (savedMode) {
+          this.modeChoisi = savedMode
+        }
+
+        const res = await api.get('/affectations')
+        const data = Array.isArray(res.data) ? res.data : []
+
+        if (data.length) {
+          this.affectations = data.map(a => ({
+            id: a.id,
+            etudiant_id: a.etudiant_id,
+            etudiant: a.etudiant,
+            matricule: a.matricule || '',
+            specialite: a.specialite || '',
+            encadrant_id: a.encadrant_id,
+            encadrant: a.encadrant || '',
+          }))
+
+          if (!this.modeChoisi) this.modeChoisi = data[0]?.mode || ''
+
+          if (data[0]?.statut === 'diffusee') {
+            this.diffuse = true
+            this.etape = 'validation'
+          }
+        }
+
+        // If mode already saved but no affectations yet (accord mutuel in progress),
+        // skip to the right step so the chef sees the status
+        if (savedMode && !data.length) {
+          this.etape = 'contraintes'
+        }
+
+      } catch (e) {
+        console.error('Erreur affectations:', e)
+      }
+    },
+
+    async confirmerMode() {
+      // Persist the chosen mode to the backend immediately
+      // so students can read it from GET /affectations/mode
+      try {
+        await api.post('/affectations/save-mode', { mode: this.modeChoisi })
+      } catch (e) {
+        console.error('Erreur save-mode:', e)
+        // proceed anyway – mode will be stored on diffusion at the latest
+      }
+      this.etape = 'contraintes'
+    },
+
     async allerAffectation() {
       this.etape = 'affectation'
+
       if (this.modeChoisi === 'manuel') {
+        // Always reload accepted demandes to show latest status
         await this.chargerDemandesAcceptees()
       }
     },
+
     async chargerDemandesAcceptees() {
       this.loading = true
       try {
-        // Pour mode accord mutuel : charger les demandes acceptées
-        // L'API retourne déjà les demandes des étudiants de la spécialité du chef (via encadrant)
-        const res = await api.get('/demandes-encadrement?statut=acceptee')
-        this.affectations = (res.data || []).map(d => ({
-          etudiant_id:  d.etudiant_id,
-          etudiant:     d.etudiant,
-          matricule:    d.matricule || '',
-          specialite:   d.specialite || '',
+        const res = await api.get('/demandes-encadrement')
+
+        const toutes = Array.isArray(res.data) ? res.data : []
+        const acceptees = toutes.filter(d => d.statut === 'acceptee')
+
+        this.affectations = acceptees.map(d => ({
+          etudiant_id: d.etudiant_id,
+          etudiant: d.etudiant,
+          matricule: d.matricule || '',
+          specialite: d.specialite || '',
           encadrant_id: d.encadrant_id,
-          encadrant:    d.encadrant || '',
+          encadrant: d.encadrant || '',
         }))
-      } catch (e) { console.error('Erreur demandes:', e) }
-      finally { this.loading = false }
+
+      } catch (e) {
+        console.error('Erreur demandes:', e)
+      } finally {
+        this.loading = false
+      }
     },
+
     ajouterContrainte() {
       if (!this.nouvelleContrainte.valeur) return
-      this.contraintes.push({ ...this.nouvelleContrainte })
+
+      const contrainte = { ...this.nouvelleContrainte }
+
+      if (this.editingContrainteIndex !== null) {
+        this.contraintes.splice(this.editingContrainteIndex, 1, contrainte)
+        this.editingContrainteIndex = null
+      } else {
+        this.contraintes.push(contrainte)
+      }
+
       this.nouvelleContrainte = { type: 'specialite', valeur: '' }
       this.showContrainteForm = false
     },
+
     modifierContrainte(i) {
       this.nouvelleContrainte = { ...this.contraintes[i] }
-      this.contraintes.splice(i, 1)
+      this.editingContrainteIndex = i
       this.showContrainteForm = true
     },
-    supprimerContrainte(i) { this.contraintes.splice(i, 1) },
+
+    supprimerContrainte(i) {
+      this.contraintes.splice(i, 1)
+    },
+
+    annulerContrainte() {
+      this.showContrainteForm = false
+      this.nouvelleContrainte = { type: 'specialite', valeur: '' }
+      this.editingContrainteIndex = null
+    },
+
     async lancerAffectation() {
       this.loading = true
+
       try {
-        // Charger uniquement les étudiants de la spécialité du chef connecté
         const res = await api.get('/affectations/etudiants-de-ma-specialite')
         const etudiants = res.data || []
-        const limit = this.modeChoisi === 'semi' ? this.nbPreFill : etudiants.length
+
+        const limit = this.modeChoisi === 'semi'
+          ? this.nbPreFill
+          : etudiants.length
 
         this.affectations = etudiants.map((e, i) => ({
-          etudiant_id:  e.id,
-          etudiant:     e.prenom + ' ' + e.nom,
-          matricule:    e.matricule || '',
-          specialite:   e.specialite || '',
-          encadrant_id: i < limit ? (this.encadrants[i % this.encadrants.length]?.id || null) : null,
-          encadrant:    i < limit ? (this.encadrants[i % this.encadrants.length]?.nom_complet || '') : '',
+          etudiant_id: e.id,
+          etudiant: e.prenom + ' ' + e.nom,
+          matricule: e.matricule || '',
+          specialite: e.specialite || '',
+          encadrant_id:
+            i < limit ? (this.encadrants[i % this.encadrants.length]?.id || null) : null,
+          encadrant:
+            i < limit ? (this.encadrants[i % this.encadrants.length]?.nom_complet || '') : '',
         }))
-      } catch (e) { console.error('Erreur chargement:', e) }
-      finally { this.loading = false }
+
+      } catch (e) {
+        console.error('Erreur chargement:', e)
+      } finally {
+        this.loading = false
+      }
     },
+
     retirerAffectation(i) {
-      this.affectations[i].encadrant    = ''
+      this.affectations[i].encadrant = ''
       this.affectations[i].encadrant_id = null
     },
+
     updateEncadrantNom(aff) {
       const enc = this.encadrants.find(e => e.id === aff.encadrant_id)
       aff.encadrant = enc ? enc.nom_complet : ''
     },
-    reinitialiser() { this.affectations = [] },
-    confirmerReinit() { this.showReinitModal = true },
+
+    reinitialiser() {
+      this.affectations = []
+    },
+
+    confirmerReinit() {
+      this.showReinitModal = true
+    },
+
     async reinitialiserTotal() {
       this.reinitEnCours = true
+
       try {
         await api.delete('/affectations/reinitialiser')
+
         this.affectations = []
-        this.diffuse      = false
-        this.modeChoisi   = ''
-        this.contraintes  = []
-        this.etape        = 'mode'
+        this.diffuse = false
+        this.modeChoisi = ''
+        this.contraintes = []
+        this.etape = 'mode'
         this.showReinitModal = false
+
       } catch (e) {
         console.error('Erreur réinitialisation:', e)
       } finally {
         this.reinitEnCours = false
       }
     },
+
     async diffuser() {
       this.saving = true
+
       try {
-        // 1. Sauvegarder en batch
         if (this.affectations.length) {
           await api.post('/affectations/batch', {
-            mode:         this.modeChoisi,
+            mode: this.modeChoisi,
             affectations: this.affectations.map(a => ({
-              etudiant_id:  a.etudiant_id,
+              etudiant_id: a.etudiant_id,
               encadrant_id: a.encadrant_id || null,
             })),
             contraintes: this.contraintes,
           })
         }
-        // 2. Diffuser
-        await api.post('/affectations/diffuser')
+
+        await api.post('/affectations/diffuser', { mode: this.modeChoisi })
+
         this.diffuse = true
+
+        // In accord-mutuel mode, reload so the table reflects what the backend built
+        if (this.modeChoisi === 'manuel') {
+          await this.chargerDemandesAcceptees()
+        }
+
       } catch (e) {
-        console.error('Erreur diffusion:', e.response?.data?.message || e)
+        console.error('Erreur diffusion:', e)
       } finally {
         this.saving = false
       }
     },
+
     exporterListe() {
-      const csv = ['Étudiant,Matricule,Spécialité,Encadrant',
-        ...this.affectations.map(a => `${a.etudiant},${a.matricule},${a.specialite},${a.encadrant||'-'}`)
+      const csv = [
+        'Étudiant,Matricule,Spécialité,Encadrant',
+        ...this.affectations.map(a =>
+          `${a.etudiant},${a.matricule},${a.specialite},${a.encadrant || '-'}`
+        )
       ].join('\n')
+
       const blob = new Blob([csv], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a'); a.href = url; a.download = 'affectations.csv'; a.click()
-    }
+
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'affectations.csv'
+      a.click()
+    },
   }
 }
 </script>
@@ -621,4 +750,9 @@ export default {
 .loading-state { text-align: center; padding: 40px; color: #8a9aaa; }
 .spinner { width: 32px; height: 32px; border: 3px solid #c8c4bc; border-top-color: #3d6080; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 999; }
+.modal { background: #ddd9d1; border-radius: 14px; padding: 28px; max-width: 480px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal-fade-enter-active { transition: opacity 0.25s ease; }
+.modal-fade-leave-active { transition: opacity 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 </style>

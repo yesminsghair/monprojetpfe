@@ -310,7 +310,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/services/api.js'
 import CreerFormulaire     from './GestionFormulaires/CreerFormulaire.vue'
 import ListeFormulaires    from './GestionFormulaires/ListeFormulaires.vue'
 import GestionAffectations from './GestionAffectations/GestionAffectations.vue'
@@ -361,19 +361,12 @@ export default {
       else if (p === 'jury' || p === 'soutenance')       this.openGroup = 'sout'
     },
 
-    getApi() {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}')
-      const inst = axios.create({
-        baseURL: 'http://127.0.0.1:8000/api',
-        headers: { 'Authorization': 'Bearer ' + stored.token, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      })
-      return inst
-    },
+
 
     async chargerFormulaires() {
       this.loadingFormulaires = true
       try {
-        const res = await this.getApi().get('/formulaires-voeux')
+        const res = await api.get('/formulaires-voeux')
         // Adapter le format API → format attendu par les sous-composants
         this.formulaires = res.data.map(f => ({
           id:           f.id,
@@ -397,7 +390,7 @@ export default {
 
     async chargerEnseignants() {
       try {
-        const res = await this.getApi().get('/formulaires-voeux/enseignants-de-ma-specialite')
+        const res = await api.get('/formulaires-voeux/enseignants-de-ma-specialite')
         this.enseignants = res.data.map(u => ({
           id:           u.id,
           nom:          u.nom,
@@ -416,8 +409,8 @@ export default {
       this.loadingEtudiants = true
       try {
         const [etudiants, affectations] = await Promise.all([
-          this.getApi().get('/affectations/etudiants-de-ma-specialite'),
-          this.getApi().get('/affectations'),
+          api.get('/affectations/etudiants-de-ma-specialite'),
+          api.get('/affectations'),
         ])
         const affMap = {}
         ;(affectations.data || []).forEach(a => {
@@ -435,7 +428,7 @@ export default {
       this.loadingEncadrants = true
       try {
         // encadrants-disponibles filtre déjà par spécialité et role=encadrant
-        const res = await this.getApi().get('/affectations/encadrants-disponibles')
+        const res = await api.get('/affectations/encadrants-disponibles')
         // Enrichir avec le nb_max_pfe depuis les vœux soumis
         this.encadrants = (res.data || []).map(e => ({
           id:         e.id,

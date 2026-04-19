@@ -31,23 +31,25 @@ Annuler
 </template>
 
 <script>
-export default{
+export default {
+  props: {
+    formulaire: Object
+  },
 
-props:{
-formulaire:Object
-},
+  emits: ['publie'],
 
-emits:["publie"],
+  data() {
+    return {
+      loading: false
+    }
+  },
 
-methods:{
-publier(){
-
-this.$emit("publie",this.formulaire.id)
-
-}
-
-}
-
+  methods: {
+    publier() {
+      this.loading = true
+      this.$emit('publie', this.formulaire.id)
+    }
+  }
 }
 </script>
 

@@ -105,9 +105,9 @@
             <div class="panel-section-title">Réponses reçues</div>
             <div v-if="reponses.length" class="reponse-list">
               <div v-for="r in reponses" :key="r.id" class="reponse-card">
-                <div class="rep-avatar">{{ initiales(r.enseignant) }}</div>
+                <div class="rep-avatar">{{ initiales(r.enseignant_nom) }}</div>
                 <div class="rep-info">
-                  <div class="rep-name">{{ r.enseignant }}</div>
+                  <div class="rep-name">{{ r.enseignant_nom }}</div>
                   <div class="rep-detail">
                     {{ r.disponibilite === 'oui' ? '✅ Disponible' : r.disponibilite === 'partielle' ? '⚡ Partiel' : '❌ Non dispo' }}
                     · {{ r.nbre_etudiants }} étudiant(s)
@@ -172,32 +172,27 @@
 </template>
 
 <script>
-import axios from 'axios'
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-})
-api.interceptors.request.use(cfg => {
-  const u = localStorage.getItem('user')
-  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
-  return cfg
-})
+import api from '@/services/api'
 
 export default {
   name: 'ListeFormulaires',
-  emits: ['navigate', 'modifier'],
+
+  emits: ['modifier', 'navigate'],
 
   data() {
     return {
       formulaires: [],
       loading: false,
-      saving: false,
-      loadingReponses: false,
-      formulaireSelectionne: null,
-      reponses: [],
+      error: null,
+
+      modalSupprimer: null,
       modalPublier: null,
       modalVerrouiller: null,
-      modalSupprimer: null,
+
+      formulaireSelectionne: null,
+      reponses: [],
+      loadingReponses: false,
+      saving: false
     }
   },
 
@@ -212,89 +207,123 @@ export default {
         const res = await api.get('/formulaires-voeux')
         this.formulaires = res.data || []
       } catch (e) {
-        console.error('Erreur:', e)
+        console.error(e)
+        this.formulaires = []
+        this.error = 'Erreur chargement formulaires'
       } finally {
         this.loading = false
       }
     },
 
-    labelStatut(s) {
-      return { brouillon:'Brouillon', publie:'Publié', verrouille:'Verrouillé' }[s] || s
-    },
-    badgeClass(s) {
-      return { 'badge-gray': s==='brouillon', 'badge-green': s==='publie', 'badge-red': s==='verrouille' }
-    },
-    isExpiringSoon(d) {
-      if (!d) return false
-      const diff = (new Date(d) - new Date()) / (1000*60*60*24)
-      return diff >= 0 && diff <= 3
-    },
-    formatDate(d) {
-      if (!d) return '—'
-      return new Date(d).toLocaleDateString('fr-FR')
-    },
-    initiales(n) {
-      if (!n) return '?'
-      return n.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2)
+    formatDate(date) {
+      if (!date) return '-'
+      const d = new Date(date)
+      if (isNaN(d.getTime())) return '-'
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     },
 
-    modifierBrouillon(f) {
-      // Émet vers DashboardChef qui navigue vers CreerFormulaire avec le formulaire à modifier
-      this.$emit('modifier', f)
-      this.$emit('navigate', 'voeux-creer')
+    isExpiringSoon(date) {
+      if (!date) return false
+      const now = new Date()
+      const target = new Date(date)
+      if (isNaN(target.getTime())) return false
+      const diffDays = (target - now) / (1000 * 60 * 60 * 24)
+      return diffDays <= 5 && diffDays >= 0
     },
 
+    badgeClass(statut) {
+      return { brouillon: 'badge-gray', publie: 'badge-green', verrouille: 'badge-red' }[statut] || 'badge-gray'
+    },
+
+    labelStatut(statut) {
+      return { brouillon: 'Brouillon', publie: 'Publié', verrouille: 'Verrouillé' }[statut] || 'Inconnu'
+    },
+
+    initiales(nom) {
+      if (!nom) return '?'
+      return nom.split(' ').map(p => p[0] || '').join('').toUpperCase().slice(0, 2)
+    },
+
+    // ── Réponses panel ────────────────────────────────────────────
     async voirReponses(f) {
       this.formulaireSelectionne = f
+      this.reponses = []
       this.loadingReponses = true
       try {
-        const res = await api.get(`/formulaires-voeux/${f.id}`)
-        this.reponses = res.data.reponses || []
+        // GET /voeux-encadrement?formulaire_id=X  (returns all voeux for this formulaire)
+        const res = await api.get('/voeux-encadrement/liste', {
+          params: { formulaire_id: f.id }
+        })
+        this.reponses = res.data || []
       } catch (e) {
+        console.error(e)
         this.reponses = []
       } finally {
         this.loadingReponses = false
       }
     },
 
-    demanderPublier(f)     { this.modalPublier    = f },
-    demanderVerrouiller(f) { this.modalVerrouiller = f },
-    demanderSupprimer(f)   { this.modalSupprimer   = f },
+    // ── Modify ────────────────────────────────────────────────────
+    modifierBrouillon(f) {
+      this.$emit('modifier', f)
+    },
+
+    // ── Publish ───────────────────────────────────────────────────
+    demanderPublier(f) {
+      this.modalPublier = f
+    },
 
     async confirmerPublier() {
+      if (!this.modalPublier) return
       this.saving = true
       try {
-        await api.post(`/formulaires-voeux/${this.modalPublier.id}/publier`)
-        const f = this.formulaires.find(x => x.id === this.modalPublier.id)
-        if (f) f.statut = 'publie'
+        await api.patch(`/formulaires-voeux/${this.modalPublier.id}/publier`)
         this.modalPublier = null
+        await this.chargerFormulaires()
       } catch (e) {
-        console.error(e.response?.data?.message)
-      } finally { this.saving = false }
+        console.error(e)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    // ── Lock ──────────────────────────────────────────────────────
+    demanderVerrouiller(f) {
+      this.modalVerrouiller = f
     },
 
     async confirmerVerrouiller() {
+      if (!this.modalVerrouiller) return
       this.saving = true
       try {
-        await api.post(`/formulaires-voeux/${this.modalVerrouiller.id}/verrouiller`)
-        const f = this.formulaires.find(x => x.id === this.modalVerrouiller.id)
-        if (f) f.statut = 'verrouille'
+        await api.patch(`/formulaires-voeux/${this.modalVerrouiller.id}/verrouiller`)
         this.modalVerrouiller = null
+        await this.chargerFormulaires()
       } catch (e) {
-        console.error(e.response?.data?.message)
-      } finally { this.saving = false }
+        console.error(e)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    // ── Delete ────────────────────────────────────────────────────
+    demanderSupprimer(f) {
+      this.modalSupprimer = f
     },
 
     async confirmerSupprimer() {
+      if (!this.modalSupprimer) return
       this.saving = true
       try {
         await api.delete(`/formulaires-voeux/${this.modalSupprimer.id}`)
-        this.formulaires = this.formulaires.filter(x => x.id !== this.modalSupprimer.id)
         this.modalSupprimer = null
+        await this.chargerFormulaires()
       } catch (e) {
-        console.error(e.response?.data?.message)
-      } finally { this.saving = false }
-    },
+        console.error(e)
+      } finally {
+        this.saving = false
+      }
+    }
   }
 }
 </script>

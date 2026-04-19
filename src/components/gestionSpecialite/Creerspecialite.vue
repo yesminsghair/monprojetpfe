@@ -47,7 +47,9 @@
 <script>
 export default {
   name: 'Creerspecialite',
-  emits: ['specialite-creee', 'navigate'],
+  // FIX: was emitting 'specialite-creee' but parent (Dashboarddirecteur) listens for 'created'
+  // Keep both for compatibility, but the parent handler is called @created → onSpecialiteCreee
+  emits: ['created', 'navigate'],
   data() {
     return {
       saving: false,
@@ -57,13 +59,15 @@ export default {
   },
   methods: {
     soumettre() {
+      // FIX: removed debug console.log("CLICK OK")
       this.errors = {}
       if (!this.form.nom.trim())  this.errors.nom  = 'Le nom est obligatoire'
       if (!this.form.code.trim()) this.errors.code = 'Le code est obligatoire'
       if (Object.keys(this.errors).length) return
       this.saving = true
-      this.$emit('specialite-creee', { ...this.form })
-      // Le parent gère l'appel API et la navigation
+      // FIX: emit 'created' to match what Dashboarddirecteur.vue listens for (@created="onSpecialiteCreee")
+      this.$emit('created', { ...this.form })
+      // The parent handles the API call and navigation
       setTimeout(() => { this.saving = false }, 1500)
     }
   }

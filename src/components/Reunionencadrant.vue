@@ -1,352 +1,418 @@
 <template>
-  <div class="page-content">
+<div class="page-content">
 
-    <!-- HEADER -->
-    <div class="page-header">
-      <div class="header-left">
-        <div class="header-icon-wrap">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </div>
-        <div>
-          <h2>Planification des réunions</h2>
-          <p class="subtitle">Proposez des créneaux à vos étudiants encadrés</p>
-        </div>
-      </div>
-      <div class="role-chip">👨‍🏫 Vue Encadrant</div>
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h2>Planification des réunions</h2>
+      <p class="subtitle">Sélectionnez un étudiant puis proposez des créneaux disponibles</p>
     </div>
-
-    <!-- NOTIF -->
-    <transition name="slide-notif">
-      <div v-if="notif.show" class="notif" :class="'notif-' + notif.type">
-        <span>{{ notif.msg }}</span>
-        <button @click="notif.show = false" class="notif-close">✕</button>
-      </div>
-    </transition>
-
-    <!-- LAYOUT: 2 colonnes -->
-    <div class="layout">
-
-      <!-- COLONNE GAUCHE : Sélection + agenda -->
-      <div class="col-main">
-
-        <!-- Sélecteur étudiant -->
-        <div class="selector-card">
-          <label class="selector-label">Choisir un étudiant à réunir</label>
-          <div class="student-options">
-            <button
-              v-for="e in etudiants" :key="e.id"
-              class="student-btn"
-              :class="{ active: selectedStudent?.id === e.id }"
-              @click="selectedStudent = e; selection = []">
-              <div class="s-av">{{ initials(e.nom) }}</div>
-              <div class="s-info">
-                <div class="s-nom">{{ e.nom }}</div>
-                <div class="s-sujet">{{ e.sujet }}</div>
-              </div>
-              <div class="s-count" v-if="propositionsFor(e).length">
-                {{ propositionsFor(e).length }}
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Navigation semaine -->
-        <div class="week-nav" v-if="selectedStudent">
-          <button class="nav-arrow" @click="prevWeek">‹</button>
-          <div class="week-info">
-            <span class="week-dates">{{ fmt(weekStart) }} — {{ fmt(weekEnd) }}</span>
-            <span class="week-num">Semaine {{ weekNum }}</span>
-          </div>
-          <button class="nav-arrow" @click="nextWeek">›</button>
-        </div>
-
-        <!-- Agenda -->
-        <div class="agenda-wrap" v-if="selectedStudent">
-          <div class="agenda-legend">
-            <span><span class="leg leg-sel"></span> Sélectionné</span>
-            <span><span class="leg leg-sent"></span> Déjà proposé</span>
-            <span><span class="leg leg-conf"></span> Confirmé</span>
-          </div>
-
-          <table class="agenda">
-            <thead>
-              <tr>
-                <th class="th-time">Heure</th>
-                <th v-for="j in days" :key="j.key">
-                  <div class="th-day">{{ j.name }}</div>
-                  <div class="th-date">{{ fmt(j.date) }}</div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="h in hours" :key="h">
-                <td class="td-time">{{ h }}</td>
-                <td v-for="j in days" :key="j.key + h"
-                  @click="toggle(j.date, h)"
-                  :class="['slot', slotClass(j.date, h)]">
-                  <span class="slot-icon">{{ slotIcon(j.date, h) }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- CTA -->
-          <div class="agenda-footer">
-            <span class="sel-count" v-if="selection.length">{{ selection.length }} créneau(x) sélectionné(s)</span>
-            <span class="sel-count muted" v-else>Cliquez sur des créneaux pour les sélectionner</span>
-            <button class="btn-gold"
-              :disabled="!selection.length"
-              @click="envoyer">
-              📤 Proposer à {{ selectedStudent.nom.split(' ')[0] }}
-            </button>
-          </div>
-        </div>
-
-        <div class="empty-hint" v-else>
-          <span style="font-size:40px">👈</span>
-          <p>Sélectionnez un étudiant pour accéder au calendrier</p>
-        </div>
-
-      </div>
-
-      <!-- COLONNE DROITE : Propositions envoyées -->
-      <div class="col-side">
-        <div class="side-title">
-          <span>📋 Propositions envoyées</span>
-          <span class="badge-count">{{ propositions.length }}</span>
-        </div>
-
-        <div v-if="!propositions.length" class="side-empty">Aucune proposition envoyée</div>
-
-        <div v-for="p in propositions" :key="p.id" class="prop-item" :class="'prop-' + p.statut">
-          <div class="prop-top">
-            <div class="prop-avatar">{{ initials(p.etudiant) }}</div>
-            <div class="prop-info">
-              <div class="prop-etudiant">{{ p.etudiant }}</div>
-              <div class="prop-datetime">{{ fmt(p.date) }} · {{ p.heure }}</div>
-            </div>
-            <span class="prop-status-chip" :class="'chip-' + p.statut">
-              {{ statusLabel(p.statut) }}
-            </span>
-          </div>
-          <div class="prop-actions">
-            <button class="mini-btn mini-remind" @click="rappel(p)">🔔 Rappel</button>
-            <button class="mini-btn mini-del" @click="supprimer(p)">✕ Supprimer</button>
-          </div>
-        </div>
-
-      </div>
+    <div class="legend">
+      <span class="leg"><span class="leg-dot ld-sel"></span>Sélectionné</span>
+      <span class="leg"><span class="leg-dot ld-prop"></span>Proposé</span>
+      <span class="leg"><span class="leg-dot ld-conf"></span>Confirmé</span>
+      <span class="leg"><span class="leg-dot ld-rej"></span>Rejeté</span>
     </div>
-
   </div>
+
+  <!-- TOAST -->
+  <transition name="toast">
+    <div v-if="toast.show" class="toast" :class="'toast-'+toast.type">
+      {{ toast.msg }}
+      <button @click="toast.show=false" class="toast-x">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </transition>
+
+  <!-- BARRE CONTRÔLE -->
+  <div class="control-bar">
+    <!-- Sélecteur étudiant -->
+    <div class="ctrl-block">
+      <span class="ctrl-label">Étudiant</span>
+      <div class="student-tabs">
+        <button v-for="e in etudiants" :key="e.id"
+          class="stab" :class="{active: selectedStudent?.id===e.id}"
+          @click="selectedStudent=e; selection=[]">
+          <span class="stab-av">{{ initials(e.nom) }}</span>
+          <span>{{ e.nom }}</span>
+          <span class="stab-cnt" v-if="propositionsPour(e).length">{{ propositionsPour(e).length }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation semaine -->
+    <div class="ctrl-block ctrl-week" v-if="selectedStudent">
+      <button class="week-btn" @click="prevWeek">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="week-label-wrap">
+        <span class="week-dates">{{ fmt(weekStart) }} — {{ fmt(weekEnd) }}</span>
+        <span class="week-num">Semaine {{ weekNum }}</span>
+      </div>
+      <button class="week-btn" @click="nextWeek">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- CTA -->
+    <button class="btn-gold" v-if="selectedStudent"
+      :disabled="!selection.length" @click="proposer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Proposer{{ selection.length ? ' ('+selection.length+')' : '' }}
+    </button>
+  </div>
+
+  <!-- GRILLE AGENDA -->
+  <div class="agenda-wrap" v-if="selectedStudent">
+    <table class="agenda">
+      <thead>
+        <tr>
+          <th class="th-time">Heure</th>
+          <th v-for="j in jours" :key="j.key">
+            <div class="th-jour">{{ j.nom }}</div>
+            <div class="th-date">{{ fmt(j.date) }}</div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="h in heures" :key="h">
+          <td class="td-time">{{ h }}</td>
+          <td v-for="j in jours" :key="j.key+h"
+            class="slot"
+            :class="slotClass(j.date, h)"
+            @click="toggleSlot(j.date, h)">
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="agenda-empty" v-else>
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <p>Sélectionnez un étudiant pour afficher le planning</p>
+  </div>
+
+  <!-- PROPOSITIONS -->
+  <div class="props-section" v-if="propositions.length">
+    <div class="section-title">Propositions envoyées</div>
+    <div class="props-grid">
+      <div v-for="(p,i) in propositions" :key="i"
+        class="prop-card" :class="'pc-'+p.statut">
+        <div class="pc-left">
+          <div class="pc-av">{{ initials(p.etudiant) }}</div>
+        </div>
+        <div class="pc-mid">
+          <div class="pc-nom">{{ p.etudiant }}</div>
+          <div class="pc-dt">{{ fmt(p.date) }} · {{ p.heure }}</div>
+          <div class="pc-raison" v-if="p.raison">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {{ p.raison }}
+          </div>
+        </div>
+        <div class="pc-right">
+          <span class="pc-badge" :class="'pb-'+p.statut">{{ statLabel(p.statut) }}</span>
+          <button class="pc-del" @click="propositions.splice(i,1)" title="Supprimer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
   name: 'ReunionEncadrant',
   data() {
     return {
-      etudiants: [
-        { id: 1, nom: 'Ali Ben Salem', sujet: 'Système de gestion PFE' },
-        { id: 2, nom: 'Nadia Gharbi', sujet: 'Application mobile IoT' },
-        { id: 3, nom: 'Karim Mbarki', sujet: 'Plateforme e-learning' },
-      ],
+      etudiants: [],
       selectedStudent: null,
-      hours: ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'],
-      selection: [],       // créneaux sélectionnés par l'encadrant (pas encore envoyés)
-      propositions: [],    // propositions envoyées
+      jourNoms: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+      heures: ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'],
+      selection: [],
+      propositions: [],
       weekStart: new Date(),
-      notif: { show: false, msg: '', type: 'success' }
+      toast: { show: false, msg: '', type: 'ok' },
+      loading: false
     }
   },
   computed: {
-    days() {
+    jours() {
       const d = new Date(this.weekStart)
-      const day = d.getDay()
-      const diff = day === 0 ? -6 : 1 - day
+      const diff = d.getDay() === 0 ? -6 : 1 - d.getDay()
       d.setDate(d.getDate() + diff)
-      return ['Lun','Mar','Mer','Jeu','Ven'].map((name, i) => {
+      return this.jourNoms.map((nom, i) => {
         const date = new Date(d)
         date.setDate(d.getDate() + i)
-        return { name, date, key: date.toDateString() }
+        return { nom, date, key: date.toDateString() }
       })
     },
     weekEnd() {
-      return this.days[4].date
+      return this.jours[4]?.date || this.weekStart
     },
     weekNum() {
       const d = new Date(this.weekStart)
-      d.setHours(0,0,0,0)
-      d.setDate(d.getDate() + 3 - (d.getDay()+6)%7)
-      const w1 = new Date(d.getFullYear(),0,4)
-      return 1 + Math.round(((d-w1)/86400000 - 3 + (w1.getDay()+6)%7)/7)
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+      const w1 = new Date(d.getFullYear(), 0, 4)
+      return 1 + Math.round(((d - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)
     }
   },
+  mounted() {
+    this.chargerEtudiants()
+    this.chargerReunions()
+  },
   methods: {
-    initials(n) { return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() },
-    fmt(d) { return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}) },
-    propositionsFor(e) { return this.propositions.filter(p=>p.etudiant===e.nom) },
-    statusLabel(s) { return {attente:'⏳ En attente',confirme:'✅ Confirmé',rappele:'🔔 Rappelé'}[s]||s },
+
+
+    async chargerEtudiants() {
+      try {
+        const res = await api.get('/suivi/encadrant')
+        this.etudiants = res.data.map(e => ({
+          id: e.etudiant_id || e.id,
+          nom: e.nom
+        }))
+      } catch (error) {
+        console.error('Erreur:', error)
+      }
+    },
+
+    async chargerReunions() {
+      try {
+        const res = await api.get('/reunions')
+        // ✅ FIX: quand étudiant annule (statut=annulee) → slot redevient libre dans le calendrier encadrant
+        this.propositions = res.data
+          .filter(r => r.statut !== 'annulee') // annulée = créneau libéré
+          .map(r => ({
+            id: r.id,
+            etudiant: r.etudiant_nom,
+            date: new Date(r.date_reunion),
+            heure: this.formatHeure(r.date_reunion),
+            statut: r.statut === 'planifiee' ? 'attente'
+                  : r.statut === 'confirmee' ? 'confirme'
+                  : r.statut,
+            raison: r.motif
+          }))
+      } catch (error) {
+        console.error('Erreur:', error)
+      }
+    },
+
+    formatHeure(date) {
+      if (!date) return ''
+      const d = new Date(date)
+      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    },
+
+    initials(n) {
+      if (!n) return '?'
+      return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    },
+
+    fmt(d) {
+      return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    },
+
+    propositionsPour(e) {
+      return this.propositions.filter(p => p.etudiant === e.nom)
+    },
+
+    statLabel(s) {
+      const labels = { proposee: 'En attente', confirmee: 'Confirmé', annulee: 'Rejeté' }
+      return labels[s] || s
+    },
+
+    isSent(date, h) {
+      return this.propositions.some(p =>
+        p.etudiant === this.selectedStudent?.nom &&
+        new Date(p.date).toDateString() === date.toDateString() &&
+        p.heure === h
+      )
+    },
+
+    isConfirmed(date, h) {
+      return this.propositions.some(p =>
+        new Date(p.date).toDateString() === date.toDateString() &&
+        p.heure === h &&
+        p.statut === 'confirmee'
+      )
+    },
+
+    isRejected(date, h) {
+      return this.propositions.some(p =>
+        new Date(p.date).toDateString() === date.toDateString() &&
+        p.heure === h &&
+        p.statut === 'annulee'
+      )
+    },
 
     isSelected(date, h) {
-      return this.selection.some(c=>c.date.toDateString()===date.toDateString()&&c.heure===h)
+      return this.selection.some(c => c.date.toDateString() === date.toDateString() && c.heure === h)
     },
-    isSent(date, h) {
-      return this.propositions.some(p=>
-        p.etudiant===this.selectedStudent?.nom &&
-        new Date(p.date).toDateString()===date.toDateString()&&p.heure===h)
-    },
-    isConfirmed(date, h) {
-      return this.propositions.some(p=>
-        new Date(p.date).toDateString()===date.toDateString()&&p.heure===h&&p.statut==='confirme')
-    },
+
     slotClass(date, h) {
-      if (this.isConfirmed(date, h)) return 'slot-confirmed'
-      if (this.isSent(date, h)) return 'slot-sent'
-      if (this.isSelected(date, h)) return 'slot-selected'
+      if (this.isConfirmed(date, h)) return 'slot-conf'
+      if (this.isRejected(date, h)) return 'slot-rej'
+      if (this.isSent(date, h)) return 'slot-prop'
+      if (this.isSelected(date, h)) return 'slot-sel'
       return 'slot-free'
     },
-    slotIcon(date, h) {
-      if (this.isConfirmed(date,h)) return '✅'
-      if (this.isSent(date,h)) return '📨'
-      if (this.isSelected(date,h)) return '⭐'
-      return ''
+
+    toggleSlot(date, h) {
+      if (this.isSent(date, h)) {
+        this.showToast('Ce créneau est déjà proposé', 'warn')
+        return
+      }
+      const idx = this.selection.findIndex(c => c.date.toDateString() === date.toDateString() && c.heure === h)
+      idx >= 0 ? this.selection.splice(idx, 1) : this.selection.push({ date: new Date(date), heure: h })
     },
-    toggle(date, h) {
-      if (this.isSent(date, h)) { this.showNotif('Créneau déjà proposé', 'warn'); return }
-      const idx = this.selection.findIndex(c=>c.date.toDateString()===date.toDateString()&&c.heure===h)
-      idx >= 0 ? this.selection.splice(idx,1) : this.selection.push({date:new Date(date),heure:h})
-    },
-    envoyer() {
-      this.selection.forEach(c => {
-        this.propositions.push({
-          id: Date.now() + Math.random(),
-          etudiant: this.selectedStudent.nom,
-          date: new Date(c.date),
-          heure: c.heure,
-          statut: 'attente'
-        })
-      })
-      this.showNotif(`${this.selection.length} créneau(x) proposé(s) à ${this.selectedStudent.nom}`)
+
+    async proposer() {
+      if (!this.selectedStudent) return
+      
+      let n = 0
+      for (const c of this.selection) {
+        if (!this.isSent(c.date, c.heure)) {
+          try {
+            await api.post('/reunions', {
+              etudiant_id: this.selectedStudent.id,
+              date_reunion: this.combinerDateHeure(c.date, c.heure),
+              type: 'presentiel'
+            })
+            n++
+          } catch (error) {
+            console.error('Erreur:', error)
+          }
+        }
+      }
+      
       this.selection = []
+      await this.chargerReunions()
+      this.showToast(`${n} créneau(x) proposé(s) à ${this.selectedStudent.nom}`)
     },
-    rappel(p) {
-      p.statut = 'rappele'
-      this.showNotif(`Rappel envoyé à ${p.etudiant}`, 'warn')
+
+    combinerDateHeure(date, heure) {
+      const [hours, minutes] = heure.split(':')
+      const newDate = new Date(date)
+      newDate.setHours(parseInt(hours), parseInt(minutes), 0)
+      return newDate.toISOString()
     },
-    supprimer(p) {
-      this.propositions = this.propositions.filter(x=>x.id!==p.id)
+
+    showToast(msg, type = 'ok') {
+      this.toast = { show: true, msg, type }
+      setTimeout(() => (this.toast.show = false), 3200)
     },
-    showNotif(msg, type='success') {
-      this.notif = {show:true,msg,type}
-      setTimeout(()=>this.notif.show=false, 3500)
+
+    prevWeek() {
+      const d = new Date(this.weekStart)
+      d.setDate(d.getDate() - 7)
+      this.weekStart = d
     },
-    prevWeek() { const d=new Date(this.weekStart); d.setDate(d.getDate()-7); this.weekStart=d },
-    nextWeek() { const d=new Date(this.weekStart); d.setDate(d.getDate()+7); this.weekStart=d },
+
+    nextWeek() {
+      const d = new Date(this.weekStart)
+      d.setDate(d.getDate() + 7)
+      this.weekStart = d
+    }
   }
 }
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-*{box-sizing:border-box}
-.page-content{padding:28px;background:#0F1923;min-height:100vh;font-family:'DM Sans',sans-serif;color:#E8EDF2}
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+.page-content{font-family:'Source Sans 3',sans-serif;color:#1e2a35}
 
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.header-left{display:flex;align-items:center;gap:14px}
-.header-icon-wrap{width:50px;height:50px;background:rgba(245,197,24,0.12);border:1px solid rgba(245,197,24,0.3);border-radius:13px;display:flex;align-items:center;justify-content:center;color:#F5C518;flex-shrink:0}
-h2{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;color:#F5C518;margin:0}
-.subtitle{font-size:13px;color:#7A8FA6;margin-top:2px}
-.role-chip{background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.3);color:#F5C518;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700}
+/* HEADER */
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+h2{font-family:'Merriweather',serif;font-size:1.4rem;font-weight:700;color:#1e2a35;margin-bottom:4px}
+.subtitle{font-size:0.88rem;color:#8a9aaa;font-weight:300}
+.legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding-top:4px}
+.leg{display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#8a9aaa}
+.leg-dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.ld-sel{background:#f5a623;border:1px solid #d98e1a}
+.ld-prop{background:#3d6080;border:1px solid #2f4f6a}
+.ld-conf{background:#27ae60;border:1px solid #1e8449}
+.ld-rej{background:#e74c3c;border:1px solid #c0392b}
 
-/* NOTIF */
-.notif{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:500;border:1px solid}
-.notif-success{background:rgba(39,174,96,0.1);color:#2ecc71;border-color:rgba(39,174,96,0.3)}
-.notif-warn{background:rgba(245,197,24,0.1);color:#F5C518;border-color:rgba(245,197,24,0.3)}
-.notif-close{background:none;border:none;color:inherit;cursor:pointer;opacity:.7}
-.slide-notif-enter-active,.slide-notif-leave-active{transition:all .3s}
-.slide-notif-enter-from,.slide-notif-leave-to{transform:translateY(-8px);opacity:0}
+/* TOAST */
+.toast{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-radius:10px;margin-bottom:16px;font-size:0.88rem;font-weight:500;border:1.5px solid}
+.toast-ok{background:#e8f5e9;color:#155724;border-color:#c3e6cb}
+.toast-warn{background:#fff3cd;color:#856404;border-color:#ffc107}
+.toast-err{background:#f8d7da;color:#721c24;border-color:#f5c6cb}
+.toast-x{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;display:flex;align-items:center;padding:2px}
+.toast-enter-active,.toast-leave-active{transition:all .25s}
+.toast-enter-from,.toast-leave-to{opacity:0;transform:translateY(-6px)}
 
-/* LAYOUT */
-.layout{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+/* CONTROL BAR */
+.control-bar{display:flex;align-items:center;gap:16px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:14px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+.ctrl-block{display:flex;flex-direction:column;gap:8px}
+.ctrl-label{font-size:0.72rem;font-weight:700;color:#8a9aaa;text-transform:uppercase;letter-spacing:.06em}
+.student-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.stab{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1.5px solid #c8c4bc;border-radius:22px;background:#ddd9d1;cursor:pointer;font-size:0.88rem;font-weight:500;color:#4a5a6a;font-family:'Source Sans 3',sans-serif;transition:.18s}
+.stab:hover{border-color:#3d6080;color:#3d6080}
+.stab.active{background:linear-gradient(160deg,#4a7090,#2f4f6a);color:#fff;border-color:transparent;font-weight:600}
+.stab-av{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.stab:not(.active) .stab-av{background:#3d6080;color:#fff}
+.stab-cnt{background:#f5a623;color:#1e2a35;font-size:0.68rem;font-weight:700;padding:1px 6px;border-radius:20px}
 
-/* SELECTOR */
-.selector-card{background:#1A2635;border:1px solid rgba(245,197,24,0.15);border-radius:14px;padding:18px;margin-bottom:16px}
-.selector-label{display:block;font-size:11px;font-weight:700;color:#7A8FA6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
-.student-options{display:flex;flex-direction:column;gap:8px}
-.student-btn{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#243347;border:1px solid rgba(255,255,255,0.06);border-radius:10px;cursor:pointer;text-align:left;transition:.2s;color:#E8EDF2}
-.student-btn:hover{border-color:rgba(245,197,24,0.3);background:rgba(245,197,24,0.05)}
-.student-btn.active{border-color:#F5C518;background:rgba(245,197,24,0.1)}
-.s-av{width:36px;height:36px;border-radius:10px;background:#F5C518;color:#0F1923;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Syne',sans-serif}
-.s-nom{font-weight:600;font-size:14px}
-.s-sujet{font-size:12px;color:#7A8FA6}
-.s-count{margin-left:auto;background:rgba(245,197,24,0.2);color:#F5C518;border-radius:20px;font-size:11px;font-weight:700;padding:2px 9px}
-
-/* WEEK NAV */
-.week-nav{display:flex;align-items:center;justify-content:space-between;background:#1A2635;border:1px solid rgba(245,197,24,0.15);border-radius:12px;padding:12px 18px;margin-bottom:14px}
-.nav-arrow{background:rgba(245,197,24,0.1);border:1px solid rgba(245,197,24,0.25);color:#F5C518;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:.2s}
-.nav-arrow:hover{background:rgba(245,197,24,0.2)}
-.week-dates{font-family:'Syne',sans-serif;font-weight:700;color:#F5C518;font-size:14px;display:block;text-align:center}
-.week-num{font-size:11px;color:#7A8FA6;display:block;text-align:center}
+.ctrl-week{flex-direction:row;align-items:center;gap:12px;flex:1;justify-content:center}
+.week-btn{width:32px;height:32px;border:1.5px solid #c8c4bc;background:#ddd9d1;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#4a5a6a;transition:.18s}
+.week-btn:hover{background:#3d6080;color:#fff;border-color:#3d6080}
+.week-label-wrap{text-align:center}
+.week-dates{font-size:0.88rem;font-weight:600;color:#1e2a35;display:block}
+.week-num{font-size:0.75rem;color:#8a9aaa;display:block;margin-top:2px}
 
 /* AGENDA */
-.agenda-wrap{background:#1A2635;border:1px solid rgba(245,197,24,0.15);border-radius:14px;overflow:hidden}
-.agenda-legend{display:flex;gap:18px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;color:#7A8FA6}
-.leg{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle}
-.leg-sel{background:rgba(245,197,24,0.5);border:1px solid #F5C518}
-.leg-sent{background:rgba(41,128,185,0.4);border:1px solid #5dade2}
-.leg-conf{background:rgba(39,174,96,0.4);border:1px solid #2ecc71}
-
+.agenda-wrap{background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08);margin-bottom:24px}
 .agenda{width:100%;border-collapse:collapse}
-.agenda th{background:#243347;padding:10px 8px;font-family:'Syne',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid rgba(245,197,24,0.2);text-align:center}
-.agenda th.th-time{width:70px;color:#7A8FA6}
-.th-day{color:#F5C518;font-size:11px}
-.th-date{color:#7A8FA6;font-size:10px;font-weight:400;margin-top:2px}
-.td-time{background:#1E2F42;color:#7A8FA6;font-size:12px;font-weight:600;text-align:center;padding:10px 6px;border-bottom:1px solid rgba(255,255,255,0.04)}
-.slot{height:48px;cursor:pointer;text-align:center;vertical-align:middle;border-bottom:1px solid rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.04);transition:.15s;font-size:14px}
-.slot-free:hover{background:rgba(245,197,24,0.07)}
-.slot-selected{background:rgba(245,197,24,0.18)!important;border:1px solid rgba(245,197,24,0.5)!important}
-.slot-sent{background:rgba(41,128,185,0.15)!important;cursor:not-allowed}
-.slot-confirmed{background:rgba(39,174,96,0.18)!important;border:1px solid rgba(39,174,96,0.4)!important}
-.slot-icon{font-size:16px}
+.agenda thead th{background:linear-gradient(160deg,#4a7090,#3d6080);color:#fff;padding:11px 8px;text-align:center;font-family:'Source Sans 3',sans-serif;font-weight:600;font-size:0.82rem}
+.th-time{width:72px;background:linear-gradient(160deg,#3d6080,#2f4f6a)!important;font-size:0.7rem;text-transform:uppercase;letter-spacing:.05em}
+.th-jour{font-size:0.85rem;font-weight:700}
+.th-date{font-size:0.72rem;opacity:.8;margin-top:2px;font-weight:300}
+.td-time{background:#ddd9d1;color:#3d6080;font-size:0.82rem;font-weight:700;text-align:center;padding:0 8px;border-bottom:1px solid #c8c4bc}
+.slot{height:48px;cursor:pointer;text-align:center;vertical-align:middle;border-bottom:1px solid #c8c4bc;border-right:1px solid #c8c4bc;transition:.15s;background:#fff}
+.slot-free:hover{background:#fef9ed}
+.slot-sel{background:#fef3c7!important;border:2px solid #f5a623!important}
+.slot-prop{background:#dbe7f0!important;cursor:not-allowed}
+.slot-conf{background:#d4edda!important;border:1px solid #c3e6cb!important}
+.slot-rej{background:#f8d7da!important;border:1px solid #f5c6cb!important;cursor:not-allowed}
 
-.agenda-footer{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-top:1px solid rgba(255,255,255,0.06)}
-.sel-count{font-size:13px;color:#F5C518;font-weight:600}
-.sel-count.muted{color:#7A8FA6;font-weight:400}
+.agenda-empty{background:#e8e4dc;border:2px dashed #c8c4bc;border-radius:14px;padding:52px 20px;text-align:center;color:#8a9aaa;margin-bottom:24px}
+.agenda-empty svg{opacity:.4;margin-bottom:12px}
+.agenda-empty p{font-size:0.9rem;font-weight:300}
 
-/* EMPTY HINT */
-.empty-hint{background:#1A2635;border:2px dashed rgba(245,197,24,0.2);border-radius:14px;padding:50px 20px;text-align:center;color:#7A8FA6}
-.empty-hint p{margin-top:10px;font-size:14px}
+/* PROPOSITIONS */
 
-/* SIDE COLUMN */
-.col-side{display:flex;flex-direction:column;gap:12px}
-.side-title{display:flex;align-items:center;justify-content:space-between;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#F5C518;margin-bottom:4px}
-.badge-count{background:rgba(245,197,24,0.15);color:#F5C518;border:1px solid rgba(245,197,24,0.3);padding:2px 10px;border-radius:20px;font-size:12px}
-.side-empty{background:#1A2635;border:1px dashed rgba(245,197,24,0.15);border-radius:12px;padding:28px;text-align:center;color:#7A8FA6;font-size:13px}
-
-.prop-item{background:#1A2635;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px;transition:.2s}
-.prop-item:hover{transform:translateX(2px)}
-.prop-attente{border-left:3px solid #F5C518}
-.prop-confirme{border-left:3px solid #2ecc71}
-.prop-rappele{border-left:3px solid #5dade2}
-.prop-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.prop-avatar{width:34px;height:34px;border-radius:9px;background:#F5C518;color:#0F1923;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Syne',sans-serif}
-.prop-etudiant{font-weight:600;font-size:13px}
-.prop-datetime{font-size:12px;color:#7A8FA6;margin-top:1px}
-.prop-status-chip{margin-left:auto;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
-.chip-attente{background:rgba(245,197,24,0.15);color:#F5C518}
-.chip-confirme{background:rgba(39,174,96,0.15);color:#2ecc71}
-.chip-rappele{background:rgba(41,128,185,0.15);color:#5dade2}
-
-.prop-actions{display:flex;gap:8px}
-.mini-btn{padding:4px 10px;border-radius:7px;font-size:11px;font-weight:600;border:none;cursor:pointer;transition:.15s}
-.mini-remind{background:rgba(245,197,24,0.1);color:#F5C518;border:1px solid rgba(245,197,24,0.3)}
-.mini-remind:hover{background:rgba(245,197,24,0.2)}
-.mini-del{background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3)}
-.mini-del:hover{background:rgba(231,76,60,0.25)}
+.section-title{font-family:'Merriweather',serif;font-size:1rem;font-weight:700;color:#1e2a35;margin-bottom:14px}
+.props-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.prop-card{background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;transition:.18s}
+.prop-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.pc-attente{border-left:4px solid #f5a623}
+.pc-confirme{border-left:4px solid #27ae60}
+.pc-rejete{border-left:4px solid #e74c3c}
+.pc-rappele{border-left:4px solid #3d6080}
+.pc-av{width:36px;height:36px;border-radius:10px;background:linear-gradient(160deg,#4a7090,#2f4f6a);color:#fff;font-weight:700;font-size:0.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Merriweather',serif}
+.pc-mid{flex:1;min-width:0}
+.pc-nom{font-size:0.9rem;font-weight:700;color:#1e2a35}
+.pc-dt{font-size:0.8rem;color:#8a9aaa;margin-top:2px}
+.pc-raison{font-size:0.78rem;color:#721c24;background:#f8d7da;border-radius:6px;padding:4px 8px;margin-top:6px;display:flex;align-items:center;gap:5px}
+.pc-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.pc-badge{font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.pb-attente{background:#fff3cd;color:#856404;border:1px solid #ffc107}
+.pb-confirme{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.pb-rejete{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.pb-rappele{background:#d0e8f4;color:#2f4f6a;border:1px solid #aacfe4}
+.pc-del{background:none;border:none;cursor:pointer;color:#c8c4bc;display:flex;align-items:center;transition:color .15s}
+.pc-del:hover{color:#e74c3c}
 
 /* BUTTONS */
-.btn-gold{background:#F5C518;color:#0F1923;border:none;padding:10px 20px;border-radius:10px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;font-size:13px;transition:.2s}
-.btn-gold:hover:not(:disabled){background:#D4A017;box-shadow:0 4px 16px rgba(245,197,24,0.4)}
-.btn-gold:disabled{opacity:.35;cursor:not-allowed}
+.btn-gold{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;background:linear-gradient(160deg,#f5a623,#d98e1a);color:#1e2a35;border:none;border-radius:9px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.2s;box-shadow:0 3px 12px rgba(245,166,35,.3);white-space:nowrap}
+.btn-gold:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 18px rgba(245,166,35,.4)}
+.btn-gold:disabled{opacity:.4;cursor:not-allowed;transform:none}
 </style>

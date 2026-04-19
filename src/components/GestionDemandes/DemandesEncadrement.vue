@@ -58,6 +58,7 @@
                     <p class="err-msg" v-if="motifError">{{ motifError }}</p>
                     <div class="motif-actions">
                       <button class="btn-outline-sm" @click="showMotifFor=null; motifRejet=''">Annuler</button>
+                      <!-- FIX: was sending { motif: ... }, backend expects { motif_rejet: ... } -->
                       <button class="btn-danger-sm" @click="confirmerRejet(d.id)" :disabled="saving">{{ saving ? '...' : 'Confirmer le rejet' }}</button>
                     </div>
                   </div>
@@ -72,9 +73,7 @@
 </template>
 
 <script>
-import axios from 'axios'
-const api = axios.create({ baseURL: 'http://127.0.0.1:8000/api', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } })
-api.interceptors.request.use(c => { const u = localStorage.getItem('user'); if (u) c.headers.Authorization = `Bearer ${JSON.parse(u).token}`; return c })
+import api from '@/services/api.js'
 export default {
   name: 'DemandesEncadrement',
   emits: ['nb-en-attente'],
@@ -105,7 +104,11 @@ export default {
     async confirmerRejet(id) {
       if (!this.motifRejet.trim() || this.motifRejet.length < 10) { this.motifError = 'Le motif doit contenir au moins 10 caractères.'; return }
       this.motifError = ''; this.saving = true
-      try { await api.post(`/demandes-encadrement/${id}/rejeter`, { motif: this.motifRejet }); this.showMotifFor = null; this.motifRejet = ''; this.detailOuvert = null; await this.chargerDemandes() }
+      try {
+        // FIX: Backend DemandeEncadrementController@rejeter expects 'motif_rejet', not 'motif'
+        await api.post(`/demandes-encadrement/${id}/rejeter`, { motif_rejet: this.motifRejet })
+        this.showMotifFor = null; this.motifRejet = ''; this.detailOuvert = null; await this.chargerDemandes()
+      }
       catch(e) { console.error(e.response?.data?.message) } finally { this.saving = false }
     },
     compterStatut(val) { return val === 'toutes' ? this.demandes.length : this.demandes.filter(d=>d.statut===val).length },

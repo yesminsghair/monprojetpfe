@@ -21,7 +21,7 @@
     <!-- US 17 - 3.c : Filtre par spécialité -->
     <div class="select-wrap">
       <select :value="filtreSpecialite"
-        @change="$emit('update:filtreSpecialite', $event.target.value)">
+        @change="$emit('update:filtreSpecialite', $event.target.value ? Number($event.target.value) : '')">
         <option value="">Toutes les spécialités</option>
         <option v-for="sp in specialites" :key="sp.id" :value="sp.id">{{ sp.nom }}</option>
       </select>

@@ -22,7 +22,6 @@
 
         <div class="nav-cat" v-if="!sidebarCollapsed">Demande d'encadrement</div>
 
-        <!-- Gérer Demandes d'encadrement -->
         <button class="nav-item" :class="{active:currentPage==='ma-demande'}" @click="navigate('ma-demande')" :title="sidebarCollapsed?'Ma demande':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Ma demande</span>
@@ -34,19 +33,16 @@
 
         <div class="nav-cat" v-if="!sidebarCollapsed">Mon projet PFE</div>
 
-        <!-- Livrables -->
         <button class="nav-item" :class="{active:currentPage==='livrables'}" @click="navigate('livrables')" :title="sidebarCollapsed?'Livrables':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Mes livrables</span>
         </button>
 
-        <!-- Réunions -->
         <button class="nav-item" :class="{active:currentPage==='reunions'}" @click="navigate('reunions')" :title="sidebarCollapsed?'Réunions':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Réunions</span>
         </button>
 
-        <!-- Résultats -->
         <button class="nav-item" :class="{active:currentPage==='resultats'}" @click="navigate('resultats')" :title="sidebarCollapsed?'Résultats':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Mon résultat final</span>
@@ -75,8 +71,29 @@
           <div v-if="currentPage==='home'" key="home">
             <div class="ptb"><h1 class="pt">Bonjour, {{ currentUser.prenom }} 👋</h1><p class="ps">Soumettez et suivez votre demande d'encadrement PFE.</p></div>
 
-            <!-- ✅ AFFECTATION DIFFUSÉE -->
             <div v-if="monAffectation && monAffectation.statut === 'diffusee'" class="banner-affectation">
+
+            <!-- ── Phase countdown alert ── -->
+            <div v-if="phaseEnCours && joursRestants !== null"
+              class="banner-phase-countdown"
+              :class="{
+                'bpc-urgent':  joursRestants <= 3,
+                'bpc-warning': joursRestants > 3 && joursRestants <= 7,
+                'bpc-normal':  joursRestants > 7
+              }">
+              <div class="bpc-icon">{{ joursRestants <= 3 ? '🔴' : joursRestants <= 7 ? '🟡' : '📅' }}</div>
+              <div class="bpc-body">
+                <div class="bpc-t">Phase en cours : <strong>{{ phaseEnCours.nom }}</strong></div>
+                <div class="bpc-s" v-if="joursRestants > 0">
+                  Il vous reste <strong>{{ joursRestants }} jour{{ joursRestants > 1 ? 's' : '' }}</strong>
+                  pour soumettre votre livrable
+                  <span v-if="phaseEnCours.date_fin">
+                    (échéance : {{ new Date(phaseEnCours.date_fin).toLocaleDateString('fr-FR') }})
+                  </span>
+                </div>
+                <div class="bpc-s bpc-expired" v-else>⚠️ La date limite de cette phase est dépassée.</div>
+              </div>
+            </div>
               <div class="ba-icon">🎓</div>
               <div class="ba-body">
                 <div class="ba-t">Votre affectation a été publiée !</div>
@@ -88,13 +105,27 @@
               <span class="ba-badge">✓ Officiel</span>
             </div>
 
-            <!-- ℹ️ Mode non-accord mutuel : demandes désactivées -->
-            <div v-if="!accordMutuelActif && !monAffectation" class="banner-info">
-              <span>ℹ️</span>
-              <div>Le chef de département gère les affectations automatiquement. Les demandes directes ne sont pas disponibles pour votre promotion.</div>
+            <div v-if="loadingDonnees" class="loading-state" style="padding:32px;text-align:center;color:#8a9aaa">
+              <div class="spinner" style="width:24px;height:24px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;margin-bottom:8px"></div>
+              <p>Chargement...</p>
             </div>
 
-            <!-- Statut demande -->
+            <template v-else>
+
+            <div v-if="!accordMutuelActif && !monAffectation" class="banner-info">
+              <span>ℹ️</span>
+              <div>Le chef de département n'a pas encore activé le mode accord mutuel. Les demandes directes ne sont pas disponibles pour le moment.</div>
+            </div>
+
+            <div v-if="accordMutuelActif && !maDemande && !monAffectation" class="banner-accord-mutuel">
+              <div class="bam-icon">🤝</div>
+              <div class="bam-body">
+                <div class="bam-t">Mode accord mutuel activé</div>
+                <div class="bam-s">Le chef de département vous invite à choisir votre encadrant et soumettre une demande. Consultez la liste des encadrants disponibles et envoyez votre demande dès maintenant.</div>
+              </div>
+              <button class="bam-btn" @click="navigate('encadrants')">Choisir un encadrant →</button>
+            </div>
+
             <div v-if="maDemande && accordMutuelActif" class="statut-card-rich">
               <div class="scr-left">
                 <div class="scr-ico" :class="'scr-ico-'+maDemande.statut">{{ statutIcon(maDemande.statut) }}</div>
@@ -125,7 +156,6 @@
 
             <div class="sec-title">Actions</div>
             <div class="qa-grid">
-              <!-- Si affectation diffusée : afficher la carte résultat -->
               <div v-if="monAffectation && monAffectation.statut === 'diffusee'" class="qa-card qa-card-result">
                 <div class="qa-icon qa-green"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
                 <div class="qa-txt">
@@ -134,7 +164,6 @@
                   <div class="qa-s" v-if="monAffectation.specialite">{{ monAffectation.specialite }}</div>
                 </div>
               </div>
-              <!-- Demande (seulement si accord mutuel) -->
               <button v-if="accordMutuelActif" class="qa-card" @click="navigate('ma-demande')">
                 <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
                 <div class="qa-txt"><div class="qa-t">{{ maDemande ? 'Gérer ma demande' : 'Soumettre une demande' }}</div><div class="qa-s">Titre, description, encadrant, document</div></div>
@@ -161,12 +190,12 @@
                 <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
+
+            </template><!-- end v-else loading -->
           </div>
 
           <!-- MA DEMANDE -->
           <div v-else-if="currentPage==='ma-demande'" key="ma-demande">
-
-            <!-- Mode verrou -->
             <div v-if="!accordMutuelActif && !maDemande" class="lock-card">
               <div class="lock-icon">🔒</div>
               <h3>Demandes non disponibles</h3>
@@ -180,7 +209,6 @@
                 <p class="sps">{{ maDemande && !editMode ? 'Consultez ou modifiez votre demande' : 'Remplissez le formulaire' }}</p></div>
               </div>
 
-              <!-- Vue demande existante -->
               <div v-if="maDemande && !editMode" class="demande-view">
                 <div class="statut-banner" :class="'sb-'+maDemande.statut">
                   <div class="sb-icon">{{ statutIcon(maDemande.statut) }}</div>
@@ -213,7 +241,6 @@
                 </div>
               </div>
 
-              <!-- Formulaire -->
               <div v-if="!maDemande || editMode" class="form-card">
                 <div class="form-title">{{ editMode ? '✏️ Modifier ma demande' : '📝 Nouvelle demande d\'encadrement' }}</div>
 
@@ -225,7 +252,7 @@
 
                 <div class="field-block">
                   <label class="fl">Description <span class="req">*</span></label>
-                  <textarea v-model="formDemande.description" class="fi ft" rows="4" placeholder="Décrivez votre sujet, objectifs et méthodologie..."/>
+                  <textarea v-model="formDemande.description" class="fi ft" rows="4" placeholder="Décrivez votre sujet, objectifs et méthodologie..."></textarea>
                   <p class="err" v-if="errs.description">{{ errs.description }}</p>
                 </div>
 
@@ -266,7 +293,6 @@
             </template>
           </div>
 
-          <!-- ═══ CONSULTER DEMANDE ═══ -->
           <div v-else-if="currentPage==='consulter-demande'" key="consulter-demande">
             <div class="page-header-back">
               <button class="back-btn" @click="navigate('home')">
@@ -276,7 +302,6 @@
               <div><h2 class="spt">Ma demande</h2><p class="sps">Détails de votre demande d'encadrement</p></div>
             </div>
             <div v-if="maDemande">
-              <!-- Bannière statut -->
               <div class="statut-banner" :class="'sb-'+maDemande.statut">
                 <div class="sb-icon">{{ statutIcon(maDemande.statut) }}</div>
                 <div class="sb-body">
@@ -289,7 +314,6 @@
               <div class="motif-rejet" v-if="maDemande.statut==='rejetee' && maDemande.motif_rejet">
                 <strong>⚠ Motif du rejet :</strong> {{ maDemande.motif_rejet }}
               </div>
-              <!-- Détails -->
               <div class="dv-card">
                 <div class="dv-row"><span class="dv-lbl">Sujet</span><span class="dv-val">{{ maDemande.sujet || maDemande.titre }}</span></div>
                 <div class="dv-row"><span class="dv-lbl">Encadrant</span><span class="dv-val">{{ maDemande.encadrant || '—' }}</span></div>
@@ -304,7 +328,6 @@
                 </div>
                 <div class="dv-row"><span class="dv-lbl">Date</span><span class="dv-val">{{ maDemande.date_demande ? new Date(maDemande.date_demande).toLocaleDateString('fr-FR') : '—' }}</span></div>
               </div>
-              <!-- Actions bas de page -->
               <div class="page-footer-actions" v-if="maDemande.statut==='en_attente'">
                 <button class="btn-primary" @click="navigate('modifier-demande')">
                   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -318,7 +341,6 @@
             </div>
           </div>
 
-          <!-- ═══ MODIFIER DEMANDE ═══ -->
           <div v-else-if="currentPage==='modifier-demande'" key="modifier-demande">
             <div class="page-header-back">
               <button class="back-btn" @click="navigate('consulter-demande')">
@@ -370,7 +392,6 @@
             </div>
           </div>
 
-          <!-- ═══ ANNULER DEMANDE ═══ -->
           <div v-else-if="currentPage==='annuler-demande'" key="annuler-demande">
             <div class="page-header-back">
               <button class="back-btn" @click="navigate('consulter-demande')">
@@ -400,15 +421,19 @@
             </div>
           </div>
 
-          <!-- ENCADRANTS DISPONIBLES -->
           <div v-else-if="currentPage==='encadrants'" key="encadrants">
             <div class="ph">
               <h2 class="spt">Encadrants disponibles</h2>
               <p class="sps">Recherchez et choisissez votre encadrant PFE</p>
             </div>
 
-            <!-- Bloqué si demande en cours -->
-            <div v-if="maDemande && (maDemande.statut==='en_attente' || maDemande.statut==='acceptee')" class="lock-card">
+            <div v-if="!accordMutuelActif && !monAffectation" class="lock-card">
+              <div class="lock-icon">🔒</div>
+              <h3>Mode accord mutuel non activé</h3>
+              <p>Le chef de département n'a pas encore activé le mode accord mutuel. Revenez plus tard.</p>
+              <button class="btn-outline" @click="navigate('home')">← Retour</button>
+            </div>
+            <div v-else-if="maDemande && (maDemande.statut==='en_attente' || maDemande.statut==='acceptee')" class="lock-card">
               <div class="lock-icon">🔒</div>
               <h3>Liste non disponible</h3>
               <p v-if="maDemande.statut==='en_attente'">Vous avez déjà une demande <strong>en attente</strong>. Vous ne pouvez pas parcourir les encadrants tant qu'elle n'est pas traitée.</p>
@@ -416,13 +441,11 @@
               <button class="btn-outline" @click="navigate('consulter-demande')">Voir ma demande</button>
             </div>
             <template v-else>
-            <!-- Barre de recherche -->
             <div class="search-bar-wrap">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a9aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input v-model="searchEnc" class="search-input" placeholder="Rechercher par nom, domaine..." />
               <button v-if="searchEnc" @click="searchEnc=''" class="search-clear">✕</button>
             </div>
-            <!-- Fiche détail encadrant -->
             <div v-if="ficheEncadrant" class="fiche-overlay" @click.self="ficheEncadrant=null">
               <div class="fiche-modal">
                 <button class="fiche-close" @click="ficheEncadrant=null">✕</button>
@@ -441,7 +464,6 @@
                 </button>
               </div>
             </div>
-            <!-- Liste filtrée -->
             <div v-if="encadrantsFiltres.length === 0" class="empty-enc">Aucun encadrant trouvé.</div>
             <div class="enc-grid" v-else>
               <div v-for="e in encadrantsFiltres" :key="e.id" class="enc-card" :class="{'enc-full':!e.disponible}">
@@ -451,7 +473,9 @@
                     <div class="enc-nom">{{ e.prenom }} {{ e.nom }}</div>
                     <div class="enc-dept">{{ e.domaine || 'Encadrant' }}</div>
                   </div>
-                  <span class="dispo-badge dispo-ok">Disponible</span>
+                <span class="dispo-badge" :class="e.disponible ? 'dispo-ok' : 'dispo-ko'">
+                    {{ e.disponible ? 'Disponible' : 'Complet' }}
+                </span>
                 </div>
                 <div class="enc-specs">
                   <span class="spec-tag" v-if="e.domaine">{{ e.domaine }}</span>
@@ -468,7 +492,6 @@
             </template>
           </div>
 
-
           <ConsulterProfil
             v-else-if="currentPage==='profil'"
             key="profil"
@@ -481,21 +504,19 @@
             @sauvegarde="currentPage='profil'"
           />
 
-          <!-- LIVRABLES -->
           <LivrableEtudiant
             v-else-if="currentPage==='livrables'"
             key="livrables"
             @toast="afficherToast"
           />
 
-          <!-- RÉUNIONS -->
+          <!-- ✅ Student uses ReunionEtudiant (confirmation view) -->
           <ReunionEtudiant
             v-else-if="currentPage==='reunions'"
             key="reunions"
             @toast="afficherToast"
           />
 
-          <!-- RÉSULTAT FINAL -->
           <div v-else-if="currentPage==='resultats'" key="resultats">
             <div class="ptb"><h2 class="spt">Mon résultat final</h2><p class="sps">Consultez votre note, mention et décision suite à la délibération</p></div>
             <div v-if="monResultat" class="resultat-card">
@@ -541,132 +562,167 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/services/api.js'
 import ConsulterProfil from './ConsulterProfil.vue'
-import ModifierProfil  from './ModifierProfil.vue'
+import ModifierProfil from './ModifierProfil.vue'
 import LivrableEtudiant from './Livrablesetudiant.vue'
-import ReunionEtudiant  from './Reunionetudiant.vue'
-
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Accept': 'application/json' },
-})
-api.interceptors.request.use(cfg => {
-  const u = localStorage.getItem('user')
-  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
-  // Ne pas forcer Content-Type pour FormData (le browser le fait automatiquement avec boundary)
-  if (!(cfg.data instanceof FormData)) {
-    cfg.headers['Content-Type'] = 'application/json'
-  }
-  return cfg
-})
+import ReunionEtudiant from './Reunionetudiant.vue'
 
 export default {
   name: 'DashboardEtudiant',
-  components: { ConsulterProfil, ModifierProfil, LivrableEtudiant, ReunionEtudiant },
+
+  components: {
+    ConsulterProfil,
+    ModifierProfil,
+    LivrableEtudiant,
+    ReunionEtudiant
+  },
 
   async mounted() {
     await this.chargerDonnees()
     await this.chargerResultat()
+    await this.chargerPhaseActive()
   },
 
   data() {
     return {
       sidebarCollapsed: false,
       currentPage: 'home',
-      toast: { visible:false, type:'toast-ok', message:'' },
+
+      toast: {
+        visible: false,
+        type: 'toast-ok',
+        message: ''
+      },
+
       currentUser: JSON.parse(localStorage.getItem('user') || '{}'),
+
       maDemande: null,
       editMode: false,
       submitting: false,
-      formDemande: { sujet:'', description:'', encadrant_id: null, fichier: null },
+
+      formDemande: {
+        sujet: '',
+        description: '',
+        encadrant_id: null,
+        fichier: null
+      },
+
       errs: {},
       encadrants: [],
       accordMutuelActif: false,
       monAffectation: null,
+      loadingDonnees: true,
+
       searchEnc: '',
       ficheEncadrant: null,
+
       monResultat: null,
       loadingResultat: false,
+      phaseEnCours: null,
     }
   },
 
   computed: {
+    joursRestants() {
+      if (!this.phaseEnCours?.date_fin) return null
+      const fin = new Date(this.phaseEnCours.date_fin)
+      fin.setHours(23, 59, 59, 999)
+      return Math.ceil((fin - new Date()) / (1000 * 60 * 60 * 24))
+    },
+
     encadrantsFiltres() {
       if (!this.searchEnc) return this.encadrants
+
       const q = this.searchEnc.toLowerCase()
+
       return this.encadrants.filter(e =>
-        (e.nom + ' ' + e.prenom).toLowerCase().includes(q) ||
+        (`${e.nom} ${e.prenom}`.toLowerCase().includes(q)) ||
         (e.domaine || '').toLowerCase().includes(q) ||
         (e.specialite || '').toLowerCase().includes(q)
       )
     },
+
     breadcrumb() {
-      return {
-        'ma-demande':         'Ma demande',
-        'consulter-demande':  'Consulter ma demande',
-        'modifier-demande':   'Modifier ma demande',
-        'annuler-demande':    'Annuler ma demande',
-        encadrants:           'Encadrants disponibles',
-        livrables:            'Mes livrables',
-        reunions:             'Réunions',
-        resultats:            'Mon résultat final',
-        profil:               'Mon profil',
-        'profil-edit':        'Modifier le profil',
-      }[this.currentPage] || ''
+      const map = {
+        'ma-demande': 'Ma demande',
+        'consulter-demande': 'Consulter ma demande',
+        'modifier-demande': 'Modifier ma demande',
+        'annuler-demande': 'Annuler ma demande',
+        encadrants: 'Encadrants disponibles',
+        livrables: 'Mes livrables',
+        reunions: 'Réunions',
+        resultats: 'Mon résultat final',
+        profil: 'Mon profil',
+        'profil-edit': 'Modifier le profil',
+      }
+
+      return map[this.currentPage] || ''
     },
+
     dateNow() {
-      return new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
-    },
+      return new Date().toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+    }
   },
 
   methods: {
-    navigate(p) {
-      this.currentPage = p
-      // Pré-remplir formulaire quand on va sur modifier-demande
-      if (p === 'modifier-demande' && this.maDemande) {
+      initiales(fullname) {
+    if (!fullname) return ''
+    const parts = fullname.split(' ')
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase()
+  },
+    navigate(page) {
+      this.currentPage = page
+
+      if (page === 'modifier-demande' && this.maDemande) {
         this.formDemande = {
-          sujet:        this.maDemande.sujet || this.maDemande.titre || '',
-          description:  this.maDemande.description || '',
+          sujet: this.maDemande.sujet || this.maDemande.titre || '',
+          description: this.maDemande.description || '',
           encadrant_id: this.maDemande.encadrant_id || null,
-          fichier:      null,
+          fichier: null
         }
         this.errs = {}
       }
     },
-    logout() {
-      localStorage.removeItem('user')
-      this.$router?.push('/login')
-    },
-    initiales(n) { return (n||'?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2) },
-    statusBadge(s) { return {en_attente:'badge-orange',acceptee:'badge-green',rejetee:'badge-red'}[s]||'badge-gray' },
-    statutColor(s) { return {en_attente:'gold',acceptee:'green',rejetee:'red'}[s]||'slate' },
-    statutIcon(s)  { return {en_attente:'⏳',acceptee:'✅',rejetee:'❌'}[s]||'📄' },
-    labelStatut(s) { return {en_attente:'En attente',acceptee:'Acceptée',rejetee:'Rejetée'}[s]||s },
-    mention(note) {
-      if (note >= 16) return 'Très bien'
-      if (note >= 14) return 'Bien'
-      if (note >= 12) return 'Assez bien'
-      if (note >= 10) return 'Passable'
-      return 'Insuffisant'
-    },
-    mentionClass(note) {
-      if (note >= 16) return 'mention-tb'
-      if (note >= 14) return 'mention-b'
-      if (note >= 12) return 'mention-ab'
-      if (note >= 10) return 'mention-p'
-      return 'mention-ins'
-    },
+
     afficherToast({ message, type }) {
       this.toast = { visible: true, type, message }
-      setTimeout(() => { this.toast.visible = false }, 3400)
+
+      setTimeout(() => {
+        this.toast.visible = false
+      }, 3000)
     },
+
+    async chargerPhaseActive() {
+      try {
+        // /api/phases returns only active phases for non-chef users
+        const res = await api.get('/phases')
+        const phases = res.data || []
+        // Find the active (not yet terminated) phase
+        this.phaseEnCours = phases.find(p => p.active && !p.terminee) || null
+      } catch {
+        this.phaseEnCours = null
+      }
+    },
+
     async chargerResultat() {
       this.loadingResultat = true
+
       try {
-        const res = await api.get('/deliberation/mon-resultat')
-        this.monResultat = res.data || null
-      } catch {
+        const res = await api.get('/resultats')
+        const resultats = Array.isArray(res.data) ? res.data : []
+
+        this.monResultat = resultats.find(r =>
+          r.etudiant_id === this.currentUser?.id
+        ) || null
+
+      } catch (error) {
+        console.error('Erreur résultat:', error)
         this.monResultat = null
       } finally {
         this.loadingResultat = false
@@ -674,120 +730,221 @@ export default {
     },
 
     async chargerDonnees() {
+      this.loadingDonnees = true
       try {
-        // 1. Ma demande existante
-        const demRes = await api.get('/demandes-encadrement')
-        this.maDemande = demRes.data || null
+        const [demRes, encRes, modeRes, affRes] = await Promise.all([
+          api.get('/demandes-encadrement'),
+          api.get('/affectations/encadrants-disponibles'),
+          api.get('/affectations/mode'),
+          api.get('/affectations/mon-affectation').catch(() => ({ data: null })),
+        ])
 
-        // 2. Encadrants disponibles
-        const encRes = await api.get('/affectations/encadrants-disponibles')
+        // API returns a single object (not array) for students
+        const demData = demRes.data
+        if (!demData) {
+          this.maDemande = null
+        } else if (Array.isArray(demData)) {
+          this.maDemande = demData[0] || null
+        } else if (typeof demData === 'object' && demData.id) {
+          this.maDemande = demData
+        } else {
+          this.maDemande = null
+        }
+
         this.encadrants = encRes.data || []
 
-        // 3. Mode d'affectation du chef (accord mutuel ou automatique)
-        const modeRes = await api.get('/affectations/mode')
-        const mode = modeRes.data
-        // accord mutuel = mode manuel (peu importe si diffusé ou pas)
-        this.accordMutuelActif = mode.mode === 'manuel'
+        // mode === 'manuel' means accord-mutuel is active for this promo
+        const mode = modeRes.data?.mode
+        this.accordMutuelActif = mode === 'manuel'
 
-        // 4. Mon affectation diffusée
-        const affRes = await api.get('/affectations')
         const affData = affRes.data
-        if (affData && !Array.isArray(affData) && affData.statut === 'diffusee') {
-          this.monAffectation = affData
-        } else if (Array.isArray(affData)) {
+        if (Array.isArray(affData)) {
           this.monAffectation = affData.find(a => a.statut === 'diffusee') || null
+        } else if (affData && affData.id) {
+          this.monAffectation = affData
         } else {
           this.monAffectation = null
         }
 
-      } catch (e) {
-        console.error('Erreur chargement:', e)
-        this.accordMutuelActif = true
+      } catch (error) {
+        console.error('Erreur chargement:', error)
+        this.accordMutuelActif = false
+      } finally {
+        this.loadingDonnees = false
       }
     },
 
-    handleFile(e) {
-      const f = e.target.files[0]
-      if (f) this.formDemande.fichier = f
-    },
-    handleDrop(e) {
-      const f = e.dataTransfer.files[0]
-      if (f) this.formDemande.fichier = f
-    },
-    async modifierDemande() {
-      this.errs = {}
-      if (!this.formDemande.sujet)        this.errs.sujet = 'Le sujet est obligatoire'
-      if (!this.formDemande.description)  this.errs.description = 'La description est obligatoire'
-      if (!this.formDemande.encadrant_id) this.errs.encadrant = 'Choisissez un encadrant'
-      if (Object.keys(this.errs).length) return
-      this.submitting = true
-      try {
-        const fd = new FormData()
-        fd.append('sujet',        this.formDemande.sujet)
-        fd.append('description',  this.formDemande.description)
-        fd.append('encadrant_id', this.formDemande.encadrant_id)
-        fd.append('_method',      'PUT')
-        if (this.formDemande.fichier) fd.append('doc_pdf', this.formDemande.fichier)
-        const res = await api.post(`/demandes-encadrement/${this.maDemande.id}`, fd)
-        this.maDemande = res.data.demande || res.data
-        this.afficherToast({ message: 'Demande modifiée avec succès !', type: 'toast-ok' })
-        this.navigate('consulter-demande')
-      } catch (e) {
-        this.afficherToast({ message: e.response?.data?.message || 'Erreur.', type: 'toast-err' })
-      } finally { this.submitting = false }
-    },
     async soumettreDemande() {
       this.errs = {}
-      if (!this.formDemande.sujet)        this.errs.sujet = 'Le sujet est obligatoire'
-      if (!this.formDemande.description)  this.errs.description = 'La description est obligatoire'
-      if (!this.formDemande.encadrant_id) this.errs.encadrant = 'Choisissez un encadrant'
+
+      if (!this.formDemande.sujet)
+        this.errs.sujet = 'Le sujet est obligatoire'
+
+      if (!this.formDemande.description)
+        this.errs.description = 'La description est obligatoire'
+
+      if (!this.formDemande.encadrant_id)
+        this.errs.encadrant = 'Choisissez un encadrant'
+
       if (Object.keys(this.errs).length) return
 
       this.submitting = true
+
       try {
         const fd = new FormData()
-        fd.append('sujet',        this.formDemande.sujet)
-        fd.append('description',  this.formDemande.description)
-        fd.append('encadrant_id', this.formDemande.encadrant_id)
-        if (this.formDemande.fichier) fd.append('doc_pdf', this.formDemande.fichier)
+        fd.append('sujet', this.formDemande.sujet)
+        fd.append('description', this.formDemande.description)
+        fd.append('encadrant_id', String(this.formDemande.encadrant_id))
 
-        const res = await api.post('/demandes-encadrement', fd)
-        this.maDemande   = res.data.demande || res.data
-        this.formDemande = { sujet:'', description:'', encadrant_id: null, fichier: null }
-        this.afficherToast({ message: 'Demande soumise avec succès !', type: 'toast-ok' })
+        if (this.formDemande.fichier instanceof File) {
+          fd.append('doc_pdf', this.formDemande.fichier, this.formDemande.fichier.name)
+        }
+
+        // Let browser set multipart/form-data with correct boundary
+        const res = await api.post('/demandes-encadrement', fd, {
+          headers: { 'Content-Type': undefined }
+        })
+
+        this.maDemande = res.data.demande || res.data
+
+        this.formDemande = {
+          sujet: '',
+          description: '',
+          encadrant_id: null,
+          fichier: null
+        }
+
+        this.afficherToast({
+          message: 'Demande soumise avec succès !',
+          type: 'toast-ok'
+        })
+
         this.navigate('home')
-      } catch (e) {
-        this.afficherToast({ message: e.response?.data?.message || 'Erreur lors de la soumission.', type: 'toast-err' })
+
+      } catch (error) {
+        this.afficherToast({
+          message: error.response?.data?.message || 'Erreur lors de la soumission.',
+          type: 'toast-err'
+        })
       } finally {
         this.submitting = false
       }
     },
 
-    async annulerDemande() {
-      if (!this.maDemande?.id) return
-      this.submitting = true
-      try {
-        await api.delete(`/demandes-encadrement/${this.maDemande.id}`)
-        this.maDemande = null
-        this.afficherToast({ message: 'Demande annulée.', type: 'toast-ok' })
-        this.currentPage = 'home'
-      } catch (e) {
-        this.afficherToast({ message: e.response?.data?.message || 'Erreur.', type: 'toast-err' })
-      } finally { this.submitting = false }
-    },
-
+    // ── Encadrant selection from the list ──────────────────────────
     choisirEncadrant(enc) {
       this.formDemande.encadrant_id = enc.id
-      this.afficherToast({ message: `${enc.prenom} ${enc.nom} sélectionné(e).`, type: 'toast-ok' })
+      const nom = enc.nom_complet || ((enc.prenom || '') + ' ' + (enc.nom || '')).trim()
+      this.afficherToast({ message: nom + ' sélectionné(e).', type: 'toast-ok' })
       this.navigate('ma-demande')
-      this.editMode = true
+      this.editMode = false
     },
 
-    afficherToast({message,type}) {
-      this.toast = { visible:true, type, message }
-      setTimeout(() => { this.toast.visible = false }, 3400)
+    // ── File upload handlers ────────────────────────────────────
+    handleFile(event) {
+      const file = event.target.files[0]
+      if (file) this.formDemande.fichier = file
     },
-  },
+
+    handleDrop(event) {
+      const file = event.dataTransfer.files[0]
+      if (file) this.formDemande.fichier = file
+    },
+
+    // ── Status helpers ──────────────────────────────────────────
+    statutIcon(statut) {
+      const icons = { en_attente: '⏳', acceptee: '✅', rejetee: '❌' }
+      return icons[statut] || '📄'
+    },
+
+    labelStatut(statut) {
+      const labels = { en_attente: 'En attente', acceptee: 'Acceptée', rejetee: 'Rejetée' }
+      return labels[statut] || statut
+    },
+
+    // ── Result helpers ──────────────────────────────────────────
+    mention(note) {
+      if (note >= 16) return 'Très bien'
+      if (note >= 14) return 'Bien'
+      if (note >= 12) return 'Assez bien'
+      if (note >= 10) return 'Passable'
+      return 'Insuffisant'
+    },
+
+    mentionClass(note) {
+      if (note >= 16) return 'mention-tb'
+      if (note >= 14) return 'mention-b'
+      if (note >= 12) return 'mention-ab'
+      if (note >= 10) return 'mention-p'
+      return 'mention-ins'
+    },
+
+    // ── Auth ────────────────────────────────────────────────────
+    logout() {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      this.$router.push('/login')
+    },
+
+    // ── Modify existing request ─────────────────────────────────
+    async modifierDemande() {
+      this.errs = {}
+      if (!this.formDemande.sujet)        this.errs.sujet       = 'Le sujet est obligatoire'
+      if (!this.formDemande.description)  this.errs.description = 'La description est obligatoire'
+      if (!this.formDemande.encadrant_id) this.errs.encadrant   = 'Choisissez un encadrant'
+      if (Object.keys(this.errs).length) return
+
+      this.submitting = true
+      try {
+        const fd = new FormData()
+        fd.append('sujet',        this.formDemande.sujet)
+        fd.append('description',  this.formDemande.description)
+        fd.append('encadrant_id', String(this.formDemande.encadrant_id))
+        if (this.formDemande.fichier instanceof File) fd.append('doc_pdf', this.formDemande.fichier, this.formDemande.fichier.name)
+
+        // Laravel method spoofing via form field (works with multipart)
+        fd.append('_method', 'PUT')
+        const res = await api.post(
+          '/demandes-encadrement/' + this.maDemande.id,
+          fd,
+          { headers: { 'Content-Type': undefined } }
+        )
+        this.maDemande = res.data.demande || res.data
+        this.editMode  = false
+        this.afficherToast({ message: 'Demande mise à jour !', type: 'toast-ok' })
+        this.navigate('ma-demande')
+      } catch (error) {
+        this.afficherToast({
+          message: (error.response && error.response.data && error.response.data.message)
+            || 'Erreur lors de la modification.',
+          type: 'toast-err'
+        })
+      } finally {
+        this.submitting = false
+      }
+    },
+
+    // ── Cancel request ──────────────────────────────────────────
+    async annulerDemande() {
+      this.submitting = true
+      try {
+        await api.delete('/demandes-encadrement/' + this.maDemande.id)
+        this.maDemande = null
+        this.editMode  = false
+        this.formDemande = { sujet: '', description: '', encadrant_id: null, fichier: null }
+        this.afficherToast({ message: 'Demande annulée.', type: 'toast-ok' })
+        this.navigate('home')
+      } catch (error) {
+        this.afficherToast({
+          message: (error.response && error.response.data && error.response.data.message)
+            || "Impossible d'annuler.",
+          type: 'toast-err'
+        })
+      } finally {
+        this.submitting = false
+      }
+    },
+  }
 }
 </script>
 
@@ -822,9 +979,7 @@ export default {
 .content-area{flex:1;padding:32px;overflow-y:auto}
 .ptb{margin-bottom:24px}.pt{font-family:'Merriweather',serif;font-size:24px;font-weight:700;color:#1e2a35;margin-bottom:5px}.ps{font-size:14px;color:#7A8FA6}
 .ph{margin-bottom:22px}.spt{font-family:'Merriweather',serif;font-size:20px;font-weight:700;color:#1e2a35;margin-bottom:4px}.sps{font-size:13.5px;color:#7A8FA6}
-/* Statut card */
 .statut-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:20px;margin-bottom:24px}
-/* Bannière statut demande */
 .statut-banner{display:flex;align-items:center;gap:14px;border-radius:14px;padding:18px 22px;margin-bottom:16px}
 .sb-en_attente{background:#fff8e8;border:1.5px solid #f5a623}
 .sb-acceptee{background:#d4edda;border:1.5px solid rgba(39,174,96,0.4)}
@@ -832,19 +987,15 @@ export default {
 .sb-icon{font-size:26px;flex-shrink:0}
 .sb-body{flex:1}.sb-t{font-size:15px;font-weight:700;color:#1e2a35}.sb-s{font-size:13px;color:#4a5a6a;margin-top:2px}
 .motif-rejet{background:#f8d7da;border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:12px 16px;font-size:13.5px;color:#922b21;margin-bottom:16px}
-/* Détails demande */
 .dv-card{background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:14px;overflow:hidden;margin-bottom:16px}
 .dv-row{display:flex;align-items:flex-start;gap:16px;padding:13px 18px;border-bottom:1px solid #c8c4bc;font-size:13.5px}.dv-row:last-child{border-bottom:none}
 .dv-lbl{width:110px;color:#8a9aaa;font-weight:600;font-size:13px;flex-shrink:0}.dv-val{color:#1e2a35;line-height:1.5}
-/* File upload */
 .file-upload-zone{border:2px dashed #c8c4bc;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:border-color .18s;background:#243347}.file-upload-zone:hover{border-color:#F5C518}
 .file-upload-placeholder p{font-size:14px;color:#4a5a6a;margin:8px 0 4px}.file-upload-placeholder span{font-size:12px;color:#7A8FA6}
 .file-selected{display:flex;align-items:center;justify-content:space-between;padding:4px 0}.file-selected span{font-size:14px;color:#1e2a35}
 .file-remove{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;padding:0 6px}.file-remove:hover{color:#c0392b}
-/* Lock card */
 .lock-card{text-align:center;padding:60px 32px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:16px}
 .lock-icon{font-size:48px;margin-bottom:16px}.lock-card h3{font-family:'Merriweather',serif;font-size:18px;color:#1e2a35;margin-bottom:8px}.lock-card p{font-size:14px;color:#8a9aaa;margin-bottom:24px}
-/* ── Statut card enrichie (home) ── */
 .statut-card-rich{display:flex;align-items:center;gap:16px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:16px;padding:18px 20px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
 .scr-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
 .scr-ico{font-size:32px;flex-shrink:0;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:12px}
@@ -861,12 +1012,10 @@ export default {
 .scr-btn-view{background:rgba(245,197,24,0.1);color:#F5C518}.scr-btn-view:hover{background:rgba(245,197,24,0.2);color:#fff}
 .scr-btn-edit{background:rgba(245,166,35,0.12);color:#d98e1a}.scr-btn-edit:hover{background:#f5a623;color:#fff}
 .scr-btn-del{background:rgba(231,76,60,0.1);color:#e74c3c}.scr-btn-del:hover{background:#e74c3c;color:#fff}
-/* ── Pages dédiées ── */
 .page-header-back{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px}
 .back-btn{display:flex;align-items:center;gap:7px;padding:9px 16px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13px;color:#4a5a6a;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s;white-space:nowrap;flex-shrink:0}.back-btn:hover{border-color:#3d6080;color:#F5C518}
 .page-footer-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
 .btn-danger-outline{display:flex;align-items:center;gap:7px;padding:10px 20px;background:transparent;border:1.5px solid #e74c3c;border-radius:9px;font-size:13.5px;font-weight:600;color:#e74c3c;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-danger-outline:hover{background:#e74c3c;color:#fff}
-/* ── Annuler page ── */
 .annul-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:16px;padding:40px;text-align:center;max-width:520px}
 .annul-icon{font-size:48px;margin-bottom:16px}
 .annul-card h3{font-family:'Merriweather',serif;font-size:18px;color:#1e2a35;margin-bottom:10px}
@@ -876,27 +1025,20 @@ export default {
 .annul-warning{font-size:13px;color:#8a9aaa;font-style:italic;margin-top:8px}
 .annul-actions{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
 .btn-danger{display:flex;align-items:center;gap:7px;padding:10px 20px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger:hover:not(:disabled){background:#c0392b}.btn-danger:disabled{opacity:.6;cursor:not-allowed}
-/* ── Lien document ── */
+.btn-danger-sm{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger-sm:hover:not(:disabled){background:#c0392b}.btn-danger-sm:disabled{opacity:.6;cursor:not-allowed}
+.dv-footer{display:flex;gap:10px;padding:16px 18px;border-top:1.5px solid #c8c4bc;background:#e8e4dc}
 .file-link{display:inline-flex;align-items:center;gap:6px;color:#F5C518;font-weight:600;font-size:13.5px;text-decoration:none;padding:6px 12px;background:rgba(245,197,24,0.08);border-radius:8px;transition:background .18s}.file-link:hover{background:rgba(245,197,24,0.16)}
-
-/* Bannières */
 .banner-affectation{display:flex;align-items:center;gap:14px;background:#d4edda;border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:20px}
 .ba-icon{font-size:28px;flex-shrink:0}
 .ba-body{flex:1}.ba-t{font-size:15px;font-weight:700;color:#1e7e34;margin-bottom:3px}.ba-s{font-size:13.5px;color:#2d6a4f}
 .ba-badge{padding:5px 14px;background:#27ae60;color:#fff;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.banner-accord-mutuel{display:flex;align-items:center;gap:14px;background:rgba(61,96,128,0.08);border:1.5px solid rgba(61,96,128,0.25);border-radius:14px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+.bam-icon{font-size:28px;flex-shrink:0}.bam-body{flex:1;min-width:200px}.bam-t{font-size:14px;font-weight:700;color:#1e2a35;margin-bottom:3px}.bam-s{font-size:13px;color:#4a5a6a;line-height:1.5}
+.bam-btn{padding:10px 18px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;white-space:nowrap;transition:all .18s;flex-shrink:0}.bam-btn:hover{background:#2f4f6a}
 .banner-info{display:flex;align-items:flex-start;gap:12px;background:#fff8e8;border:1.5px solid #bee3f8;border-radius:14px;padding:16px 20px;margin-bottom:20px;font-size:13.5px;color:#2b6cb0}
 .qa-card-result{cursor:default!important;border-color:rgba(39,174,96,0.4)!important;background:rgba(39,174,96,0.08)!important}
 .qa-green{background:rgba(39,174,96,0.12);color:#27ae60}
 .qa-teal{background:rgba(39,174,96,0.12);color:#27ae60}
-.sc-en-attente{border-left:4px solid #f5a623}.sc-acceptée{border-left:4px solid #27ae60}.sc-rejetée{border-left:4px solid #e74c3c}
-.sc-left{display:flex;align-items:center;gap:14px;margin-bottom:12px}
-.sc-ico{font-size:28px;flex-shrink:0}
-.sc-t{font-size:15px;font-weight:700;color:#1e2a35;margin-bottom:3px}.sc-m{font-size:13px;color:#7A8FA6}.sc-s{margin-top:6px}
-.sc-motif{font-size:13px;color:#922b21;padding:8px 12px;background:rgba(192,57,43,0.06);border-radius:8px;margin-bottom:14px}
-.sc-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn-outline-sm{padding:8px 18px;background:transparent;border:1.5px solid #3d6080;border-radius:8px;font-size:13px;font-weight:600;color:#F5C518;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-outline-sm:hover{background:rgba(245,197,24,0.2);color:#fff}
-.btn-danger-sm{padding:8px 16px;background:rgba(192,57,43,0.1);color:#922b21;border:1.5px solid rgba(192,57,43,0.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-danger-sm:hover{background:#c0392b;color:#fff}
-/* KPI */
 .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
 .kpi-card{background:#ddd9d1;border-radius:14px;padding:22px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1.5px solid #c8c4bc}
 .kpi-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -910,34 +1052,18 @@ export default {
 .qa-blue{background:rgba(245,197,24,0.12);color:#F5C518}.qa-gold{background:rgba(245,166,35,0.12);color:#d98e1a}
 .qa-txt{flex:1}.qa-t{font-size:14px;font-weight:600;color:#1e2a35;margin-bottom:2px}.qa-s{font-size:12.5px;color:#7A8FA6}
 .qa-arr{color:#c8c4bc;flex-shrink:0;transition:transform .18s,color .18s}.qa-card:hover .qa-arr{transform:translateX(3px);color:#F5C518}
-/* Demande view */
 .demande-view{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;overflow:hidden}
-.dv-header{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1.5px solid #c8c4bc}
-.dv-av{font-size:30px;flex-shrink:0}.dv-info{flex:1}
-.dv-t{font-size:16px;font-weight:700;color:#1e2a35;margin-bottom:3px}.dv-m{font-size:13px;color:#7A8FA6}
-.dv-body{padding:20px 24px}
-.dv-row{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid #c8c4bc;font-size:13.5px}.dv-row:last-child{border-bottom:none}
-.dv-row span{width:110px;color:#8a9aaa;flex-shrink:0;font-size:13px}.dv-row p,.dv-row a{color:#4a5a6a;line-height:1.6}
-.dv-motif{margin-top:14px;font-size:13px;color:#922b21;padding:10px 14px;background:rgba(192,57,43,0.06);border-radius:8px}
-.dv-footer{display:flex;gap:10px;padding:18px 24px;border-top:1.5px solid #c8c4bc}
-.file-link{color:#F5C518;text-decoration:underline}
-/* Form */
 .form-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:28px}
 .form-title{font-size:13px;font-weight:700;color:#F5C518;text-transform:uppercase;letter-spacing:.06em;margin-bottom:22px;padding-bottom:14px;border-bottom:1.5px solid #c8c4bc}
 .field-block{margin-bottom:18px}.fl{display:block;font-size:13.5px;font-weight:600;color:#1e2a35;margin-bottom:6px}.req{color:#c0392b}
 .fi{width:100%;padding:10px 13px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13.5px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;transition:border-color .18s}
 .fi:focus{outline:none;border-color:#3d6080;box-shadow:0 0 0 3px rgba(61,96,128,0.1)}.ft{resize:vertical;min-height:100px}
-.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.upload-zone{display:flex;align-items:center;gap:14px;padding:16px;background:#e8e4dc;border:2px dashed #c8c4bc;border-radius:10px;cursor:pointer;color:#8a9aaa;transition:all .18s}.upload-zone:hover{border-color:#3d6080;color:#F5C518}
-.upload-ok{border-color:#27ae60!important;color:#27ae60!important}
-.upload-l{font-size:13.5px;font-weight:600}.upload-s{font-size:12px;color:#8a9aaa;margin-top:2px}
 .err{color:#c0392b;font-size:12px;margin-top:5px}
 .form-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1.5px solid #c8c4bc}
 .btn-primary{display:flex;align-items:center;gap:8px;padding:11px 22px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-primary:hover{background:#2f4f6a}.btn-primary:disabled{opacity:.6;cursor:not-allowed}
 .btn-outline{padding:11px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:10px;font-size:13.5px;color:#4a5a6a;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-outline:hover{border-color:#3d6080;color:#F5C518}
 .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Encadrants */
 .enc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .enc-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:20px;transition:all .2s}
 .enc-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.08);transform:translateY(-2px)}
@@ -950,17 +1076,14 @@ export default {
 .enc-specs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .spec-tag{padding:3px 10px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:20px;font-size:11.5px;font-weight:600;color:#A8BDD4}
 .enc-cap{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.cap-bar-sm{flex:1;height:6px;background:#f0ede8;border-radius:99px;overflow:hidden}.cap-fill-sm{height:100%;background:rgba(245,197,24,0.2);border-radius:99px;transition:width .4s}
 .cap-txt{font-size:12px;color:#8a9aaa;white-space:nowrap}
 .enc-actions{display:flex;gap:8px;margin-top:4px}
 .btn-fiche{flex:1;padding:9px;background:transparent;border:1.5px solid #3d6080;color:#F5C518;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s}.btn-fiche:hover{background:rgba(245,197,24,0.2);color:#fff}
 .btn-choisir{flex:1;padding:10px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-choisir:hover:not(:disabled){background:#2f4f6a}.btn-choisir:disabled{background:#f0ede8;color:#8a9aaa;cursor:not-allowed}
-/* Recherche */
 .search-bar-wrap{display:flex;align-items:center;gap:10px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:10px;padding:10px 14px;margin-bottom:20px}
 .search-input{flex:1;border:none;background:transparent;font-size:14px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;outline:none}
 .search-clear{background:none;border:none;color:#8a9aaa;cursor:pointer;font-size:16px;padding:0 4px}.search-clear:hover{color:#1e2a35}
 .empty-enc{text-align:center;padding:40px;color:#8a9aaa;font-size:14px}
-/* Fiche modale encadrant */
 .fiche-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
 .fiche-modal{background:#ddd9d1;border-radius:18px;padding:32px;max-width:420px;width:100%;position:relative;text-align:center}
 .fiche-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:18px;cursor:pointer;color:#7A8FA6}.fiche-close:hover{color:#1e2a35}
@@ -970,12 +1093,10 @@ export default {
 .fiche-rows{text-align:left;margin-bottom:20px}
 .fiche-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #c8c4bc;font-size:13.5px;color:#1e2a35}
 .fiche-lbl{color:#8a9aaa;font-weight:600}
-/* Badges */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
 .badge-orange{background:#fff8e8;color:#d98e1a}.badge-green{background:#d4edda;color:#1e7e34}.badge-red{background:#f8d7da;color:#a71d2a}.badge-gray{background:rgba(74,90,106,0.1);color:#A8BDD4}
 .page-fade-enter-active{transition:opacity .25s,transform .25s cubic-bezier(.22,1,.36,1)}.page-fade-leave-active{transition:opacity .15s}
 .page-fade-enter-from{opacity:0;transform:translateY(8px)}.page-fade-leave-to{opacity:0}
-/* Résultat final */
 .resultat-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:16px;padding:30px;max-width:600px}
 .rc-header{display:flex;align-items:center;gap:18px;margin-bottom:28px}
 .rc-icon{font-size:40px;line-height:1}
@@ -996,8 +1117,16 @@ export default {
 .decision-badge{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700}
 .decision-ok{background:#d4edda;color:#155724}.decision-nok{background:#f8d7da;color:#721c24}
 .loading-state{text-align:center;padding:60px;color:#7A8FA6}
-.spinner{width:32px;height:32px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:1100px){.enc-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.kpi-grid{grid-template-columns:1fr 1fr}.qa-grid{grid-template-columns:1fr}.enc-grid{grid-template-columns:1fr}.row-2{grid-template-columns:1fr}}
+@media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.kpi-grid{grid-template-columns:1fr 1fr}.qa-grid{grid-template-columns:1fr}.enc-grid{grid-template-columns:1fr}}
+.banner-phase-countdown{display:flex;align-items:flex-start;gap:14px;border-radius:14px;padding:16px 20px;margin-bottom:16px;border:1.5px solid}
+.bpc-normal{background:#e8f4fd;border-color:rgba(61,96,128,0.3)}
+.bpc-warning{background:#fff8e8;border-color:rgba(245,166,35,0.5)}
+.bpc-urgent{background:#fdf0f0;border-color:rgba(231,76,60,0.5);animation:pulse-bpc 2s ease-in-out infinite}
+@keyframes pulse-bpc{0%,100%{border-color:rgba(231,76,60,0.4)}50%{border-color:rgba(231,76,60,0.9)}}
+.bpc-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.bpc-body{flex:1}
+.bpc-t{font-size:14px;font-weight:600;color:#1e2a35;margin-bottom:3px}
+.bpc-s{font-size:13px;color:#4a5a6a;line-height:1.5}
+.bpc-expired{color:#c0392b;font-weight:600}
 </style>

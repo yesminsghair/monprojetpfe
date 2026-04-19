@@ -184,9 +184,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Sera enregistré en <strong>brouillon</strong>
         </div>
-        <button class="btn-primary" type="button" @click="enregistrer">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Enregistrer le formulaire
+        <button class="btn-primary" type="button" @click="enregistrer" :disabled="saving">
+          <svg v-if="!saving" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ saving ? 'Enregistrement...' : 'Enregistrer le formulaire' }}
         </button>
       </div>
     </div>
@@ -196,157 +196,205 @@
       <div v-if="showAnnulerModal" class="overlay" @click.self="showAnnulerModal=false">
         <div class="confirm-modal">
           <div class="confirm-icon warn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            ⚠️
           </div>
           <h4>Annuler la création ?</h4>
-          <p>Le formulaire ne sera pas enregistré. Toutes les données saisies seront perdues.</p>
+          <p>Le formulaire ne sera pas enregistré.</p>
           <div class="confirm-btns">
-            <button class="btn-outline" @click="showAnnulerModal=false">Continuer la saisie</button>
-            <button class="btn-danger" @click="confirmerAnnulation">Oui, annuler</button>
+            <button class="btn-outline" @click="showAnnulerModal=false">Continuer</button>
+            <button class="btn-danger" @click="confirmerAnnulation">Oui</button>
           </div>
         </div>
       </div>
     </transition>
 
-  </div>
-</template>
+    <!-- SUCCESS TOAST -->
+    <transition name="fade">
+      <div v-if="showSuccess" class="toast-success">
+        {{ successMessage }} ✅
+      </div>
+    </transition>
 
+    <!-- ERROR TOAST -->
+    <transition name="fade">
+      <div v-if="showError" class="toast-error">
+        ❌ {{ errorMessage }}
+      </div>
+    </transition>
+
+  </div>
+    
+</template>
 <script>
-import axios from 'axios'
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-})
-api.interceptors.request.use(cfg => {
-  const u = localStorage.getItem('user')
-  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
-  return cfg
-})
+import api from '@/services/api'
+import SelectionnerEnseignants from '@/components/GestionFormulaires/SelectionEnseignants.vue'
+
 export default {
   name: 'CreerFormulaire',
-  props: {
-    enseignants:         { type: Array,  default: () => [] },
-    formulaireAModifier: { type: Object, default: null },   // Si défini → mode édition brouillon
+
+  components: {
+    SelectionnerEnseignants
   },
+
+  props: {
+    formulaireAModifier: Object,
+    modeEdition: Boolean
+  },
+
   emits: ['form-cree', 'navigate'],
 
   data() {
     return {
-      searchEns: '',
+      showSelector: false,
       showAnnulerModal: false,
       saving: false,
-      champsDisponibles: [
-        { id: 'disponibilite',   icon: '📅', nom: 'Disponibilité',          desc: 'Oui / Non / Partielle' },
-        { id: 'specialites',     icon: '📚', nom: 'Spécialités souhaitées', desc: 'Domaines à encadrer' },
-        { id: 'nbEtudiants',     icon: '👥', nom: 'Nb max d\'étudiants',   desc: 'Capacité d\'accueil' },
-        { id: 'commentaire',     icon: '💬', nom: 'Commentaires',           desc: 'Contraintes particulières' },
-        { id: 'themes',          icon: '🎯', nom: 'Thèmes préférés',        desc: 'Sujets d\'intérêt' },
-        { id: 'cotutelle',       icon: '🤝', nom: 'Co-tutelle',             desc: 'Accepte un co-encadrant' },
-      ],
+
+      // ✅ SUCCESS / ERROR TOAST
+      successMessage: '',
+      showSuccess: false,
+      errorMessage: '',
+      showError: false,
+
+      enseignants: [],
+      searchEns: '',
+
       form: {
         titre: '',
         dateLimite: '',
         nbMax: 3,
         message: '',
-        champs: ['disponibilite', 'specialites', 'nbEtudiants'],
+        champs: [],
         enseignants: []
       },
-      errors: {}
+
+      errors: {},
+
+      champsDisponibles: [
+        { id: 'disponibilite', icon: '📋', nom: 'Disponibilité', desc: 'Oui / Partielle / Non' },
+        { id: 'specialites', icon: '🎓', nom: 'Spécialités', desc: 'Domaines souhaités' },
+        { id: 'nbEtudiants', icon: '👥', nom: 'Nb étudiants / PFE', desc: 'Capacité d\'encadrement' },
+        { id: 'themes', icon: '💡', nom: 'Thèmes', desc: 'Sujets préférés' },
+        { id: 'encadrement', icon: '🔧', nom: "Type d'encadrement", desc: "Nature de l'encadrement" },
+        { id: 'cotutelle', icon: '🤝', nom: 'Co-tutelle', desc: 'Acceptation co-tutelle' },
+        { id: 'commentaire', icon: '💬', nom: 'Commentaire', desc: 'Contraintes particulières' }
+      ]
     }
   },
 
   computed: {
-    today() { return new Date().toISOString().split('T')[0] },
-    modeEdition() { return !!this.formulaireAModifier },
+    today() {
+      return new Date().toISOString().split('T')[0]
+    },
+
     enseignantsFiltres() {
       if (!this.searchEns) return this.enseignants
-      const q = this.searchEns.toLowerCase()
-      return this.enseignants.filter(e =>
-        (e.nom + ' ' + e.prenom).toLowerCase().includes(q) ||
-        (e.email||'').toLowerCase().includes(q)
-      )
+
+      return this.enseignants.filter(e => {
+        const full = `${e.prenom} ${e.nom} ${e.email}`.toLowerCase()
+        return full.includes(this.searchEns.toLowerCase())
+      })
     }
   },
 
-  watch: {
-    // Quand le prop change (passage en mode édition), pré-remplir le formulaire
-    formulaireAModifier: {
-      immediate: true,
-      handler(f) {
-        if (f) {
-          this.form.titre      = f.titre || ''
-          this.form.dateLimite = f.date_limite || f.dateLimite || ''
-          this.form.nbMax      = f.nb_max_etudiants || f.nbMax || 3
-          this.form.message    = f.message || ''
-          this.form.champs     = f.champs || ['disponibilite','specialites','nbEtudiants']
-        }
+  async created() {
+    await this.loadEnseignants()
+
+    if (this.formulaireAModifier) {
+      this.form = {
+        titre: this.formulaireAModifier.titre || '',
+        dateLimite: this.formulaireAModifier.date_limite || '',
+        nbMax: this.formulaireAModifier.nb_max_etudiants || 3,
+        message: this.formulaireAModifier.message || '',
+        champs: this.formulaireAModifier.champs || [],
+        enseignants: this.formulaireAModifier.enseignants?.map(e => e.id) || []
       }
     }
   },
 
   methods: {
-    selectAll() { this.form.enseignants = this.enseignants.map(e => e.id) },
 
-    async enregistrer() {
-      this.errors = {}
-      if (!this.form.titre.trim())
-        this.errors.titre = 'Le titre du formulaire est obligatoire'
-      if (this.form.champs.length === 0)
-        this.errors.champs = 'Sélectionnez au moins un champ pour le formulaire'
-      if (!this.form.dateLimite) {
-        this.errors.dateLimite = 'La date limite est obligatoire'
-      } else if (this.form.dateLimite <= this.today) {
-        this.errors.dateLimite = 'La date limite doit être postérieure à aujourd\'hui'
-      }
-      if (Object.keys(this.errors).length > 0) return
-
-      this.saving = true
+    async loadEnseignants() {
       try {
-        let res
-        if (this.modeEdition) {
-          // Mise à jour du brouillon existant via PUT (on utilise store qui est un upsert)
-          res = await api.post('/formulaires-voeux', {
-            titre:            this.form.titre,
-            date_limite:      this.form.dateLimite,
-            nb_max_etudiants: this.form.nbMax,
-            champs:           this.form.champs,
-            message:          this.form.message,
-          })
-          // Supprimer l'ancien brouillon si c'est un update
-          // (le backend crée un nouveau — on pourrait aussi faire un PUT /formulaires-voeux/{id})
-        } else {
-          res = await api.post('/formulaires-voeux', {
-            titre:            this.form.titre,
-            date_limite:      this.form.dateLimite,
-            nb_max_etudiants: this.form.nbMax,
-            champs:           this.form.champs,
-            message:          this.form.message,
-          })
-        }
-        this.$emit('form-cree', res.data.formulaire)
+        const res = await api.get('/formulaires-voeux/enseignants-de-ma-specialite')
+        this.enseignants = Array.isArray(res.data) ? res.data : []
       } catch (e) {
-        const errs = e.response?.data?.errors || {}
-        if (errs.titre)       this.errors.titre      = errs.titre[0]
-        if (errs.date_limite) this.errors.dateLimite = errs.date_limite[0]
-        if (!Object.keys(errs).length)
-          this.errors.titre = 'Erreur lors de la création. Réessayez.'
-      } finally {
-        this.saving = false
+        console.error(e)
+        this.enseignants = []
       }
     },
 
+    selectAll() {
+      this.form.enseignants = this.enseignantsFiltres.map(e => e.id)
+    },
+
     annuler() {
-      const hasData = this.form.titre || this.form.dateLimite || this.form.enseignants.length > 0
-      if (hasData) {
-        this.showAnnulerModal = true
-      } else {
-        this.$emit('navigate', 'voeux-liste')
-      }
+      this.showAnnulerModal = true
     },
 
     confirmerAnnulation() {
       this.showAnnulerModal = false
       this.$emit('navigate', 'voeux-liste')
+    },
+
+    validate() {
+      this.errors = {}
+
+      if (!this.form.titre) this.errors.titre = 'Titre requis'
+      if (!this.form.dateLimite) this.errors.dateLimite = 'Date requise'
+      if (!this.form.enseignants || this.form.enseignants.length === 0) {
+        this.errors.enseignants = 'Choisir au moins un enseignant'
+      }
+
+      return Object.keys(this.errors).length === 0
+    },
+
+    async enregistrer() {
+      if (!this.validate()) return
+
+      this.saving = true
+
+      try {
+        const payload = {
+          titre: this.form.titre,
+          date_limite: this.form.dateLimite,
+          nb_max_etudiants: this.form.nbMax,
+          champs: this.form.champs,
+          message: this.form.message,
+          enseignants: this.form.enseignants
+        }
+
+        let res
+
+        if (this.formulaireAModifier) {
+          res = await api.put(
+            `/formulaires-voeux/${this.formulaireAModifier.id}`,
+            payload
+          )
+        } else {
+          res = await api.post('/formulaires-voeux', payload)
+        }
+
+        // ✅ SUCCESS TOAST
+        this.successMessage = this.formulaireAModifier
+          ? "Formulaire modifié avec succès"
+          : "Formulaire créé avec succès"
+
+        this.showSuccess = true
+
+        setTimeout(() => {
+          this.showSuccess = false
+        }, 3000)
+
+        this.$emit('form-cree', res.data.formulaire)
+
+      } catch (e) {
+        console.error('FULL ERROR:', e.response?.data)
+        this.errorMessage = e.response?.data?.message || "Une erreur est survenue, veuillez réessayer."
+        this.showError = true
+        setTimeout(() => { this.showError = false }, 4000)
+      } finally {
+        this.saving = false
+      }
     }
   }
 }
@@ -538,4 +586,40 @@ export default {
 .modal-fade-enter-active { transition: opacity 0.25s; }
 .modal-fade-leave-active { transition: opacity 0.2s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+.toast-success {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #27ae60;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.toast-error {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #c0392b;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s, transform 0.3s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
 </style>

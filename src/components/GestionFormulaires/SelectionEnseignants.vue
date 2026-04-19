@@ -30,28 +30,25 @@ Confirmer
 </template>
 
 <script>
-export default{
+export default {
+  name: 'SelectionnerEnseignants',
 
-props:{
-enseignants:Array
-},
+  props: {
+    enseignants: { type: Array, default: () => [] }
+  },
 
-emits:["selection-validee"],
+  emits: ['selection-validee'],
 
-data(){
-return{
-selection:[]
-}
-},
+  data() {
+    return {
+      selection: []
+    }
+  },
 
-methods:{
-confirmer(){
-
-this.$emit("selection-validee",this.selection)
-
-}
-}
-
+  methods: {
+    confirmer() {
+      this.$emit('selection-validee', this.selection)
+    }
+  }
 }
 </script>
-

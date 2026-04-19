@@ -8,7 +8,7 @@
       </div>
       <div class="deadline-chip" :class="{ warn: isExpiringSoon }">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Date limite : {{ formatDate(formulaire.date_limite || formulaire.dateLimite) }}
+        Date limite : {{ formatDate(formulaire.date_limite) }}
       </div>
     </div>
 
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card" v-if="!loadingVoeu">
 
       <!-- Disponibilité -->
       <div class="field-block" v-if="hasChamp('disponibilite')">
@@ -64,10 +64,20 @@
       <div class="field-block" v-if="hasChamp('nbEtudiants') && form.disponibilite !== 'non'">
         <label class="field-label">Nombre maximum d'étudiants à encadrer <span class="required">*</span></label>
         <div class="number-input">
-          <button type="button" @click="form.nbEtudiants > 1 && form.nbEtudiants--" class="num-btn">−</button>
-          <input type="number" v-model="form.nbEtudiants" class="field-input num-field" min="1" :max="formulaire.nb_max_etudiants || formulaire.nbMax || 10"/>
-          <button type="button" @click="form.nbEtudiants < (formulaire.nb_max_etudiants || formulaire.nbMax || 10) && form.nbEtudiants++" class="num-btn">+</button>
-          <span class="num-hint">(max {{ formulaire.nb_max_etudiants || formulaire.nbMax || 10 }})</span>
+          <button type="button" @click="form.nbre_etudiants > 1 && form.nbre_etudiants--" class="num-btn">−</button>
+          <input type="number" v-model="form.nbre_etudiants" class="field-input num-field" min="1" :max="formulaire.nb_max_etudiants || 10"/>
+          <button type="button" @click="form.nbre_etudiants < (formulaire.nb_max_etudiants || 10) && form.nbre_etudiants++" class="num-btn">+</button>
+          <span class="num-hint">(max {{ formulaire.nb_max_etudiants || 10 }})</span>
+        </div>
+      </div>
+
+      <!-- Nb max PFE -->
+      <div class="field-block" v-if="hasChamp('nbEtudiants') && form.disponibilite !== 'non'">
+        <label class="field-label">Nombre maximum de PFE que vous acceptez</label>
+        <div class="number-input">
+          <button type="button" @click="form.nbre_max_pfe > 1 && form.nbre_max_pfe--" class="num-btn">−</button>
+          <input type="number" v-model="form.nbre_max_pfe" class="field-input num-field" min="1" max="10"/>
+          <button type="button" @click="form.nbre_max_pfe < 10 && form.nbre_max_pfe++" class="num-btn">+</button>
         </div>
       </div>
 
@@ -76,6 +86,13 @@
         <label class="field-label">Thèmes préférés</label>
         <textarea v-model="form.themes" class="field-input field-textarea" rows="2"
           placeholder="Ex: Machine Learning, Sécurité réseau, Développement mobile..."/>
+      </div>
+
+      <!-- Type d'encadrement -->
+      <div class="field-block" v-if="hasChamp('encadrement') && form.disponibilite !== 'non'">
+        <label class="field-label">Type d'encadrement souhaité</label>
+        <textarea v-model="form.encadrement" class="field-input field-textarea" rows="2"
+          placeholder="Ex: Encadrement technique, recherche appliquée..."/>
       </div>
 
       <!-- Co-tutelle -->
@@ -95,12 +112,13 @@
       </div>
 
       <!-- Formulaire verrouillé -->
-      <div class="locked-notice" v-if="formulaire.statut === 'verrouille' || formulaire.statut === 'verrouillé'">
+      <div class="locked-notice" v-if="formulaire.statut === 'verrouille'">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Ce formulaire est clôturé. Aucune modification n'est plus possible.
       </div>
 
-      <div class="form-footer" v-if="formulaire.statut !== 'verrouille' && formulaire.statut !== 'verrouillé'">
+      <div class="form-footer" v-if="formulaire.statut !== 'verrouille'">
+        <!-- Brouillon hidden when modeSoumissionOnly -->
         <button v-if="!modeSoumissionOnly" class="btn-outline" type="button" @click="sauvegarderBrouillon" :disabled="saving">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
           Sauvegarder en brouillon
@@ -114,6 +132,11 @@
 
     </div>
 
+    <div v-else class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement de votre fiche...</p>
+    </div>
+
     <!-- Toast local -->
     <transition name="toast-anim">
       <div v-if="localToast.visible" class="local-toast" :class="localToast.type">
@@ -125,163 +148,188 @@
 </template>
 
 <script>
-import axios from 'axios'
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-})
-api.interceptors.request.use(cfg => {
-  const u = localStorage.getItem('user')
-  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
-  return cfg
-})
+import api from '@/services/api'
 
 export default {
   name: 'FicheVoeux',
+
   props: {
-    formulaire:          { type: Object, default: () => ({ champs: [], date_limite: '', nb_max_etudiants: 5, statut: 'publie' }) },
-    modeSoumissionOnly:  { type: Boolean, default: false },  // true = pas de bouton brouillon
+    formulaire: {
+      type: Object,
+      required: true
+    },
+    // When true: hide the "Sauvegarder en brouillon" button — only "Soumettre" is shown.
+    // Used by both DashboardEnseignant and DashboardEncadrant.
+    modeSoumissionOnly: {
+      type: Boolean,
+      default: false
+    }
   },
+
+  // ✅ FIX: declare both emits so Vue 3 doesn't treat them as native events
   emits: ['soumis', 'role-changed'],
 
   data() {
     return {
       saving: false,
+      loadingVoeu: false,
       errors: {},
       roleChange: false,
-      localToast: { visible: false, type: '', message: '' },
-      disponibiliteOpts: [
-        { val: 'oui',      icon: '✅', label: 'Disponible',      sub: 'Je peux encadrer des PFE' },
-        { val: 'partielle', icon: '⚡', label: 'Partiellement',   sub: 'Avec contraintes' },
-        { val: 'non',       icon: '❌', label: 'Non disponible',  sub: 'Je ne peux pas encadrer' },
-      ],
-      specialitesDisponibles: [],
+
       form: {
         disponibilite: '',
         specialites: [],
-        nbEtudiants: 3,
+        nbre_etudiants: 1,
+        nbre_max_pfe: 3,
         themes: '',
+        encadrement: '',
         commentaire: '',
-        cotutelle: false,
-        statut: 'brouillon',
-      }
+        cotutelle: false
+      },
+
+      localToast: { visible: false, message: '', type: '' },
+
+      disponibiliteOpts: [
+        { val: 'oui',       icon: '✅', label: 'Disponible',              sub: 'Je peux encadrer des PFE' },
+        { val: 'partielle', icon: '⚡', label: 'Disponibilité partielle', sub: 'Sous certaines conditions' },
+        { val: 'non',       icon: '❌', label: 'Non disponible',           sub: 'Je ne peux pas encadrer' }
+      ],
+
+      specialitesDisponibles: [
+        'Informatique', 'Réseaux', 'Génie logiciel',
+        'Intelligence artificielle', 'Cybersécurité', 'Systèmes embarqués'
+      ]
     }
   },
 
   computed: {
     isExpiringSoon() {
-      const d = this.formulaire.date_limite || this.formulaire.dateLimite
-      if (!d) return false
-      const diff = (new Date(d) - new Date()) / (1000*60*60*24)
-      return diff >= 0 && diff <= 3
+      if (!this.formulaire?.date_limite) return false
+      const now = new Date()
+      const target = new Date(this.formulaire.date_limite)
+      if (isNaN(target.getTime())) return false
+      const diffDays = (target - now) / (1000 * 60 * 60 * 24)
+      return diffDays <= 5 && diffDays >= 0
     }
   },
 
   async created() {
-    // Charger les spécialités depuis l'API
-    try {
-      const res = await api.get('/specialites')
-      this.specialitesDisponibles = res.data.map(s => s.nom)
-    } catch (e) {
-      this.specialitesDisponibles = ['Génie Logiciel', 'Réseaux & Télécoms', 'Intelligence Artificielle', 'Sécurité Informatique', 'Systèmes Embarqués', 'Base de Données']
-    }
-
-    // Charger le brouillon existant si présent
-    if (this.formulaire?.id) {
-      try {
-        const res = await api.get(`/voeux-encadrement?formulaire_id=${this.formulaire.id}`)
-        if (res.data) {
-          const v = res.data
-          this.form.disponibilite = v.disponibilite || ''
-          this.form.specialites   = v.specialites || []
-          this.form.nbEtudiants   = v.nbre_etudiants || 3
-          this.form.themes        = v.themes || ''
-          this.form.commentaire   = v.commentaire || ''
-          this.form.cotutelle     = v.cotutelle || false
-          this.form.statut        = v.statut || 'brouillon'
-        }
-      } catch (e) { /* pas de brouillon */ }
-    }
+    await this.chargerVoeuExistant()
   },
 
   methods: {
     hasChamp(id) {
-      const champs = this.formulaire.champs
-      if (!champs || champs.length === 0) return true
+      const champs = this.formulaire?.champs
+      if (!Array.isArray(champs)) return true // show all if not configured
       return champs.includes(id)
     },
-    formatDate(d) {
-      if (!d) return '—'
-      if (d.includes('/')) return d
-      return new Date(d).toLocaleDateString('fr-FR')
-    },
-    async sauvegarderBrouillon() {
-      await this.envoyerVoeu('brouillon')
-    },
-    async soumettre() {
-      this.errors = {}
 
-      // Vérifier disponibilité seulement si le champ est présent
-      if (this.hasChamp('disponibilite') && !this.form.disponibilite) {
-        this.errors.disponibilite = 'Veuillez indiquer votre disponibilité'
-      }
-
-      // Vérifier spécialités seulement si le champ est présent dans le formulaire
-      if (this.hasChamp('specialites') && this.form.disponibilite !== 'non' && this.form.specialites.length === 0) {
-        this.errors.specialites = 'Sélectionnez au moins une spécialité'
-      }
-
-      if (Object.keys(this.errors).length) return
-
-      await this.envoyerVoeu('soumis')
+    formatDate(date) {
+      if (!date) return '-'
+      const d = new Date(date)
+      if (isNaN(d.getTime())) return '-'
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     },
 
-    async envoyerVoeu(statut) {
-      if (!this.formulaire?.id) {
-        this.toast('Formulaire introuvable. Rechargez la page.', 'toast-err')
-        return
-      }
-      this.saving = true
+    showToast(message, type = 'success') {
+      this.localToast = { visible: true, message, type }
+      setTimeout(() => { this.localToast.visible = false }, 3500)
+    },
+
+    async chargerVoeuExistant() {
+      if (!this.formulaire?.id) return
+      this.loadingVoeu = true
       try {
-        const res = await api.post('/voeux-encadrement', {
-          formulaire_id:  this.formulaire.id,
-          disponibilite:  this.form.disponibilite || null,
-          nbre_etudiants: this.form.nbEtudiants,
-          nbre_max_pfe:   this.formulaire.nb_max_etudiants || this.formulaire.nbMax || 3,
-          specialites:    this.form.specialites,
-          encadrement:    this.form.themes,
-          themes:         this.form.themes,
-          commentaire:    this.form.commentaire,
-          cotutelle:      this.form.cotutelle,
-          statut,
+        const res = await api.get('/voeux-encadrement', {
+          params: { formulaire_id: this.formulaire.id }
         })
-
-        this.form.statut = statut
-        const msg = statut === 'soumis' ? 'Vœux soumis avec succès !' : 'Brouillon sauvegardé.'
-        this.toast(msg, 'toast-ok')
-
-        if (statut === 'soumis') {
-          if (res.data?.role_changed) {
-            this.roleChange = true
-            const userData = JSON.parse(localStorage.getItem('user') || '{}')
-            userData.role = 'encadrant'
-            localStorage.setItem('user', JSON.stringify(userData))
-            this.$emit('role-changed', 'encadrant')
+        if (res.data) {
+          const v = res.data
+          this.form = {
+            disponibilite:  v.disponibilite  || '',
+            specialites:    v.specialites    || [],
+            nbre_etudiants: v.nbre_etudiants ?? 1,
+            nbre_max_pfe:   v.nbre_max_pfe   ?? 3,
+            themes:         v.themes         || '',
+            encadrement:    v.encadrement    || '',
+            commentaire:    v.commentaire    || '',
+            cotutelle:      v.cotutelle      ?? false
           }
-          this.$emit('soumis', { ...this.form, ...res.data?.voeu })
         }
       } catch (e) {
-        const msg = e.response?.data?.message
-          || (e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' ') : null)
-          || 'Erreur lors de l\'envoi. Vérifiez votre connexion.'
-        this.toast(msg, 'toast-err')
+        // 404 = pas encore de voeu, normal
+      } finally {
+        this.loadingVoeu = false
+      }
+    },
+
+    buildPayload(statut) {
+      return {
+        formulaire_id:  this.formulaire.id,
+        disponibilite:  this.form.disponibilite  || null,
+        nbre_etudiants: this.form.nbre_etudiants,
+        nbre_max_pfe:   this.form.nbre_max_pfe,
+        specialites:    this.form.specialites,
+        themes:         this.form.themes         || null,
+        encadrement:    this.form.encadrement    || null,
+        commentaire:    this.form.commentaire    || null,
+        cotutelle:      this.form.cotutelle,
+        statut
+      }
+    },
+
+    async sauvegarderBrouillon() {
+      this.saving = true
+      try {
+        await api.post('/voeux-encadrement', this.buildPayload('brouillon'))
+        this.showToast('Brouillon sauvegardé.')
+      } catch (e) {
+        this.showToast('Erreur lors de la sauvegarde.', 'toast-err')
       } finally {
         this.saving = false
       }
     },
-    toast(msg, type) {
-      this.localToast = { visible: true, message: msg, type }
-      setTimeout(() => { this.localToast.visible = false }, 3000)
+
+    async soumettre() {
+      this.errors = {}
+
+      if (this.hasChamp('disponibilite') && !this.form.disponibilite) {
+        this.errors.disponibilite = 'Veuillez choisir votre disponibilité'
+      }
+
+      if (
+        this.hasChamp('specialites') &&
+        this.form.disponibilite !== 'non' &&
+        !this.form.specialites.length
+      ) {
+        this.errors.specialites = 'Veuillez choisir au moins une spécialité'
+      }
+
+      if (Object.keys(this.errors).length) return
+
+      this.saving = true
+
+      try {
+        const res = await api.post('/voeux-encadrement', this.buildPayload('soumis'))
+
+        // ✅ FIX: emit role-changed so parent dashboards can react
+        if (res.data.role_changed) {
+          this.roleChange = true
+          this.$emit('role-changed', res.data.new_role)
+        }
+
+        this.showToast('Fiche soumise avec succès !')
+        this.$emit('soumis', res.data.voeu ?? res.data)
+
+      } catch (e) {
+        if (e.response?.data?.message === 'locked') {
+          this.showToast('Ce formulaire est clôturé, impossible de soumettre.', 'toast-err')
+        } else {
+          this.showToast('Erreur lors de la soumission.', 'toast-err')
+        }
+      } finally {
+        this.saving = false
+      }
     }
   }
 }
@@ -300,6 +348,7 @@ export default {
 .role-banner { display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: rgba(39,174,96,0.1); border: 1.5px solid rgba(39,174,96,0.3); border-radius: 12px; margin-bottom: 20px; color: #1a6b3a; }
 .role-banner strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .role-banner p { font-size: 13px; line-height: 1.5; margin: 0; }
+.loading-state { text-align: center; padding: 60px; color: #8a9aaa; }
 .form-card { background: #ddd9d1; border: 1.5px solid #c8c4bc; border-radius: 14px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .field-block { margin-bottom: 22px; }
 .field-label { display: block; font-size: 13.5px; font-weight: 600; color: #1e2a35; margin-bottom: 8px; }

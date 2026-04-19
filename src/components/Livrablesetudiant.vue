@@ -1,422 +1,291 @@
 <template>
-  <div class="page-content">
+<div class="page-content">
 
-    <!-- HEADER -->
-    <div class="page-header">
-      <div class="header-left">
-        <span class="header-icon">📁</span>
-        <div>
-          <h2>Mes livrables</h2>
-          <p class="subtitle">Déposer et suivre vos documents par phase d'évaluation</p>
-        </div>
+  <div class="page-header">
+    <div>
+      <h2>Mes livrables</h2>
+      <p class="subtitle">Déposez vos documents — seules les phases activées par le chef sont accessibles</p>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi kpi-ok">
+        <strong>{{ nValides }}</strong><span>Validé(s)</span>
       </div>
-      <button class="btn-gold" @click="showForm = true">
-        <span>+</span> Déposer un livrable
+      <div class="kpi kpi-warn">
+        <strong>{{ nAttente }}</strong><span>En attente</span>
+      </div>
+      <div class="kpi kpi-ko">
+        <strong>{{ nRejetes }}</strong><span>Rejeté(s)</span>
+      </div>
+    </div>
+  </div>
+
+  <transition name="toast">
+    <div v-if="toast.show" class="toast" :class="'toast-'+toast.type">
+      {{ toast.msg }}
+      <button @click="toast.show=false" class="toast-x">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
+  </transition>
 
-    <!-- NOTIFICATIONS -->
-    <transition name="slide-notif">
-      <div v-if="notification.show" class="notif" :class="'notif-' + notification.type">
-        <span class="notif-icon">{{ notification.type === 'success' ? '✅' : notification.type === 'error' ? '❌' : '⚠️' }}</span>
-        {{ notification.msg }}
-        <button class="notif-close" @click="notification.show = false">✕</button>
-      </div>
-    </transition>
-
-    <!-- STATS -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <span class="stat-val">{{ livrables.length }}</span>
-        <span class="stat-label">Total</span>
-      </div>
-      <div class="stat-card stat-yellow">
-        <span class="stat-val">{{ livrables.filter(l => l.statut === 'attente').length }}</span>
-        <span class="stat-label">En attente</span>
-      </div>
-      <div class="stat-card stat-green">
-        <span class="stat-val">{{ livrables.filter(l => l.statut === 'valide').length }}</span>
-        <span class="stat-label">Validés</span>
-      </div>
-      <div class="stat-card stat-red">
-        <span class="stat-val">{{ livrables.filter(l => l.statut === 'rejete').length }}</span>
-        <span class="stat-label">Rejetés</span>
-      </div>
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-wrapper" v-if="livrables.length">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Phase</th>
-            <th>Fichier</th>
-            <th>Date de dépôt</th>
-            <th>Statut</th>
-            <th>Commentaire encadrant</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="l in livrables" :key="l.id" :class="{ 'row-rejected': l.statut === 'rejete', 'row-validated': l.statut === 'valide' }">
-            <td>
-              <div class="phase-chip">{{ l.phase }}</div>
-            </td>
-            <td>
-              <div class="file-info" v-if="l.fileName">
-                <span class="file-icon">📄</span>
-                <span class="file-name">{{ l.fileName }}</span>
-              </div>
-              <span v-else class="empty-cell">Aucun fichier</span>
-            </td>
-            <td class="date-col">{{ l.dateDepot || '—' }}</td>
-            <td>
-              <span class="status-badge"
-                :class="{
-                  'status-wait': l.statut === 'attente',
-                  'status-ok': l.statut === 'valide',
-                  'status-ko': l.statut === 'rejete'
-                }">
-                {{ statusLabel(l.statut) }}
-              </span>
-            </td>
-            <td>
-              <span v-if="l.commentaireEncadrant" class="comment-text">💬 {{ l.commentaireEncadrant }}</span>
-              <span v-else class="empty-cell">—</span>
-            </td>
-            <td class="actions">
-              <!-- Modifier le fichier si pas encore validé définitivement -->
-              <label class="btn-sm btn-upload" v-if="!l.valideFinal" :for="'upload-' + l.id" title="Remplacer le fichier">
-                🔄 Modifier
-                <input type="file" :id="'upload-' + l.id" accept="application/pdf" @change="upload($event, l)" style="display:none" />
-              </label>
-              <!-- Voir -->
-              <button class="btn-sm btn-view" @click="voir(l)" v-if="l.file" title="Visualiser">👁 Voir</button>
-              <!-- Télécharger -->
-              <a class="btn-sm btn-download" :href="l.file" :download="l.fileName" v-if="l.file" title="Télécharger">⬇ Télécharger</a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-else class="empty-box">
-      <div class="empty-icon">📂</div>
-      <p>Aucun livrable déposé</p>
-      <button class="btn-gold" @click="showForm = true">Déposer mon premier livrable</button>
-    </div>
-
-    <!-- MODAL AJOUT -->
-    <div v-if="showForm" class="modal-overlay" @click.self="showForm = false">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>📤 Déposer un livrable</h3>
-          <button class="close-btn" @click="showForm = false">✕</button>
-        </div>
-
-        <div class="form-group">
-          <label>Phase d'évaluation *</label>
-          <select v-model="newDoc.phase">
-            <option disabled value="">Sélectionner une phase</option>
-            <option v-for="phase in phases" :key="phase" :value="phase">{{ phase }}</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Commentaire (optionnel)</label>
-          <input type="text" v-model="newDoc.commentaire" placeholder="Note ou précision pour l'encadrant..." />
-        </div>
-
-        <div class="form-group">
-          <label>Fichier PDF *</label>
-          <div class="file-drop" :class="{ 'has-file': newDoc.fileName }" @click="$refs.fileInput.click()">
-            <span v-if="!newDoc.fileName">
-              <span style="font-size:32px">📄</span><br>
-              Cliquez pour sélectionner un PDF
-            </span>
-            <span v-else class="file-selected">
-              ✅ {{ newDoc.fileName }}
-            </span>
-          </div>
-          <input ref="fileInput" type="file" @change="handleFileUpload" accept="application/pdf" style="display:none" />
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn-gold" @click="ajouterLivrable">Déposer</button>
-          <button class="btn-outline" @click="showForm = false">Annuler</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEWER -->
-    <div v-if="viewer" class="modal-overlay" @click.self="viewer = null">
-      <div class="modal-box viewer-box">
-        <div class="modal-header">
-          <h3>👁 Visualisation du document</h3>
-          <button class="close-btn" @click="viewer = null">✕</button>
-        </div>
-        <iframe :src="viewer" width="100%" height="500px" style="border:none; border-radius:8px;"></iframe>
-      </div>
-    </div>
-
+  <!-- Loading state -->
+  <div v-if="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Chargement des phases...</p>
   </div>
+
+  <!-- No active phases yet -->
+  <div v-else-if="!phases.length" class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <p>Aucune phase n'est encore activée par votre chef de département.</p>
+    <p class="empty-sub">Vous serez notifié(e) dès qu'une phase sera ouverte.</p>
+  </div>
+
+  <!-- PHASES GRID -->
+  <div class="phases-grid" v-else>
+    <div v-for="phase in phases" :key="phase.id"
+      class="phase-card"
+      :class="{
+        'pc-active': phase.active && !phase.terminee,
+        'pc-done':   phase.terminee,
+      }">
+
+      <div class="pc-bar"></div>
+
+      <div class="pc-top">
+        <span class="pc-num">Phase {{ phase.ordre }}</span>
+        <span class="pc-badge"
+          :class="{
+            'pb-active': phase.active && !phase.terminee,
+            'pb-done':   phase.terminee,
+          }">
+          {{ phase.terminee ? 'Terminée' : 'En cours' }}
+        </span>
+      </div>
+
+      <div class="pc-nom">{{ phase.nom }}</div>
+      <div class="pc-dates">{{ phase.dateDebut }} — {{ phase.dateFin }}</div>
+
+      <!-- No livrable required -->
+      <div class="pc-no-lv" v-if="!phase.livrableObligatoire">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Aucun livrable requis pour cette phase
+      </div>
+
+      <!-- Livrable required -->
+      <template v-if="phase.livrableObligatoire">
+
+        <!-- Already submitted -->
+        <div v-if="phase.livrable" class="lv-area">
+          <div class="lv-file">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div class="lv-info">
+              <div class="lv-nom">{{ phase.livrable.fileName }}</div>
+              <div class="lv-date">Déposé le {{ phase.livrable.dateDepot }}</div>
+            </div>
+          </div>
+          <span class="lv-status"
+            :class="{
+              'ls-wait': phase.livrable.statut==='en_attente',
+              'ls-ok':   phase.livrable.statut==='valide',
+              'ls-ko':   phase.livrable.statut==='rejete',
+            }">
+            {{ {en_attente:'En attente',valide:'Validé',rejete:'Rejeté'}[phase.livrable.statut] || phase.livrable.statut }}
+          </span>
+          <!-- Rejection comment -->
+          <div v-if="phase.livrable.statut==='rejete' && phase.livrable.commentaire" class="lv-comment">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {{ phase.livrable.commentaire }}
+          </div>
+          <!-- Replace (only if not validated and phase not terminated) -->
+          <label v-if="phase.livrable.statut!=='valide' && !phase.terminee" :for="'f'+phase.id" class="btn-modifier">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Remplacer le fichier
+          </label>
+          <input type="file" :id="'f'+phase.id" accept="application/pdf" @change="upload($event,phase)" style="display:none"/>
+        </div>
+
+        <!-- No livrable yet -->
+        <div v-else class="depot-area">
+          <label v-if="!phase.terminee" :for="'f'+phase.id" class="btn-depot">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Déposer un livrable PDF
+          </label>
+          <div v-else class="lv-missed">⚠️ Phase terminée sans livrable déposé</div>
+          <input type="file" :id="'f'+phase.id" accept="application/pdf" @change="upload($event,phase)" style="display:none"/>
+        </div>
+
+      </template>
+
+      <!-- Done bar -->
+      <div class="pc-done-bar" v-if="phase.terminee">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Phase complète
+      </div>
+
+    </div>
+  </div>
+
+</div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
   name: 'LivrablesEtudiant',
   data() {
     return {
-      livrables: [],
-      viewer: null,
-      showForm: false,
-      newDoc: { phase: '', commentaire: '', file: null, fileName: '' },
-      phases: ['Phase 1 — Rapport intermédiaire', 'Phase 2 — Soutenance blanche', 'Phase 3 — Rapport final', 'Correction'],
-      notification: { show: false, msg: '', type: 'success' }
+      toast: { show: false, msg: '', type: 'ok' },
+      phases: [],
+      loading: false
     }
   },
+  computed: {
+    nValides()  { return this.phases.filter(p => p.livrable?.statut === 'valide').length },
+    nAttente()  { return this.phases.filter(p => p.livrable?.statut === 'en_attente').length },
+    nRejetes()  { return this.phases.filter(p => p.livrable?.statut === 'rejete').length },
+  },
   mounted() {
-    const saved = JSON.parse(localStorage.getItem('livrables'))
-    if (saved) this.livrables = saved
+    this.chargerDonnees()
   },
   methods: {
-    statusLabel(s) {
-      return { attente: '⏳ En attente', valide: '✅ Validé', rejete: '❌ Rejeté' }[s] || s
-    },
-    save() {
-      localStorage.setItem('livrables', JSON.stringify(this.livrables))
-    },
-    showNotif(msg, type = 'success') {
-      this.notification = { show: true, msg, type }
-      setTimeout(() => { this.notification.show = false }, 4000)
-    },
-    upload(e, l) {
-      const file = e.target.files[0]
-      if (!file || file.type !== 'application/pdf') { this.showNotif('PDF uniquement', 'error'); return }
-      if (l.valideFinal) { this.showNotif('Ce livrable est déjà validé définitivement', 'warn'); return }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        l.file = event.target.result
-        l.fileName = file.name
-        l.statut = 'attente'
-        l.dateDepot = new Date().toLocaleDateString('fr-FR')
-        this.save()
-        this.showNotif('Livrable mis à jour — en attente de validation')
+
+    async chargerDonnees() {
+      this.loading = true
+      try {
+        // GET /api/phases now returns ONLY active phases for non-chef users.
+        // GET /api/livrables returns the student's own livrables.
+        const [resPhases, resLivrables] = await Promise.all([
+          api.get('/phases'),
+          api.get('/livrables').catch(() => ({ data: [] }))
+        ])
+
+        // Build livrables map: phase_id → livrable data
+        const livrablesMap = {}
+        ;(resLivrables.data || []).forEach(l => {
+          livrablesMap[l.phase_id] = {
+            fileName:    l.fichier ? l.fichier.split('/').pop() : 'fichier.pdf',
+            dateDepot:   this.formatDate(l.depose_le),
+            statut:      l.statut,       // en_attente | valide | rejete
+            commentaire: l.commentaire ?? null
+          }
+        })
+
+        // Map phases — active=true is guaranteed by the API for non-chefs
+        this.phases = (resPhases.data || []).map(p => ({
+          id:                p.id,
+          ordre:             p.ordre,
+          nom:               p.nom,
+          dateDebut:         this.formatDate(p.date_debut),
+          dateFin:           this.formatDate(p.date_fin),
+          active:            !!p.active,
+          terminee:          !!p.terminee,
+          livrableObligatoire: !!p.livrable_obligatoire,
+          livrable:          livrablesMap[p.id] || null
+        }))
+
+      } catch (error) {
+        console.error('Erreur livrables:', error)
+        this.showToast('Erreur de chargement', 'err')
+      } finally {
+        this.loading = false
       }
-      reader.readAsDataURL(file)
     },
-    voir(l) { this.viewer = l.file },
-    handleFileUpload(e) {
+
+    formatDate(date) {
+      if (!date) return ''
+      const d = new Date(date)
+      if (isNaN(d)) return date
+      return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`
+    },
+
+    async upload(e, phase) {
       const file = e.target.files[0]
-      if (!file || file.type !== 'application/pdf') { this.showNotif('PDF uniquement', 'error'); return }
-      this.newDoc.fileName = file.name
-      const reader = new FileReader()
-      reader.onload = (event) => { this.newDoc.file = event.target.result }
-      reader.readAsDataURL(file)
-    },
-    ajouterLivrable() {
-      if (!this.newDoc.file || !this.newDoc.phase) {
-        this.showNotif('Veuillez sélectionner une phase et un fichier PDF', 'warn')
+      if (!file || file.type !== 'application/pdf') {
+        this.showToast('Fichier PDF uniquement', 'err')
         return
       }
-      this.livrables.push({
-        id: Date.now(),
-        phase: this.newDoc.phase,
-        file: this.newDoc.file,
-        fileName: this.newDoc.fileName,
-        commentaire: this.newDoc.commentaire,
-        commentaireEncadrant: '',
-        statut: 'attente',
-        valideFinal: false,
-        dateDepot: new Date().toLocaleDateString('fr-FR')
-      })
-      this.save()
-      this.newDoc = { phase: '', commentaire: '', file: null, fileName: '' }
-      this.showForm = false
-      this.showNotif('Livrable déposé avec succès — en attente de validation')
+      const formData = new FormData()
+      formData.append('phase_id', phase.id)
+      formData.append('fichier', file)
+
+      try {
+        await api.post('/livrables', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        await this.chargerDonnees()
+        this.showToast(`Livrable déposé pour "${phase.nom}" ✓`)
+      } catch (error) {
+        this.showToast(error.response?.data?.message || 'Erreur lors du dépôt', 'err')
+      }
+      e.target.value = ''
+    },
+
+    showToast(msg, type = 'ok') {
+      this.toast = { show: true, msg, type }
+      setTimeout(() => (this.toast.show = false), 3200)
     }
   }
 }
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-* { box-sizing: border-box; }
-
-.page-content {
-  padding: 32px;
-  background: #0F1923;
-  min-height: 100vh;
-  font-family: 'DM Sans', sans-serif;
-  color: #E8EDF2;
-}
-
-.page-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 20px;
-}
-.header-left { display: flex; align-items: center; gap: 14px; }
-.header-icon {
-  font-size: 28px; background: rgba(245,197,24,0.15);
-  width: 52px; height: 52px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 14px; border: 1px solid rgba(245,197,24,0.3);
-}
-h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: #F5C518; margin: 0; }
-.subtitle { font-size: 13px; color: #7A8FA6; margin: 2px 0 0; }
-
-/* NOTIF */
-.notif {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 18px; border-radius: 10px; margin-bottom: 16px;
-  font-size: 14px; font-weight: 500;
-  border: 1px solid;
-}
-.notif-success { background: rgba(39,174,96,0.1); color: #2ecc71; border-color: rgba(39,174,96,0.3); }
-.notif-error { background: rgba(231,76,60,0.1); color: #e74c3c; border-color: rgba(231,76,60,0.3); }
-.notif-warn { background: rgba(245,197,24,0.1); color: #F5C518; border-color: rgba(245,197,24,0.3); }
-.notif-icon { font-size: 16px; }
-.notif-close { margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; opacity: 0.7; }
-.slide-notif-enter-active, .slide-notif-leave-active { transition: all 0.3s; }
-.slide-notif-enter-from, .slide-notif-leave-to { transform: translateY(-10px); opacity: 0; }
-
-/* STATS */
-.stats-row { display: flex; gap: 14px; margin-bottom: 24px; }
-.stat-card {
-  background: #1A2635; border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px; padding: 14px 22px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.stat-card.stat-yellow { border-color: rgba(245,197,24,0.3); }
-.stat-card.stat-green { border-color: rgba(39,174,96,0.3); }
-.stat-card.stat-red { border-color: rgba(231,76,60,0.3); }
-.stat-val { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #F5C518; line-height: 1; }
-.stat-yellow .stat-val { color: #F5C518; }
-.stat-green .stat-val { color: #2ecc71; }
-.stat-red .stat-val { color: #e74c3c; }
-.stat-label { font-size: 11px; color: #7A8FA6; text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* TABLE */
-.table-wrapper {
-  background: #1A2635; border-radius: 16px; overflow: hidden;
-  border: 1px solid rgba(245,197,24,0.15);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-}
-.table { width: 100%; border-collapse: collapse; }
-.table th {
-  background: #243347; color: #F5C518;
-  padding: 14px 16px;
-  font-family: 'Syne', sans-serif;
-  font-size: 11px; text-transform: uppercase;
-  letter-spacing: 1px; font-weight: 600;
-  border-bottom: 1px solid rgba(245,197,24,0.2);
-  text-align: left;
-}
-.table td { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
-.table tbody tr:hover { background: rgba(245,197,24,0.03); }
-.row-rejected { border-left: 3px solid #e74c3c; }
-.row-validated { border-left: 3px solid #2ecc71; }
-
-.phase-chip {
-  background: rgba(245,197,24,0.12); color: #F5C518;
-  border: 1px solid rgba(245,197,24,0.25);
-  padding: 4px 12px; border-radius: 20px;
-  font-size: 12px; font-weight: 600; display: inline-block;
-}
-.file-info { display: flex; align-items: center; gap: 8px; }
-.file-icon { font-size: 18px; }
-.file-name { font-size: 13px; color: #C8D6E5; font-weight: 500; }
-.date-col { color: #7A8FA6; font-size: 13px; }
-.empty-cell { color: #4A5568; font-style: italic; font-size: 13px; }
-.comment-text { font-size: 13px; color: #C8D6E5; font-style: italic; }
-
-.status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.status-wait { background: rgba(245,197,24,0.15); color: #F5C518; border: 1px solid rgba(245,197,24,0.3); }
-.status-ok { background: rgba(39,174,96,0.15); color: #2ecc71; border: 1px solid rgba(39,174,96,0.3); }
-.status-ko { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); }
-
-.actions { display: flex; gap: 6px; align-items: center; }
-.btn-sm {
-  padding: 5px 10px; border-radius: 7px; font-size: 12px;
-  font-weight: 600; cursor: pointer; transition: 0.15s;
-  text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
-}
-.btn-upload { background: rgba(245,197,24,0.12); color: #F5C518; border: 1px solid rgba(245,197,24,0.3); cursor: pointer; }
-.btn-upload:hover { background: rgba(245,197,24,0.22); }
-.btn-view { background: rgba(41,128,185,0.15); color: #5dade2; border: 1px solid rgba(41,128,185,0.3); }
-.btn-view:hover { background: rgba(41,128,185,0.3); }
-.btn-download { background: rgba(39,174,96,0.15); color: #2ecc71; border: 1px solid rgba(39,174,96,0.3); }
-.btn-download:hover { background: rgba(39,174,96,0.3); }
-
-/* EMPTY */
-.empty-box {
-  background: #1A2635; border: 2px dashed rgba(245,197,24,0.25);
-  border-radius: 16px; padding: 60px 20px;
-  text-align: center; color: #7A8FA6;
-}
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-box p { margin-bottom: 20px; font-size: 15px; }
-
-/* MODAL */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
-}
-.modal-box {
-  background: #1A2635; border: 1px solid rgba(245,197,24,0.25);
-  border-radius: 18px; padding: 28px; width: 500px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
-}
-.viewer-box { width: 800px; max-width: 95vw; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
-.modal-header h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #F5C518; margin: 0; }
-.close-btn {
-  background: rgba(255,255,255,0.07); border: none;
-  color: #7A8FA6; width: 32px; height: 32px;
-  border-radius: 8px; cursor: pointer; transition: 0.2s;
-}
-.close-btn:hover { background: rgba(231,76,60,0.2); color: #e74c3c; }
-
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block; font-size: 11px; font-weight: 600;
-  color: #7A8FA6; text-transform: uppercase;
-  letter-spacing: 0.5px; margin-bottom: 7px;
-}
-input, select {
-  width: 100%; padding: 11px 14px;
-  background: #243347; border: 1px solid rgba(245,197,24,0.2);
-  border-radius: 10px; color: #E8EDF2;
-  font-size: 14px; font-family: 'DM Sans', sans-serif;
-  transition: border-color 0.2s;
-}
-input:focus, select:focus { border-color: #F5C518; outline: none; box-shadow: 0 0 0 3px rgba(245,197,24,0.1); }
-
-.file-drop {
-  background: #243347; border: 2px dashed rgba(245,197,24,0.25);
-  border-radius: 10px; padding: 30px 20px;
-  text-align: center; cursor: pointer; color: #7A8FA6;
-  font-size: 14px; line-height: 1.6; transition: all 0.2s;
-}
-.file-drop:hover { border-color: #F5C518; background: rgba(245,197,24,0.05); }
-.file-drop.has-file { border-color: #2ecc71; background: rgba(39,174,96,0.05); }
-.file-selected { color: #2ecc71; font-weight: 600; }
-
-.btn-gold {
-  background: #F5C518; color: #0F1923; border: none;
-  padding: 10px 20px; border-radius: 10px; font-weight: 700;
-  font-family: 'Syne', sans-serif; cursor: pointer;
-  font-size: 14px; transition: all 0.2s;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.btn-gold:hover { background: #D4A017; box-shadow: 0 4px 16px rgba(245,197,24,0.4); }
-.btn-outline {
-  background: transparent; border: 1px solid rgba(245,197,24,0.35);
-  color: #F5C518; padding: 10px 18px; border-radius: 10px;
-  cursor: pointer; font-size: 14px; transition: all 0.2s;
-}
-.btn-outline:hover { background: rgba(245,197,24,0.1); }
-.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+.page-content{font-family:'Source Sans 3',sans-serif;color:#1e2a35}
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+h2{font-family:'Merriweather',serif;font-size:1.4rem;font-weight:700;color:#1e2a35;margin-bottom:4px}
+.subtitle{font-size:0.88rem;color:#8a9aaa;font-weight:300}
+.kpi-row{display:flex;gap:12px;flex-wrap:wrap}
+.kpi{display:flex;flex-direction:column;align-items:center;padding:10px 18px;border-radius:10px;border:1.5px solid;gap:2px}
+.kpi strong{font-family:'Merriweather',serif;font-size:1.5rem;font-weight:700;line-height:1}
+.kpi span{font-size:0.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.kpi-ok{background:#d4edda;border-color:#c3e6cb}.kpi-ok strong,.kpi-ok span{color:#155724}
+.kpi-warn{background:#fff3cd;border-color:#ffc107}.kpi-warn strong,.kpi-warn span{color:#856404}
+.kpi-ko{background:#f8d7da;border-color:#f5c6cb}.kpi-ko strong,.kpi-ko span{color:#721c24}
+.toast{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-radius:10px;margin-bottom:16px;font-size:0.88rem;font-weight:500;border:1.5px solid}
+.toast-ok{background:#e8f5e9;color:#155724;border-color:#c3e6cb}
+.toast-err{background:#f8d7da;color:#721c24;border-color:#f5c6cb}
+.toast-x{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;display:flex;align-items:center}
+.toast-enter-active,.toast-leave-active{transition:all .25s}
+.toast-enter-from,.toast-leave-to{opacity:0;transform:translateY(-6px)}
+.loading-state{text-align:center;padding:60px;color:#8a9aaa}
+.spinner{width:32px;height:32px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:60px 20px;color:#8a9aaa;background:#e8e4dc;border:2px dashed #c8c4bc;border-radius:14px}
+.empty-state svg{opacity:.4;margin-bottom:16px}
+.empty-state p{font-size:14px;margin-bottom:6px}
+.empty-sub{font-size:12.5px;opacity:.7}
+.phases-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.phase-card{background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:14px;overflow:hidden;position:relative;transition:.2s}
+.phase-card:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
+.pc-bar{height:4px}
+.pc-active .pc-bar{background:linear-gradient(90deg,#f5a623,#d98e1a)}
+.pc-done   .pc-bar{background:linear-gradient(90deg,#27ae60,#1e8449)}
+.pc-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 0}
+.pc-num{font-size:0.72rem;font-weight:700;color:#8a9aaa;text-transform:uppercase;letter-spacing:.06em}
+.pc-badge{font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px}
+.pb-active{background:#fff3cd;color:#856404;border:1px solid #ffc107}
+.pb-done{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.pc-nom{font-family:'Merriweather',serif;font-size:0.9rem;font-weight:700;color:#1e2a35;padding:10px 16px 4px;line-height:1.4}
+.pc-dates{font-size:0.78rem;color:#8a9aaa;font-weight:300;padding:0 16px 14px}
+.pc-no-lv{display:flex;align-items:center;gap:7px;font-size:0.8rem;color:#155724;background:#d4edda;border-top:1px solid #c3e6cb;padding:10px 14px}
+.depot-area{padding:0 16px 16px}
+.btn-depot{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:linear-gradient(160deg,#f5a623,#d98e1a);color:#1e2a35;border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.2s;box-shadow:0 3px 10px rgba(245,166,35,.25)}
+.btn-depot:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(245,166,35,.35)}
+.lv-missed{font-size:0.82rem;color:#721c24;background:#f8d7da;border:1px solid #f5c6cb;border-radius:9px;padding:10px;text-align:center}
+.lv-area{padding:0 16px 14px;display:flex;flex-direction:column;gap:8px}
+.lv-file{display:flex;align-items:center;gap:10px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:9px;padding:10px 12px}
+.lv-info{flex:1;min-width:0}
+.lv-nom{font-size:0.85rem;font-weight:600;color:#1e2a35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-date{font-size:0.75rem;color:#8a9aaa}
+.lv-status{font-size:0.78rem;font-weight:700;padding:4px 12px;border-radius:20px;text-align:center}
+.ls-wait{background:#fff3cd;color:#856404;border:1px solid #ffc107}
+.ls-ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.ls-ko{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.lv-comment{font-size:0.8rem;color:#721c24;background:#f8d7da;border:1px solid #f5c6cb;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:6px}
+.btn-modifier{display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:9px;font-size:0.82rem;font-weight:600;color:#4a5a6a;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.18s}
+.btn-modifier:hover{border-color:#3d6080;color:#3d6080}
+.pc-done-bar{display:flex;align-items:center;gap:7px;font-size:0.8rem;font-weight:700;color:#155724;background:#d4edda;border-top:1px solid #c3e6cb;padding:10px 14px}
 </style>

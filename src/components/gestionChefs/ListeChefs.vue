@@ -53,11 +53,11 @@
 
           <!-- Affecter spécialité -->
           <div class="affect-row" v-if="specialites.length">
-            <select v-model="c._selectedSpec" class="spec-select">
+            <select v-model="selectedSpecs[c.id]" class="spec-select">
               <option value="">— Choisir une spécialité —</option>
               <option v-for="s in specialites" :key="s.id" :value="s.id">{{ s.nom }}</option>
             </select>
-            <button class="btn-affecter" @click="affecterSpec(c)" :disabled="!c._selectedSpec">
+            <button class="btn-affecter" @click="affecterSpec(c)" :disabled="!selectedSpecs[c.id]">
               Affecter
             </button>
           </div>
@@ -125,6 +125,7 @@ export default {
       editId: null,
       editForm: {},
       modalRetrait: null,
+      selectedSpecs: {},   // keyed by chef id — avoids mutating prop objects
     }
   },
   methods: {
@@ -152,11 +153,13 @@ export default {
       }
     },
     async affecterSpec(c) {
-      if (!c._selectedSpec) return
+      const specId = this.selectedSpecs[c.id]
+      if (!specId) return
       try {
-        const res = await api.post(`/chefs/${c.id}/affecter`, { specialiteId: c._selectedSpec })
+        const res = await api.post(`/chefs/${c.id}/affecter`, { specialiteId: specId })
         const updated = this.chefs.map(x => x.id === c.id ? { ...x, ...res.data } : x)
         this.$emit('chefs-maj', updated)
+        this.selectedSpecs[c.id] = ''
       } catch (e) {
         console.error('Erreur affectation:', e.response?.data?.message)
       }

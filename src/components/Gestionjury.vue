@@ -285,7 +285,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/services/api.js'
 
 export default {
   name: 'GestionJury',
@@ -320,7 +320,7 @@ export default {
 
   computed: {
     totalMembres() {
-      return this.jurys.reduce((s, j) => s + j.membres.length, 0)
+      return this.jurys.reduce((s, j) => s + (j.membres?.length || 0), 0)
     },
   },
 
@@ -333,102 +333,115 @@ export default {
   },
 
   methods: {
-    getApi() {
-      const u = JSON.parse(localStorage.getItem('user') || '{}')
-      return axios.create({
-        baseURL: 'http://127.0.0.1:8000/api',
-        headers: { Authorization: 'Bearer ' + u.token, Accept: 'application/json', 'Content-Type': 'application/json' },
-      })
-    },
+
 
     async chargerJurys() {
       this.loadingJurys = true
       try {
-        const res = await this.getApi().get('/jurys')
-        this.jurys = (res.data || []).map(j => ({
+        const res = await api.get('/jurys')
+        this.jurys = res.data.map(j => ({
           id: j.id,
-          projet_titre: j.projet?.titre || j.projet_titre || 'Projet #' + j.projet_id,
-          etudiant_nom: j.etudiant?.nom_complet || j.etudiant_nom || '—',
-          membres: (j.membres || []).map(m => ({ id: m.id, nom: m.nom_complet || m.nom + ' ' + m.prenom })),
-          president: j.president?.nom_complet || null,
-          president_id: j.president_id,
+          affectation_id: j.affectation_id,
+          projet_titre: j.projet_titre || 'Projet #' + (j.affectation_id || j.id),
+          etudiant_nom: j.etudiant_nom || '—',
+          membres: (j.membres || []).map(m => ({
+            id: m.id,
+            nom: m.nom || (m.enseignant?.nom + ' ' + m.enseignant?.prenom) || 'Membre',
+            enseignant_id: m.enseignant_id
+          })),
+          president: (j.membres || []).find(m => m.fonction === 'president')?.nom || null,
+          president_id: (j.membres || []).find(m => m.fonction === 'president')?.enseignant_id || null
         }))
-      } catch (e) {
-        // Mode démo si API pas encore prête
-        this.jurys = [
-          { id: 1, projet_titre: 'Système de gestion PFE', etudiant_nom: 'Ali Ben Salah', membres: [{ id: 1, nom: 'Dr. Mohamed Triki' }, { id: 2, nom: 'Dr. Sana Bouaziz' }], president: 'Dr. Mohamed Triki', president_id: 1 },
-          { id: 2, projet_titre: 'Application mobile e-commerce', etudiant_nom: 'Fatma Chaari', membres: [{ id: 3, nom: 'Dr. Hedi Mansouri' }], president: null, president_id: null },
-        ]
-      } finally { this.loadingJurys = false }
+      } catch (error) {
+        console.error('Erreur chargement jurys:', error)
+        this.$emit('toast', { message: 'Erreur de chargement des jurys', type: 'toast-err' })
+      } finally {
+        this.loadingJurys = false
+      }
     },
 
     async chargerEnseignants() {
       try {
-        const res = await this.getApi().get('/jurys/enseignants-disponibles')
-        this.enseignantsDispo = res.data || []
-      } catch {
-        this.enseignantsDispo = [
-          { id: 1, nom_complet: 'Dr. Mohamed Triki', grade: 'MCF' },
-          { id: 2, nom_complet: 'Dr. Sana Bouaziz', grade: 'MCF' },
-          { id: 3, nom_complet: 'Dr. Hedi Mansouri', grade: 'Professeur' },
-          { id: 4, nom_complet: 'Dr. Leila Jemaa', grade: 'MCF' },
-        ]
+        const res = await api.get('/utilisateurs')
+        // ✅ FIX: filter enseignants/encadrants client-side
+        this.enseignantsDispo = res.data
+          .filter(e => e.role === 'enseignant' || e.role === 'encadrant')
+          .map(e => ({
+            id: e.id,
+            nom_complet: e.nom + ' ' + e.prenom,
+            grade: e.role || 'Enseignant'
+          }))
+      } catch (error) {
+        console.error('Erreur chargement enseignants:', error)
+        this.enseignantsDispo = []
       }
     },
 
     async chargerProjets() {
       try {
-        const res = await this.getApi().get('/jurys/projets-sans-jury')
-        this.projetsDisponibles = res.data || []
-      } catch {
-        this.projetsDisponibles = [
-          { id: 1, titre: 'Système de gestion PFE', etudiant: 'Ali Ben Salah' },
-          { id: 2, titre: 'Application mobile e-commerce', etudiant: 'Fatma Chaari' },
-          { id: 3, titre: 'Plateforme IA diagnostique', etudiant: 'Youssef Rekik' },
-        ]
+        const res = await api.get('/affectations/sans-jury')
+        this.projetsDisponibles = res.data.map(a => ({
+          id: a.id,
+          titre: a.titre_projet || 'Projet #' + a.id,
+          etudiant: a.etudiant?.nom + ' ' + a.etudiant?.prenom || 'Étudiant'
+        }))
+      } catch (error) {
+        console.error('Erreur chargement projets:', error)
+        this.projetsDisponibles = []
       }
     },
 
     async chargerEvaluations() {
       this.loadingEvals = true
       try {
-        const res = await this.getApi().get('/evaluations-jury')
-        this.evaluations = res.data || []
-      } catch {
-        this.evaluations = [
-          {
-            id: 1, projet_titre: 'Système de gestion PFE', etudiant_nom: 'Ali Ben Salah',
-            membre_jury: 'Dr. Mohamed Triki', date: '12/06/2025', note_totale: 15.5,
-            criteres: [
-              { id: 1, nom: 'Qualité du rapport', bareme: 5, note: 4 },
-              { id: 2, nom: 'Présentation orale', bareme: 5, note: 4.5 },
-              { id: 3, nom: 'Réponses aux questions', bareme: 5, note: 3.5 },
-              { id: 4, nom: 'Innovation', bareme: 5, note: 3.5 },
-            ],
-            commentaire: 'Très bon travail, maîtrise du sujet excellente.',
-          },
-        ]
-      } finally { this.loadingEvals = false }
+        const res = await api.get('/notes-jury')
+        this.evaluations = res.data.map(ev => ({
+          id: ev.id,
+          projet_titre: ev.projet_titre || 'Projet',
+          etudiant_nom: ev.etudiant_nom || 'Étudiant',
+          membre_jury: ev.membre_nom || 'Membre',
+          date: new Date(ev.created_at).toLocaleDateString('fr-FR'),
+          note_totale: ev.note,
+          criteres: ev.criteres || [],
+          commentaire: ev.commentaire
+        }))
+      } catch (error) {
+        console.error('Erreur chargement évaluations:', error)
+        this.evaluations = []
+      } finally {
+        this.loadingEvals = false
+      }
     },
 
     async chargerResultats() {
       this.loadingResultats = true
       try {
-        const res = await this.getApi().get('/deliberation/resultats')
-        this.resultats = res.data?.resultats || []
-        this.deliberationLancee = res.data?.lancee || false
-        this.resultatsPublies = res.data?.publies || false
-      } catch {
+        const res = await api.get('/resultats')
+        this.resultats = res.data.map(r => ({
+          id: r.id,
+          etudiant_nom: r.etudiant_nom || 'Étudiant',
+          matricule: r.matricule || '—',
+          projet_titre: r.projet_titre || 'Projet',
+          note_jury: r.note_jury || 0,
+          note_encadrant: r.note_encadrant || 0,
+          note_finale: r.note_finale || 0
+        }))
+        this.deliberationLancee = this.resultats.length > 0
+        this.resultatsPublies = res.data.some(r => r.publie)
+      } catch (error) {
+        console.error('Erreur chargement résultats:', error)
         this.resultats = []
-      } finally { this.loadingResultats = false }
+      } finally {
+        this.loadingResultats = false
+      }
     },
 
     openJuryModal(jury) {
       this.editJury = jury
       if (jury) {
         this.form = {
-          projet_id: jury.projet_id || '',
-          membres_ids: jury.membres.map(m => m.id),
+          projet_id: jury.affectation_id || '',
+          membres_ids: jury.membres.map(m => m.enseignant_id || m.id),
           president_id: jury.president_id || '',
         }
       } else {
@@ -437,101 +450,109 @@ export default {
       this.showModal = true
     },
 
-    closeModal() { this.showModal = false; this.editJury = null },
+    closeModal() {
+      this.showModal = false
+      this.editJury = null
+    },
 
     async sauvegarder() {
       if (!this.form.projet_id && !this.editJury) {
-        this.$emit('toast', { message: 'Veuillez sélectionner un projet.', type: 'toast-err' }); return
+        this.$emit('toast', { message: 'Veuillez sélectionner un projet.', type: 'toast-err' })
+        return
       }
       if (!this.form.membres_ids.length) {
-        this.$emit('toast', { message: 'Veuillez sélectionner au moins un membre.', type: 'toast-err' }); return
+        this.$emit('toast', { message: 'Veuillez sélectionner au moins un membre.', type: 'toast-err' })
+        return
       }
+      
       this.saving = true
       try {
         if (this.editJury) {
-          await this.getApi().put('/jurys/' + this.editJury.id, this.form)
+          // Mise à jour du jury - d'abord supprimer les anciens membres
+          for (const m of this.editJury.membres) {
+            try {
+              await api.delete(`/jurys/${this.editJury.id}/membres/${m.id}`)
+            } catch(e) {}
+          }
+          // Ajouter les nouveaux membres
+          for (const id of this.form.membres_ids) {
+            await api.post(`/jurys/${this.editJury.id}/membres`, {
+              enseignant_id: id,
+              fonction: id === this.form.president_id ? 'president' : 'examinateur'
+            })
+          }
           this.$emit('toast', { message: 'Jury mis à jour avec succès.', type: 'toast-ok' })
         } else {
-          await this.getApi().post('/jurys', this.form)
+          // Créer le jury
+          const juryRes = await api.post('/jurys', { affectation_id: this.form.projet_id })
+          const juryId = juryRes.data.id
+          
+          // Ajouter les membres
+          for (const id of this.form.membres_ids) {
+            await api.post(`/jurys/${juryId}/membres`, {
+              enseignant_id: id,
+              fonction: id === this.form.president_id ? 'president' : 'examinateur'
+            })
+          }
           this.$emit('toast', { message: 'Jury composé avec succès.', type: 'toast-ok' })
         }
         this.closeModal()
         await this.chargerJurys()
-      } catch {
-        // Démo : mise à jour locale
-        if (this.editJury) {
-          const idx = this.jurys.findIndex(j => j.id === this.editJury.id)
-          if (idx !== -1) {
-            this.jurys[idx].membres = this.form.membres_ids.map(id => ({
-              id, nom: this.enseignantsDispo.find(e => e.id === id)?.nom_complet || 'Membre #' + id
-            }))
-            const pres = this.enseignantsDispo.find(e => e.id === this.form.president_id)
-            this.jurys[idx].president = pres?.nom_complet || null
-            this.jurys[idx].president_id = this.form.president_id || null
-          }
-        } else {
-          const projet = this.projetsDisponibles.find(p => p.id === this.form.projet_id)
-          this.jurys.push({
-            id: Date.now(), projet_titre: projet?.titre || 'Nouveau projet', etudiant_nom: projet?.etudiant || '—',
-            membres: this.form.membres_ids.map(id => ({ id, nom: this.enseignantsDispo.find(e => e.id === id)?.nom_complet || 'Membre #' + id })),
-            president: this.enseignantsDispo.find(e => e.id === this.form.president_id)?.nom_complet || null,
-            president_id: this.form.president_id || null,
-          })
-        }
-        this.$emit('toast', { message: this.editJury ? 'Jury mis à jour.' : 'Jury composé.', type: 'toast-ok' })
-        this.closeModal()
-      } finally { this.saving = false }
+      } catch (error) {
+        console.error('Erreur sauvegarde:', error)
+        this.$emit('toast', { message: 'Erreur lors de l\'enregistrement', type: 'toast-err' })
+      } finally {
+        this.saving = false
+      }
     },
 
     async retirerMembre(jury, membre) {
       if (!confirm(`Retirer ${membre.nom} du jury ?`)) return
       try {
-        await this.getApi().delete('/jurys/' + jury.id + '/membres/' + membre.id)
+        await api.delete(`/jurys/${jury.id}/membres/${membre.id}`)
         await this.chargerJurys()
         this.$emit('toast', { message: 'Membre retiré.', type: 'toast-ok' })
-      } catch {
-        jury.membres = jury.membres.filter(m => m.id !== membre.id)
-        this.$emit('toast', { message: 'Membre retiré.', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur:', error)
+        this.$emit('toast', { message: 'Erreur lors du retrait', type: 'toast-err' })
       }
     },
 
     async supprimerJury(id) {
       if (!confirm('Supprimer ce jury ?')) return
       try {
-        await this.getApi().delete('/jurys/' + id)
+        await api.delete(`/jurys/${id}`)
         await this.chargerJurys()
         this.$emit('toast', { message: 'Jury supprimé.', type: 'toast-ok' })
-      } catch {
-        this.jurys = this.jurys.filter(j => j.id !== id)
-        this.$emit('toast', { message: 'Jury supprimé.', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur:', error)
+        this.$emit('toast', { message: 'Erreur lors de la suppression', type: 'toast-err' })
       }
     },
 
     async declencher() {
       if (!confirm('Lancer la délibération finale ? Cette action consolidera toutes les notes.')) return
       try {
-        await this.getApi().post('/deliberation/declencher')
+        await api.post('/deliberation/declencher')
         this.$emit('toast', { message: 'Délibération lancée avec succès.', type: 'toast-ok' })
-      } catch {
-        this.$emit('toast', { message: 'Délibération lancée (mode démo).', type: 'toast-ok' })
+        await this.chargerResultats()
+      } catch (error) {
+        console.error('Erreur:', error)
+        this.$emit('toast', { message: 'Erreur lors du lancement', type: 'toast-err' })
       }
-      this.deliberationLancee = true
-      this.resultats = [
-        { id: 1, etudiant_nom: 'Ali Ben Salah', matricule: '21-0142', projet_titre: 'Système de gestion PFE', note_jury: 15.5, note_encadrant: 16, note_finale: 15.75 },
-        { id: 2, etudiant_nom: 'Fatma Chaari', matricule: '21-0156', projet_titre: 'Application mobile e-commerce', note_jury: 12, note_encadrant: 13, note_finale: 12.5 },
-        { id: 3, etudiant_nom: 'Youssef Rekik', matricule: '21-0189', projet_titre: 'Plateforme IA diagnostique', note_jury: 8, note_encadrant: 9, note_finale: 8.5 },
-      ]
     },
 
     async publierResultats() {
       if (!confirm('Publier les résultats ? Les étudiants seront notifiés.')) return
       try {
-        await this.getApi().post('/deliberation/publier')
+        await api.post('/deliberation/publier')
         this.$emit('toast', { message: 'Résultats publiés. Les étudiants ont été notifiés.', type: 'toast-ok' })
-      } catch {
-        this.$emit('toast', { message: 'Résultats publiés (mode démo).', type: 'toast-ok' })
+        this.resultatsPublies = true
+        await this.chargerResultats()
+      } catch (error) {
+        console.error('Erreur:', error)
+        this.$emit('toast', { message: 'Erreur lors de la publication', type: 'toast-err' })
       }
-      this.resultatsPublies = true
     },
 
     mention(note) {
@@ -541,6 +562,7 @@ export default {
       if (note >= 10) return 'Passable'
       return 'Insuffisant'
     },
+
     mentionClass(note) {
       if (note >= 16) return 'mention-tb'
       if (note >= 14) return 'mention-b'
@@ -548,8 +570,12 @@ export default {
       if (note >= 10) return 'mention-p'
       return 'mention-ins'
     },
-    initiales(n) { return (n || '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) },
-  },
+
+    initiales(n) {
+      if (!n) return '?'
+      return n.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)
+    }
+  }
 }
 </script>
 

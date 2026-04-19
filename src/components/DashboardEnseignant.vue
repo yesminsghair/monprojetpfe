@@ -20,15 +20,15 @@
 
       <nav class="sb-nav">
         <!-- Tableau de bord -->
-        <button class="nav-item" :class="{active:currentPage==='home'}" @click="navigate('home')">
+        <button class="nav-item" :class="{active:currentPage==='home'}" @click="navigate('home')" :title="sidebarCollapsed?'Accueil':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Tableau de bord</span>
         </button>
 
+        <!-- ── Vœux d'encadrement ── -->
         <div class="nav-cat" v-if="!sidebarCollapsed">Vœux d'encadrement</div>
 
-        <!-- Remplir — visible si pas encore soumis -->
-        <button v-if="!voeuxSoumis" class="nav-item" :class="{active:currentPage==='remplir'}" @click="navigate('remplir')">
+        <button v-if="!voeuxSoumis" class="nav-item" :class="{active:currentPage==='remplir'}" @click="navigate('remplir')" :title="sidebarCollapsed?'Formulaire':''">
           <span class="nav-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </span>
@@ -38,16 +38,50 @@
           </span>
         </button>
 
-        <!-- Ma fiche — visible si soumis -->
-        <button v-if="voeuxSoumis" class="nav-item" :class="{active:currentPage==='ma-fiche'}" @click="navigate('ma-fiche')">
+        <button v-if="voeuxSoumis" class="nav-item" :class="{active:currentPage==='ma-fiche'}" @click="navigate('ma-fiche')" :title="sidebarCollapsed?'Ma fiche':''">
           <span class="nav-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </span>
           <span class="nav-label" v-if="!sidebarCollapsed">Ma fiche <span class="badge-soumis">✓</span></span>
         </button>
 
+        <!-- ── Communication ── -->
+        <div class="nav-cat" v-if="!sidebarCollapsed">Communication</div>
+
+        <button class="nav-item" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
+
+        <!-- ── Archives & Résultats ── -->
+        <div class="nav-cat" v-if="!sidebarCollapsed">Archives & Résultats</div>
+
+        <button class="nav-item" :class="{active:currentPage==='resultats'}" @click="navigate('resultats')" :title="sidebarCollapsed?'Résultats':''">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Résultats soutenances</span>
+        </button>
+
+        <button class="nav-item" :class="{active:currentPage==='archives'}" @click="navigate('archives')" :title="sidebarCollapsed?'Archives':''">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Archives</span>
+        </button>
+
+        <button class="nav-item" :class="{active:currentPage==='biblio-pfe'}" @click="navigate('biblio-pfe')" :title="sidebarCollapsed?'Bibliothèque':''">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Bibliothèque PFE</span>
+        </button>
+
+        <!-- ── Mon compte ── -->
         <div class="nav-cat" v-if="!sidebarCollapsed">Mon compte</div>
-        <button class="nav-item" :class="{active:currentPage==='profil'}" @click="navigate('profil')">
+        <button class="nav-item" :class="{active:currentPage==='profil'}" @click="navigate('profil')" :title="sidebarCollapsed?'Profil':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Mon profil</span>
         </button>
@@ -71,7 +105,11 @@
             <span class="bc-curr">{{ breadcrumb }}</span>
           </template>
         </div>
-        <div class="topbar-r"><span class="tb-date">{{ dateNow }}</span></div>
+        <div class="topbar-r">
+          <span class="tb-date">{{ dateNow }}</span>
+          <!-- Notifications bell -->
+          <Notifications />
+        </div>
       </header>
 
       <div class="content-area">
@@ -81,7 +119,6 @@
           <div v-if="currentPage==='home'" key="home">
             <div class="ptb"><h1 class="pt">Bonjour, {{ currentUser.prenom }} 👋</h1><p class="ps">Exprimez vos vœux d'encadrement pour les PFE.</p></div>
 
-            <!-- Alerte : formulaire disponible non rempli -->
             <div class="alert-gold" v-if="formulaireActif && !voeuxSoumis">
               <span class="al-icon">📋</span>
               <div class="al-body">
@@ -91,7 +128,6 @@
               <button class="btn-alert" @click="navigate('remplir')">Remplir maintenant →</button>
             </div>
 
-            <!-- Statut : fiche soumise -->
             <div class="statut-ok" v-if="voeuxSoumis">
               <div class="ok-check">✓</div>
               <div>
@@ -120,13 +156,29 @@
               </div>
             </div>
 
-            <div class="sec-title">Actions</div>
+            <div class="sec-title">Actions rapides</div>
             <div class="qa-grid">
               <button class="qa-card" @click="navigate(voeuxSoumis ? 'ma-fiche' : 'remplir')">
                 <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
                 <div class="qa-txt">
                   <div class="qa-t">{{ voeuxSoumis ? 'Consulter ma fiche' : 'Remplir le formulaire' }}</div>
                   <div class="qa-s">{{ voeuxSoumis ? 'Voir vos préférences soumises' : 'Disponibilité, spécialités, capacité' }}</div>
+                </div>
+                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button class="qa-card" @click="navigate('messagerie')">
+                <div class="qa-icon qa-teal"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <div class="qa-txt">
+                  <div class="qa-t">Messagerie</div>
+                  <div class="qa-s">Communiquer avec les autres utilisateurs</div>
+                </div>
+                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button class="qa-card" @click="navigate('biblio-pfe')">
+                <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+                <div class="qa-txt">
+                  <div class="qa-t">Bibliothèque PFE</div>
+                  <div class="qa-s">Consulter les meilleurs projets</div>
                 </div>
                 <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
@@ -149,9 +201,8 @@
             />
           </div>
 
-          <!-- ═══ MA FICHE (lecture + modifier) ═══ -->
+          <!-- ═══ MA FICHE ═══ -->
           <div v-else-if="currentPage==='ma-fiche'" key="ma-fiche">
-            <!-- Mode lecture -->
             <div v-if="!modeModifier" class="page-content">
               <div class="page-header-block">
                 <div>
@@ -159,7 +210,6 @@
                   <p class="page-sub">{{ formulaireActif?.titre }} · Soumise le {{ dateSoumission }}</p>
                 </div>
                 <div class="header-actions">
-                  <!-- Bouton modifier — seulement si date limite pas encore atteinte -->
                   <button v-if="peutModifier" class="btn-primary" @click="modeModifier=true">
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Modifier ma fiche
@@ -170,23 +220,16 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Tableau de lecture -->
               <div class="fiche-card">
                 <div class="fiche-statut">
                   <span class="badge-soumis-lg">✓ Soumise</span>
                   <span class="fiche-date">{{ dateSoumission }}</span>
                 </div>
-
                 <table class="fiche-table">
                   <tbody>
                     <tr>
                       <td class="fiche-lbl">Disponibilité</td>
-                      <td class="fiche-val">
-                        <span :class="['dispo-badge', voeuxData?.disponibilite]">
-                          {{ labelDisponibilite(voeuxData?.disponibilite) }}
-                        </span>
-                      </td>
+                      <td class="fiche-val"><span :class="['dispo-badge', voeuxData?.disponibilite]">{{ labelDisponibilite(voeuxData?.disponibilite) }}</span></td>
                     </tr>
                     <tr v-if="voeuxData?.nbre_etudiants !== undefined">
                       <td class="fiche-lbl">Nb max étudiants</td>
@@ -194,9 +237,7 @@
                     </tr>
                     <tr v-if="voeuxData?.specialites?.length">
                       <td class="fiche-lbl">Spécialités souhaitées</td>
-                      <td class="fiche-val">
-                        <span v-for="s in voeuxData.specialites" :key="s" class="spec-tag">{{ s }}</span>
-                      </td>
+                      <td class="fiche-val"><span v-for="s in voeuxData.specialites" :key="s" class="spec-tag">{{ s }}</span></td>
                     </tr>
                     <tr v-if="voeuxData?.themes">
                       <td class="fiche-lbl">Thèmes préférés</td>
@@ -214,8 +255,6 @@
                 </table>
               </div>
             </div>
-
-            <!-- Mode modification (FicheVoeux en mode édition) -->
             <div v-else>
               <div class="back-header">
                 <button class="back-btn" @click="modeModifier=false">
@@ -223,14 +262,21 @@
                   Retour à ma fiche
                 </button>
               </div>
-              <FicheVoeux
-                :formulaire="formulaireActif"
-                :mode-soumission-only="true"
-                @soumis="onVoeuxModifie"
-                @role-changed="onRoleChanged"
-              />
+              <FicheVoeux :formulaire="formulaireActif" :mode-soumission-only="true" @soumis="onVoeuxModifie" @role-changed="onRoleChanged"/>
             </div>
           </div>
+
+          <!-- ═══ MESSAGERIE ═══ -->
+          <Messagerie v-else-if="currentPage==='messagerie'" key="messagerie" />
+
+          <!-- ═══ RÉSULTATS ═══ -->
+          <ConsulterResultat v-else-if="currentPage==='resultats'" key="resultats" />
+
+          <!-- ═══ ARCHIVES ═══ -->
+          <Archives v-else-if="currentPage==='archives'" key="archives" />
+
+          <!-- ═══ BIBLIOTHÈQUE PFE ═══ -->
+          <BiblioPFE v-else-if="currentPage==='biblio-pfe'" key="biblio-pfe" />
 
           <!-- PROFIL -->
           <ConsulterProfil v-else-if="currentPage==='profil'" key="profil" @modifier="currentPage='profil-edit'"/>
@@ -243,14 +289,30 @@
 </template>
 
 <script>
-import axios from 'axios'
-import FicheVoeux      from './GestionFormulaires/FicheVoeux.vue'
-import ConsulterProfil from './ConsulterProfil.vue'
-import ModifierProfil  from './ModifierProfil.vue'
+import api              from '@/services/api.js'
+import FicheVoeux       from './GestionFormulaires/FicheVoeux.vue'
+import ConsulterProfil  from './ConsulterProfil.vue'
+import ModifierProfil   from './ModifierProfil.vue'
+
+// Sprint 4 components
+import Notifications    from './GestionArchivageCommunication/Notifications.vue'
+import Messagerie       from './GestionArchivageCommunication/Messagerie.vue'
+import ConsulterResultat from './GestionArchivageCommunication/Consulterresultatfinal.vue'
+import Archives         from './GestionArchivageCommunication/Archives.vue'
+import BiblioPFE        from './GestionArchivageCommunication/Bibliopfe.vue'
 
 export default {
   name: 'DashboardEnseignant',
-  components: { FicheVoeux, ConsulterProfil, ModifierProfil },
+  components: {
+    FicheVoeux,
+    ConsulterProfil,
+    ModifierProfil,
+    Notifications,
+    Messagerie,
+    ConsulterResultat,
+    Archives,
+    BiblioPFE,
+  },
 
   async mounted() {
     await this.chargerFormulaireActif()
@@ -272,7 +334,16 @@ export default {
 
   computed: {
     breadcrumb() {
-      return { remplir: 'Remplir le formulaire', 'ma-fiche': 'Ma fiche', profil: 'Mon profil', 'profil-edit': 'Modifier le profil' }[this.currentPage] || ''
+      return {
+        remplir: 'Remplir le formulaire',
+        'ma-fiche': 'Ma fiche',
+        profil: 'Mon profil',
+        'profil-edit': 'Modifier le profil',
+        messagerie: 'Messagerie',
+        resultats: 'Résultats des soutenances',
+        archives: 'Archives',
+        'biblio-pfe': 'Bibliothèque PFE',
+      }[this.currentPage] || ''
     },
     dateNow() {
       return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -280,9 +351,9 @@ export default {
     roleLabel() {
       return this.currentUser.role === 'encadrant' ? 'Encadrant' : 'Enseignant'
     },
-    // Modifier autorisé seulement si date limite pas encore dépassée
     peutModifier() {
       if (!this.formulaireActif?.date_limite) return false
+      if (this.formulaireActif.statut === 'verrouille') return false
       return new Date(this.formulaireActif.date_limite) > new Date()
     },
   },
@@ -293,30 +364,19 @@ export default {
       this.modeModifier = false
     },
 
-    getApi() {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}')
-      return axios.create({
-        baseURL: 'http://127.0.0.1:8000/api',
-        headers: { Authorization: 'Bearer ' + stored.token, Accept: 'application/json' },
-      })
-    },
-
     async chargerFormulaireActif() {
       try {
-        const res    = await this.getApi().get('/formulaires-voeux')
+        const res    = await api.get('/formulaires-voeux')
         const publie = res.data.find(f => f.statut === 'publie' || f.statut === 'verrouille')
         if (publie) {
           this.formulaireActif = publie
-
-          // Charger le vœu existant de cet enseignant
-          const voeuxRes = await this.getApi().get('/voeux-encadrement?formulaire_id=' + publie.id)
+          const voeuxRes = await api.get('/voeux-encadrement?formulaire_id=' + publie.id)
           if (voeuxRes.data && voeuxRes.data.statut === 'soumis') {
             this.voeuxSoumis    = true
             this.voeuxData      = voeuxRes.data
             this.dateSoumission = voeuxRes.data.soumis_at
               ? new Date(voeuxRes.data.soumis_at).toLocaleDateString('fr-FR')
               : ''
-            // Naviguer directement vers ma-fiche au chargement
             this.currentPage = 'ma-fiche'
           }
         }
@@ -362,8 +422,11 @@ export default {
     },
 
     onRoleChanged(newRole) {
-      this.currentUser = { ...this.currentUser, role: newRole }
-      this.afficherToast({ message: 'Votre rôle est maintenant : Encadrant 🎉', type: 'toast-ok' })
+      if (newRole) {
+        this.currentUser = { ...this.currentUser, role: newRole }
+        localStorage.setItem('user', JSON.stringify(this.currentUser))
+        this.afficherToast({ message: 'Votre rôle est maintenant : Encadrant 🎉', type: 'toast-ok' })
+      }
     },
 
     afficherToast({ message, type }) {
@@ -389,7 +452,7 @@ export default {
 .collapse-btn{background:rgba(255,255,255,0.08);border:none;border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);cursor:pointer;flex-shrink:0;transition:background .18s}
 .collapse-btn:hover{background:rgba(255,255,255,0.15);color:#fff}
 .sb-nav{flex:1;padding:14px 10px;overflow-y:auto;overflow-x:hidden}
-.nav-cat{font-size:10px;font-weight:700;color:rgba(245,166,35,0.75);text-transform:uppercase;letter-spacing:.12em;padding:12px 12px 4px}
+.nav-cat{font-size:10px;font-weight:700;color:rgba(245,166,35,0.75);text-transform:uppercase;letter-spacing:.12em;padding:14px 12px 4px}
 .nav-item{display:flex;align-items:center;gap:11px;width:100%;padding:10px 11px;border:none;border-radius:10px;background:transparent;color:rgba(255,255,255,0.62);font-size:13.5px;font-family:'Source Sans 3',sans-serif;font-weight:500;cursor:pointer;text-align:left;transition:all .18s;white-space:nowrap;overflow:hidden;margin-bottom:2px}
 .nav-item:hover{background:rgba(255,255,255,0.09);color:#fff}.nav-item.active{background:rgba(245,166,35,0.22);color:#f5a623}
 .nav-icon{display:flex;align-items:center;flex-shrink:0}.nav-label{overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
@@ -423,11 +486,13 @@ export default {
 .kpi-blue .kpi-icon{background:rgba(61,96,128,0.12);color:#3d6080}.kpi-gold .kpi-icon{background:rgba(245,166,35,0.12);color:#d98e1a}.kpi-green .kpi-icon{background:rgba(39,174,96,0.12);color:#27ae60}
 .kpi-v{font-family:'Merriweather',serif;font-size:28px;font-weight:700;color:#1e2a35;line-height:1}.kpi-l{font-size:12px;color:#8a9aaa;margin-top:4px}
 .sec-title{font-size:12px;font-weight:700;color:#8a9aaa;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
-.qa-grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:480px}
+.qa-grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:520px}
 .qa-card{display:flex;align-items:center;gap:14px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
 .qa-card:hover{border-color:#3d6080;box-shadow:0 4px 18px rgba(61,96,128,0.12);transform:translateY(-2px)}
 .qa-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .qa-gold{background:rgba(245,166,35,0.12);color:#d98e1a}
+.qa-teal{background:rgba(39,174,96,0.12);color:#27ae60}
+.qa-blue{background:rgba(61,96,128,0.12);color:#3d6080}
 .qa-txt{flex:1}.qa-t{font-size:14px;font-weight:600;color:#1e2a35;margin-bottom:2px}.qa-s{font-size:12.5px;color:#8a9aaa}
 .qa-arr{color:#c8c4bc;flex-shrink:0;transition:transform .18s,color .18s}.qa-card:hover .qa-arr{transform:translateX(3px);color:#3d6080}
 /* Empty */
@@ -455,7 +520,6 @@ export default {
 .dispo-badge{font-weight:600}
 .dispo-badge.oui{color:#1e7e34}.dispo-badge.partielle{color:#d98e1a}.dispo-badge.non{color:#922b21}
 .spec-tag{display:inline-block;padding:3px 10px;background:rgba(61,96,128,0.1);color:#3d6080;border-radius:20px;font-size:12px;font-weight:600;margin:2px 4px 2px 0}
-/* Modifier mode */
 .back-header{margin-bottom:20px}
 .back-btn{display:flex;align-items:center;gap:7px;padding:8px 16px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13px;color:#4a5a6a;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}
 .back-btn:hover{border-color:#3d6080;color:#3d6080}

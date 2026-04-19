@@ -116,6 +116,10 @@ export default {
         action: 'promouvoir',
         utilisateur: this.utilisateurTrouve,
         domaineExpertise: this.domaineExpertise,
+        callback: (err) => {
+          this.chargement = false
+          if (!err) this.reinitialiser()
+        },
       })
     },
     reinitialiser() {

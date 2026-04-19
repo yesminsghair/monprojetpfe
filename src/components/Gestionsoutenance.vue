@@ -208,6 +208,14 @@
               </div>
             </div>
 
+            <div class="form-group" v-if="!editSession">
+              <label>Jury *</label>
+              <select v-model="form.jury_id">
+                <option value="">— Sélectionner un jury —</option>
+                <option v-for="j in jurysDisponibles" :key="j.id" :value="j.id">{{ j.label }}</option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label>Projet PFE (optionnel)</label>
               <select v-model="form.projet_id">
@@ -265,7 +273,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '@/services/api.js'
 
 export default {
   name: 'GestionSoutenance',
@@ -288,6 +296,7 @@ export default {
       sessions: [],
       plans: [],
       projetsDisponibles: [],
+      jurysDisponibles: [],
 
       form: {
         date: '',
@@ -295,6 +304,7 @@ export default {
         heure_debut: '',
         heure_fin: '',
         projet_id: '',
+        jury_id: '',
       },
     }
   },
@@ -317,68 +327,78 @@ export default {
     this.chargerSessions()
     this.chargerProjets()
     this.chargerPlans()
+    this.chargerJurys()
   },
 
   methods: {
-    getApi() {
-      const u = JSON.parse(localStorage.getItem('user') || '{}')
-      return axios.create({
-        baseURL: 'http://127.0.0.1:8000/api',
-        headers: { Authorization: 'Bearer ' + u.token, Accept: 'application/json', 'Content-Type': 'application/json' },
-      })
+
+
+    async chargerJurys() {
+      try {
+        const res = await api.get('/jurys')
+        this.jurysDisponibles = res.data.map(j => ({
+          id: j.id,
+          label: (j.projet_titre || 'Projet #' + j.id) + ' — ' + (j.etudiant_nom || '')
+        }))
+      } catch (error) {
+        console.error('Erreur chargement jurys:', error)
+        this.jurysDisponibles = []
+      }
     },
 
     async chargerSessions() {
       this.loadingSessions = true
       try {
-        const res = await this.getApi().get('/soutenances')
+        const res = await api.get('/soutenances')
         this.sessions = (res.data || []).map(s => this.mapSession(s))
         this.detecterConflits()
-      } catch {
-        this.sessions = [
-          { id: 1, date: '2025-06-15', heure_debut: '09:00', heure_fin: '10:00', salle: 'Salle A101', projet: 'Système de gestion PFE', etudiant: 'Ali Ben Salah', jury_membres: ['Dr. Triki', 'Dr. Bouaziz'], conflit: false },
-          { id: 2, date: '2025-06-15', heure_debut: '10:00', heure_fin: '11:00', salle: 'Salle A102', projet: 'Application mobile e-commerce', etudiant: 'Fatma Chaari', jury_membres: ['Dr. Mansouri', 'Dr. Jemaa'], conflit: false },
-          { id: 3, date: '2025-06-16', heure_debut: '09:00', heure_fin: '10:00', salle: 'Salle B201', projet: null, etudiant: null, jury_membres: [], conflit: false },
-        ]
-      } finally { this.loadingSessions = false }
+      } catch (error) {
+        console.error('Erreur chargement sessions:', error)
+        this.$emit('toast', { message: 'Erreur de chargement des sessions', type: 'toast-err' })
+        this.sessions = []
+      } finally {
+        this.loadingSessions = false
+      }
     },
 
     mapSession(s) {
       return {
-        id: s.id, date: s.date, heure_debut: s.heure_debut, heure_fin: s.heure_fin, salle: s.salle,
-        projet: s.projet?.titre || s.projet_titre || null, etudiant: s.etudiant?.nom_complet || s.etudiant_nom || null,
-        jury_membres: (s.jury_membres || []).map(m => m.nom_complet || m.nom || m), conflit: s.conflit || false,
+        id: s.id,
+        date: s.date || (s.date_seance ? s.date_seance.split('T')[0] : ''),
+        heure_debut: s.heure_debut || (s.date_seance ? s.date_seance.split('T')[1]?.substring(0, 5) : ''),
+        heure_fin: s.heure_fin || this.calculerHeureFin(s.date_seance),
+        salle: s.salle,
+        projet: s.projet_titre || s.projet?.titre || null,
+        etudiant: s.etudiant_nom || s.etudiant?.nom_complet || null,
+        jury_membres: (s.membres || []).map(m => m.nom || m),
+        conflit: false
       }
+    },
+
+    calculerHeureFin(dateSeance) {
+      if (!dateSeance) return ''
+      const date = new Date(dateSeance)
+      date.setHours(date.getHours() + 1)
+      return date.toTimeString().substring(0, 5)
     },
 
     async chargerProjets() {
       try {
-        const res = await this.getApi().get('/soutenances/projets-disponibles')
+        const res = await api.get('/soutenances/projets-disponibles')
         this.projetsDisponibles = res.data || []
-      } catch {
-        this.projetsDisponibles = [
-          { id: 1, titre: 'Système de gestion PFE', etudiant: 'Ali Ben Salah' },
-          { id: 2, titre: 'Application mobile e-commerce', etudiant: 'Fatma Chaari' },
-          { id: 3, titre: 'Plateforme IA diagnostique', etudiant: 'Youssef Rekik' },
-          { id: 4, titre: 'Système de surveillance IoT', etudiant: 'Mariem Zouari' },
-        ]
+      } catch (error) {
+        console.error('Erreur chargement projets:', error)
+        this.projetsDisponibles = []
       }
     },
 
     async chargerPlans() {
       try {
-        const res = await this.getApi().get('/soutenances/plans-proposes')
+        const res = await api.get('/soutenances/plans-proposes')
         this.plans = res.data || []
-      } catch {
-        this.plans = [
-          {
-            id: 1, membre_jury: 'Dr. Mohamed Triki', date_proposition: '10/05/2025', statut: 'En attente',
-            sessions: [
-              { date: '15/06/2025', heure: '09:00', salle: 'A101', projet: 'Système de gestion PFE' },
-              { date: '15/06/2025', heure: '11:00', salle: 'A101', projet: 'Application mobile e-commerce' },
-            ],
-          },
-        ]
+      } catch (error) {
+        console.error('Erreur chargement plans:', error)
+        this.plans = []
       }
     },
 
@@ -390,14 +410,23 @@ export default {
         if (parCreneau[key]) {
           this.conflits.push({ id: s.id, message: `Salle ${s.salle} double-réservée le ${s.date} à ${s.heure_debut}` })
           s.conflit = true
-        } else { parCreneau[key] = s }
+        } else {
+          parCreneau[key] = s
+          s.conflit = false
+        }
       })
     },
 
     openModal(session) {
       this.editSession = session
       if (session) {
-        this.form = { date: session.date, salle: session.salle, heure_debut: session.heure_debut, heure_fin: session.heure_fin, projet_id: '' }
+        this.form = {
+          date: session.date,
+          salle: session.salle,
+          heure_debut: session.heure_debut,
+          heure_fin: session.heure_fin,
+          projet_id: session.projet_id || ''
+        }
       } else {
         this.form = { date: '', salle: '', heure_debut: '', heure_fin: '', projet_id: '' }
       }
@@ -405,52 +434,69 @@ export default {
       this.showModal = true
     },
 
-    closeModal() { this.showModal = false; this.editSession = null },
+    closeModal() {
+      this.showModal = false
+      this.editSession = null
+    },
 
     async sauvegarder() {
-      if (!this.form.date || !this.form.salle || !this.form.heure_debut || !this.form.heure_fin) {
-        this.$emit('toast', { message: 'Veuillez remplir tous les champs obligatoires.', type: 'toast-err' }); return
+      if (!this.form.date || !this.form.salle || !this.form.heure_debut || !this.form.heure_fin || (!this.editSession && !this.form.jury_id)) {
+        this.$emit('toast', { message: 'Veuillez remplir tous les champs obligatoires.', type: 'toast-err' })
+        return
       }
+
       this.saving = true
       try {
+        // Construction de la date/heure pour l'API
+        const dateTime = `${this.form.date} ${this.form.heure_debut}:00`
+
         if (this.editSession) {
-          await this.getApi().put('/soutenances/' + this.editSession.id, this.form)
+          await api.put(`/soutenances/${this.editSession.id}`, {
+            date_seance: dateTime,
+            salle: this.form.salle
+          })
           this.$emit('toast', { message: 'Session mise à jour.', type: 'toast-ok' })
         } else {
-          await this.getApi().post('/soutenances', this.form)
+          // Pour créer une session, il faut un jury_id
+          // À adapter selon votre logique métier
+          await api.post('/soutenances', {
+            jury_id: this.form.jury_id,
+            date_seance: dateTime,
+            salle: this.form.salle
+          })
           this.$emit('toast', { message: 'Session créée avec succès.', type: 'toast-ok' })
         }
         this.closeModal()
         await this.chargerSessions()
-      } catch {
-        const projet = this.projetsDisponibles.find(p => p.id === this.form.projet_id)
-        if (this.editSession) {
-          const idx = this.sessions.findIndex(s => s.id === this.editSession.id)
-          if (idx !== -1) Object.assign(this.sessions[idx], { ...this.form, projet: projet?.titre || this.sessions[idx].projet, etudiant: projet?.etudiant || this.sessions[idx].etudiant })
-        } else {
-          this.sessions.push({
-            id: Date.now(), ...this.form, projet: projet?.titre || null, etudiant: projet?.etudiant || null, jury_membres: [], conflit: false,
-          })
-        }
-        this.detecterConflits()
-        this.$emit('toast', { message: this.editSession ? 'Session mise à jour.' : 'Session créée.', type: 'toast-ok' })
-        this.closeModal()
-      } finally { this.saving = false }
+      } catch (error) {
+        console.error('Erreur sauvegarde:', error)
+        this.$emit('toast', { message: 'Erreur lors de l\'enregistrement', type: 'toast-err' })
+      } finally {
+        this.saving = false
+      }
     },
 
-    openAffectation(session) { this.affectSession = session; this.affectProjetId = ''; this.showAffectModal = true },
+    openAffectation(session) {
+      this.affectSession = session
+      this.affectProjetId = ''
+      this.showAffectModal = true
+    },
 
     async confirmerAffectation() {
-      if (!this.affectProjetId) { this.$emit('toast', { message: 'Sélectionnez un projet.', type: 'toast-err' }); return }
+      if (!this.affectProjetId) {
+        this.$emit('toast', { message: 'Sélectionnez un projet.', type: 'toast-err' })
+        return
+      }
+
       try {
-        await this.getApi().put('/soutenances/' + this.affectSession.id + '/affecter', { projet_id: this.affectProjetId })
+        await api.put(`/soutenances/${this.affectSession.id}/affecter`, {
+          projet_id: this.affectProjetId
+        })
         await this.chargerSessions()
         this.$emit('toast', { message: 'Projet affecté à la session.', type: 'toast-ok' })
-      } catch {
-        const projet = this.projetsDisponibles.find(p => p.id === this.affectProjetId)
-        const idx = this.sessions.findIndex(s => s.id === this.affectSession.id)
-        if (idx !== -1) { this.sessions[idx].projet = projet?.titre || '—'; this.sessions[idx].etudiant = projet?.etudiant || '—' }
-        this.$emit('toast', { message: 'Projet affecté (mode démo).', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur affectation:', error)
+        this.$emit('toast', { message: 'Erreur lors de l\'affectation', type: 'toast-err' })
       }
       this.showAffectModal = false
     },
@@ -458,41 +504,47 @@ export default {
     async supprimer(id) {
       if (!confirm('Supprimer cette session de soutenance ?')) return
       try {
-        await this.getApi().delete('/soutenances/' + id)
+        await api.delete(`/soutenances/${id}`)
         await this.chargerSessions()
         this.$emit('toast', { message: 'Session supprimée.', type: 'toast-ok' })
-      } catch {
-        this.sessions = this.sessions.filter(s => s.id !== id)
-        this.detecterConflits()
-        this.$emit('toast', { message: 'Session supprimée.', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur suppression:', error)
+        this.$emit('toast', { message: 'Erreur lors de la suppression', type: 'toast-err' })
       }
     },
 
     async publierCalendrier() {
       if (!confirm('Publier le calendrier des soutenances ? Tous les participants seront notifiés.')) return
       try {
-        await this.getApi().post('/soutenances/publier-calendrier')
+        await api.post('/soutenances/publier-calendrier')
+        this.calendrierPublie = true
         this.$emit('toast', { message: 'Calendrier publié. Tous les participants ont été notifiés.', type: 'toast-ok' })
-      } catch {
-        this.$emit('toast', { message: 'Calendrier publié (mode démo).', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur publication:', error)
+        this.$emit('toast', { message: 'Erreur lors de la publication', type: 'toast-err' })
       }
-      this.calendrierPublie = true
     },
 
     async validerPlan(plan) {
       try {
-        await this.getApi().put('/soutenances/plans/' + plan.id + '/valider')
-      } catch {}
-      plan.statut = 'validé'
-      this.$emit('toast', { message: 'Plan validé avec succès.', type: 'toast-ok' })
+        await api.put(`/soutenances/plans/${plan.id}/valider`)
+        plan.statut = 'validé'
+        this.$emit('toast', { message: 'Plan validé avec succès.', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur validation plan:', error)
+        this.$emit('toast', { message: 'Erreur lors de la validation', type: 'toast-err' })
+      }
     },
 
     async rejeterPlan(plan) {
       try {
-        await this.getApi().put('/soutenances/plans/' + plan.id + '/rejeter')
-      } catch {}
-      plan.statut = 'rejeté'
-      this.$emit('toast', { message: 'Plan rejeté.', type: 'toast-ok' })
+        await api.put(`/soutenances/plans/${plan.id}/rejeter`)
+        plan.statut = 'rejeté'
+        this.$emit('toast', { message: 'Plan rejeté.', type: 'toast-ok' })
+      } catch (error) {
+        console.error('Erreur rejet plan:', error)
+        this.$emit('toast', { message: 'Erreur lors du rejet', type: 'toast-err' })
+      }
     },
 
     statusLabel(s) {
@@ -500,17 +552,27 @@ export default {
       if (s.projet) return '✓ Planifiée'
       return 'Libre'
     },
+
     statusClass(s) {
       if (s.conflit) return 'status-conflit'
       if (s.projet) return 'status-ok'
       return 'status-libre'
     },
+
     formatDate(d) {
       if (!d) return d
-      try { return new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }
-      catch { return d }
-    },
-  },
+      try {
+        return new Date(d).toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      } catch {
+        return d
+      }
+    }
+  }
 }
 </script>
 

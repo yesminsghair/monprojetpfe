@@ -20,9 +20,29 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Tableau de bord</span>
         </button>
 
+        <!-- ✅ NEW: Vœux d'encadrement section -->
+        <div class="nav-cat" v-if="!sidebarCollapsed">Vœux d'encadrement</div>
+
+        <button v-if="!voeuxSoumis" class="nav-item" :class="{active:currentPage==='voeux'}" @click="navigate('voeux')" :title="sidebarCollapsed?'Mes vœux':''">
+          <span class="nav-icon" style="position:relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span v-if="sidebarCollapsed && formulaireActif && !voeuxSoumis" class="badge-dot"></span>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">
+            Remplir le formulaire
+            <span v-if="formulaireActif" class="badge-cnt">!</span>
+          </span>
+        </button>
+
+        <button v-if="voeuxSoumis" class="nav-item" :class="{active:currentPage==='voeux'}" @click="navigate('voeux')" :title="sidebarCollapsed?'Ma fiche':''">
+          <span class="nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Ma fiche <span class="badge-soumis">✓</span></span>
+        </button>
+
         <div class="nav-cat" v-if="!sidebarCollapsed">Mon encadrement</div>
 
-        <!-- Gérer Demandes Étudiants -->
         <button class="nav-item" :class="{active:currentPage==='demandes'}" @click="navigate('demandes')" :title="sidebarCollapsed?'Demandes':''">
           <span class="nav-icon" style="position:relative">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -31,7 +51,6 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Gérer les demandes <span v-if="nbEnAttente>0" class="badge-cnt">{{ nbEnAttente }}</span></span>
         </button>
 
-        <!-- Consulter Liste Étudiants affectés -->
         <button class="nav-item" :class="{active:currentPage==='affectes'}" @click="navigate('affectes')" :title="sidebarCollapsed?'Étudiants affectés':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Étudiants affectés</span>
@@ -39,13 +58,17 @@
 
         <div class="nav-cat" v-if="!sidebarCollapsed">Suivi de projet</div>
 
-        <!-- Suivi avancement -->
         <button class="nav-item" :class="{active:currentPage==='suivi'}" @click="navigate('suivi')" :title="sidebarCollapsed?'Suivi avancement':''">
-          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-          <span class="nav-label" v-if="!sidebarCollapsed">Suivi &amp; livrables</span>
+          <span class="nav-icon" style="position:relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span v-if="sidebarCollapsed && nbLivrablesPending>0" class="badge-dot"></span>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">
+            Suivi &amp; livrables
+            <span v-if="nbLivrablesPending>0" class="badge-cnt">{{ nbLivrablesPending }}</span>
+          </span>
         </button>
 
-        <!-- Réunions -->
         <button class="nav-item" :class="{active:currentPage==='reunions'}" @click="navigate('reunions')" :title="sidebarCollapsed?'Réunions':''">
           <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
           <span class="nav-label" v-if="!sidebarCollapsed">Réunions</span>
@@ -63,7 +86,31 @@
     <div class="main-wrap">
       <header class="topbar">
         <div class="breadcrumb"><span class="bc-root">Espace Encadrant</span><template v-if="breadcrumb"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span class="bc-curr">{{ breadcrumb }}</span></template></div>
-        <div class="topbar-r"><span class="tb-date">{{ dateNow }}</span></div>
+        <div class="topbar-r">
+          <span class="tb-date">{{ dateNow }}</span>
+          <div class="notif-wrap" v-if="notifications.length > 0 || showNotifPanel">
+            <button class="notif-bell" @click="showNotifPanel=!showNotifPanel" :class="{active:showNotifPanel}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span v-if="notifications.length" class="notif-badge">{{ notifications.length }}</span>
+            </button>
+            <transition name="notif-drop">
+              <div v-if="showNotifPanel" class="notif-panel" v-click-outside="()=>showNotifPanel=false">
+                <div class="notif-panel-hdr">
+                  <span>Notifications ({{ notifications.length }})</span>
+                  <button class="notif-mark-all" @click="marquerTousLus" v-if="notifications.length">Tout marquer lu</button>
+                </div>
+                <div v-if="!notifications.length" class="notif-empty">Aucune notification</div>
+                <div v-for="n in notifications" :key="n.id" class="notif-item"
+                  :class="{'notif-item-lv': n.message && n.message.includes('livrable')}"
+                  @click="n.message && n.message.includes('livrable') ? goToLivrable(n) : null"
+                  :style="n.message && n.message.includes('livrable') ? 'cursor:pointer' : ''">
+                  <div class="notif-msg">{{ n.message }}</div>
+                  <button class="notif-close" @click.stop="marquerLu(n.id)">✕</button>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
       </header>
 
       <div class="content-area">
@@ -73,8 +120,26 @@
           <div v-if="currentPage==='home'" key="home">
             <div class="ptb"><h1 class="pt">Bonjour, {{ currentUser.prenom }} 👋</h1><p class="ps">Gérez les demandes des étudiants et consultez vos affectations.</p></div>
 
-            <!-- Bannière affectation diffusée -->
-            <div v-if="etudiantsAffectes.length" class="banner-affectation">
+            <!-- ✅ NEW: voeux alert on home -->
+            <div class="alert-gold" v-if="formulaireActif && !voeuxSoumis">
+              <span class="al-icon">📋</span>
+              <div class="al-body">
+                <div class="al-t">Formulaire de vœux disponible</div>
+                <div class="al-s">Date limite : <strong>{{ formatDate(formulaireActif.date_limite) }}</strong></div>
+              </div>
+              <button class="btn-alert" @click="navigate('voeux')">Remplir maintenant →</button>
+            </div>
+
+            <div v-if="nouvellesAffectations && etudiantsAffectes.length" class="banner-new-aff">
+              <div class="ba-icon">🎉</div>
+              <div class="ba-body">
+                <div class="ba-t">Nouvelle(s) affectation(s) !</div>
+                <div class="ba-s">Le chef de département vous a affecté <strong>{{ etudiantsAffectes.length }}</strong> étudiant(s). Consultez la liste dès maintenant.</div>
+              </div>
+              <button class="ba-btn" @click="nouvellesAffectations=false; navigate('affectes')">Voir →</button>
+            </div>
+
+            <div v-else-if="etudiantsAffectes.length" class="banner-affectation">
               <div class="ba-icon">📋</div>
               <div class="ba-body">
                 <div class="ba-t">Liste d'affectation publiée</div>
@@ -89,6 +154,15 @@
               <button class="btn-alert" @click="navigate('demandes')">Traiter maintenant →</button>
             </div>
 
+            <div class="alert-gold" v-if="nbLivrablesPending>0" style="background:#fff8e8;border-color:#f5a623">
+              <span class="al-icon">📄</span>
+              <div class="al-body">
+                <div class="al-t">{{ nbLivrablesPending }} livrable(s) en attente de révision</div>
+                <div class="al-s">Des étudiants ont déposé des fichiers à valider ou rejeter.</div>
+              </div>
+              <button class="btn-alert" @click="navigate('suivi')">Consulter →</button>
+            </div>
+
             <div class="kpi-grid">
               <div class="kpi-card kpi-gold"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="kpi-v">{{ nbEnAttente }}</div><div class="kpi-l">En attente</div></div></div>
               <div class="kpi-card kpi-green"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="kpi-v">{{ etudiantsAffectes.length }}</div><div class="kpi-l">Acceptées</div></div></div>
@@ -97,6 +171,15 @@
             </div>
             <div class="sec-title">Actions rapides</div>
             <div class="qa-grid">
+              <!-- ✅ NEW: voeux quick-action -->
+              <button class="qa-card" @click="navigate('voeux')">
+                <div class="qa-icon qa-teal"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                <div class="qa-txt">
+                  <div class="qa-t">{{ voeuxSoumis ? 'Consulter ma fiche de vœux' : 'Remplir le formulaire de vœux' }}</div>
+                  <div class="qa-s">{{ voeuxSoumis ? 'Voir vos préférences soumises' : 'Disponibilité, spécialités, capacité' }}</div>
+                </div>
+                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
               <button class="qa-card" @click="navigate('demandes')">
                 <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                 <div class="qa-txt"><div class="qa-t">Gérer les demandes étudiants</div><div class="qa-s">Accepter ou rejeter avec motif</div></div>
@@ -112,40 +195,90 @@
                 <div class="qa-txt"><div class="qa-t">Suivi &amp; livrables</div><div class="qa-s">Valider ou rejeter les livrables</div></div>
                 <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
-              <button class="qa-card" @click="navigate('reunions')">
-                <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-                <div class="qa-txt"><div class="qa-t">Réunions</div><div class="qa-s">Planifier et confirmer des créneaux</div></div>
-                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
             </div>
           </div>
 
-          <!-- GÉRER DEMANDES -->
-          <!-- DEMANDES — utilise le composant connecté à l'API -->
+          <!-- ✅ NEW: VOEUX PAGE (fill or read-only) -->
+          <div v-else-if="currentPage==='voeux'" key="voeux">
+            <!-- Lecture (already submitted) -->
+            <div v-if="voeuxSoumis && !modeModifierVoeux" class="page-content">
+              <div class="page-header-block">
+                <div>
+                  <h2 class="page-title">Ma fiche de vœux</h2>
+                  <p class="page-sub">{{ formulaireActif?.titre }} · Soumise le {{ dateSoumission }}</p>
+                </div>
+                <div class="header-actions">
+                  <button v-if="peutModifier" class="btn-primary-enc" @click="modeModifierVoeux=true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Modifier ma fiche
+                  </button>
+                  <div v-else class="deadline-passed-enc">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Date limite dépassée
+                  </div>
+                </div>
+              </div>
+              <div class="fiche-card-enc">
+                <div class="fiche-statut-enc">
+                  <span class="badge-soumis-lg">✓ Soumise</span>
+                  <span class="fiche-date-enc">{{ dateSoumission }}</span>
+                </div>
+                <table class="fiche-table-enc">
+                  <tbody>
+                    <tr><td class="fiche-lbl-enc">Disponibilité</td><td class="fiche-val-enc"><span :class="['dispo-badge', voeuxData?.disponibilite]">{{ labelDisponibilite(voeuxData?.disponibilite) }}</span></td></tr>
+                    <tr v-if="voeuxData?.nbre_etudiants !== undefined"><td class="fiche-lbl-enc">Nb max étudiants</td><td class="fiche-val-enc">{{ voeuxData.nbre_etudiants }}</td></tr>
+                    <tr v-if="voeuxData?.specialites?.length"><td class="fiche-lbl-enc">Spécialités souhaitées</td><td class="fiche-val-enc"><span v-for="s in voeuxData.specialites" :key="s" class="spec-tag-enc">{{ s }}</span></td></tr>
+                    <tr v-if="voeuxData?.themes"><td class="fiche-lbl-enc">Thèmes préférés</td><td class="fiche-val-enc">{{ voeuxData.themes }}</td></tr>
+                    <tr v-if="voeuxData?.commentaire"><td class="fiche-lbl-enc">Commentaires</td><td class="fiche-val-enc">{{ voeuxData.commentaire }}</td></tr>
+                    <tr><td class="fiche-lbl-enc">Co-tutelle</td><td class="fiche-val-enc">{{ voeuxData?.cotutelle ? 'Acceptée' : 'Non' }}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- No formulaire available -->
+            <div v-else-if="!formulaireActif && !modeModifierVoeux" class="empty-state">
+              <div class="empty-icon">📋</div>
+              <div class="empty-t">Aucun formulaire disponible</div>
+              <p class="empty-s">Le chef de département n'a pas encore publié de formulaire de vœux.</p>
+            </div>
+
+            <!-- Fill / edit mode -->
+            <div v-else>
+              <div v-if="modeModifierVoeux" class="back-header-enc">
+                <button class="back-btn-enc" @click="modeModifierVoeux=false">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                  Retour à ma fiche
+                </button>
+              </div>
+              <FicheVoeux
+                :formulaire="formulaireActif"
+                :mode-soumission-only="true"
+                @soumis="onVoeuxSoumis"
+                @role-changed="onRoleChanged"
+              />
+            </div>
+          </div>
+
           <DemandesEncadrement
             v-else-if="currentPage==='demandes'"
             key="demandes"
             @nb-en-attente="onNbEnAttente"
           />
 
-          <!-- SUIVI & LIVRABLES -->
           <SuiviEncadrant
             v-else-if="currentPage==='suivi'"
             key="suivi"
             @toast="afficherToast"
           />
 
-          <!-- RÉUNIONS -->
-          <ReunionEtudiant
+          <ReunionEncadrant
             v-else-if="currentPage==='reunions'"
             key="reunions"
             @toast="afficherToast"
           />
 
-          <!-- ÉTUDIANTS AFFECTÉS -->
           <div v-else-if="currentPage==='affectes'" key="affectes">
-
-            <!-- Header -->
             <div class="aff-page-header">
               <div>
                 <h2 class="spt">Mes étudiants affectés</h2>
@@ -157,27 +290,16 @@
               </button>
             </div>
 
-            <!-- Stats strip -->
             <div class="aff-stats-strip" v-if="etudiantsAffectes.length">
-              <div class="aff-stat">
-                <div class="aff-stat-v">{{ etudiantsAffectes.length }}</div>
-                <div class="aff-stat-l">Étudiants affectés</div>
-              </div>
-              <div class="aff-stat">
-                <div class="aff-stat-v">{{ capaciteMax }}</div>
-                <div class="aff-stat-l">Capacité max</div>
-              </div>
-              <div class="aff-stat">
-                <div class="aff-stat-v aff-stat-pct">{{ capaciteMax ? Math.round(etudiantsAffectes.length/capaciteMax*100) : 100 }}%</div>
-                <div class="aff-stat-l">Charge</div>
-              </div>
+              <div class="aff-stat"><div class="aff-stat-v">{{ etudiantsAffectes.length }}</div><div class="aff-stat-l">Étudiants affectés</div></div>
+              <div class="aff-stat"><div class="aff-stat-v">{{ capaciteMax }}</div><div class="aff-stat-l">Capacité max</div></div>
+              <div class="aff-stat"><div class="aff-stat-v aff-stat-pct">{{ capaciteMax ? Math.round(etudiantsAffectes.length/capaciteMax*100) : 100 }}%</div><div class="aff-stat-l">Charge</div></div>
               <div class="aff-stat-bar-wrap">
                 <div class="aff-stat-l" style="margin-bottom:6px">Progression de charge</div>
                 <div class="aff-bar-bg"><div class="aff-bar-fill" :style="{width:Math.min(100,etudiantsAffectes.length/(capaciteMax||1)*100)+'%'}"></div></div>
               </div>
             </div>
 
-            <!-- Barre recherche -->
             <div class="search-bar-wrap" v-if="etudiantsAffectes.length">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a9aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input v-model="searchEtu" class="search-input" placeholder="Rechercher par nom, matricule, spécialité..."/>
@@ -185,7 +307,6 @@
               <button v-if="searchEtu" @click="searchEtu=''" class="search-clear">✕</button>
             </div>
 
-            <!-- Modale fiche étudiant -->
             <transition name="modal-fade">
               <div class="overlay" v-if="ficheEtudiant" @click.self="ficheEtudiant=null">
                 <div class="modal fiche-etu-modal">
@@ -209,14 +330,12 @@
               </div>
             </transition>
 
-            <!-- Empty -->
             <div v-if="!etudiantsAffectes.length" class="empty-state">
               <div class="empty-icon">👨‍🎓</div>
               <div class="empty-t">Aucun étudiant affecté</div>
               <p class="empty-s">Le chef de département n'a pas encore finalisé les affectations.</p>
             </div>
 
-            <!-- Tableau riche -->
             <template v-else>
               <div class="aff-table-card">
                 <table class="aff-table">
@@ -232,24 +351,16 @@
                   </thead>
                   <tbody>
                     <tr v-for="(e,i) in etudiantsFiltres" :key="e.id" class="aff-tr" @click="ficheEtudiant=e">
-                      <td class="td-n">
-                        <span class="row-num">{{ i+1 }}</span>
-                      </td>
+                      <td class="td-n"><span class="row-num">{{ i+1 }}</span></td>
                       <td>
                         <div class="etu-cell">
                           <div class="etu-av-gold">{{ initiales(e.prenom+' '+e.nom) }}</div>
-                          <div>
-                            <div class="etu-nom">{{ e.prenom }} {{ e.nom }}</div>
-                            <div class="etu-sub" v-if="e.email">{{ e.email }}</div>
-                          </div>
+                          <div><div class="etu-nom">{{ e.prenom }} {{ e.nom }}</div><div class="etu-sub" v-if="e.email">{{ e.email }}</div></div>
                         </div>
                       </td>
                       <td><span class="mat-badge">{{ e.matricule || '—' }}</span></td>
                       <td><span class="spec-pill">{{ e.specialite || '—' }}</span></td>
-                      <td>
-                        <span class="tel-txt" v-if="e.telephone">📞 {{ e.telephone }}</span>
-                        <span class="tel-none" v-else>—</span>
-                      </td>
+                      <td><span class="tel-txt" v-if="e.telephone">📞 {{ e.telephone }}</span><span class="tel-none" v-else>—</span></td>
                       <td class="td-action">
                         <button class="btn-fiche-sm" @click.stop="ficheEtudiant=e">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -265,64 +376,31 @@
             </template>
           </div>
 
+          <ConsulterProfil v-else-if="currentPage==='profil'" key="profil" @modifier="currentPage='profil-edit'"/>
+          <ModifierProfil  v-else-if="currentPage==='profil-edit'" key="profil-edit" @annuler="currentPage='profil'" @sauvegarde="currentPage='profil'"/>
+
         </transition>
       </div>
     </div>
-
-    <!-- MODAL REJET -->
-    <transition name="modal-fade">
-      <div class="overlay" v-if="modalRejet" @click.self="modalRejet=null">
-        <div class="modal">
-          <h4>Rejeter la demande</h4>
-          <p>Étudiant : <strong>{{ modalRejet.etudiant }}</strong><br>Sujet : {{ modalRejet.titre }}</p>
-          <div class="fb"><label class="fl">Motif du rejet <span class="req">*</span></label><textarea v-model="motifRejet" class="fi ft" rows="3" placeholder="Expliquez votre décision..."/><p class="err" v-if="showMotifErr">Le motif est obligatoire.</p></div>
-          <div class="modal-btns">
-            <button class="btn-outline" @click="modalRejet=null">Annuler</button>
-            <button class="btn-danger" @click="confirmerRejet">Confirmer le rejet</button>
-          </div>
-        </div>
-      </div>
-
-          <ConsulterProfil
-            v-else-if="currentPage==='profil'"
-            key="profil"
-            @modifier="currentPage='profil-edit'"
-          />
-          <ModifierProfil
-            v-else-if="currentPage==='profil-edit'"
-            key="profil-edit"
-            @annuler="currentPage='profil'"
-            @sauvegarde="currentPage='profil'"
-          />
-
-    </transition>
   </div>
 </template>
 
 <script>
-import axios from 'axios'
-import ConsulterProfil    from './ConsulterProfil.vue'
-import ModifierProfil     from './ModifierProfil.vue'
+import api from '@/services/api.js'
+import ConsulterProfil from './ConsulterProfil.vue'
+import ModifierProfil from './ModifierProfil.vue'
 import DemandesEncadrement from './GestionDemandes/DemandesEncadrement.vue'
-import SuiviEncadrant     from './Suiviencadrant.vue'
-import ReunionEtudiant    from './Reunionetudiant.vue'
-
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-})
-api.interceptors.request.use(cfg => {
-  const u = localStorage.getItem('user')
-  if (u) cfg.headers.Authorization = 'Bearer ' + JSON.parse(u).token
-  return cfg
-})
+import SuiviEncadrant from './Suiviencadrant.vue'
+import ReunionEncadrant from './Reunionencadrant.vue'
+import FicheVoeux from './GestionFormulaires/FicheVoeux.vue'
 
 export default {
   name: 'DashboardEncadrant',
-  components: { ConsulterProfil, ModifierProfil, DemandesEncadrement, SuiviEncadrant, ReunionEtudiant },
+  components: { ConsulterProfil, ModifierProfil, DemandesEncadrement, SuiviEncadrant, ReunionEncadrant, FicheVoeux },
 
   async mounted() {
     await this.chargerDonnees()
+    await this.chargerFormulaireActif()
   },
 
   data() {
@@ -336,11 +414,23 @@ export default {
       capaciteMax: 0,
       searchEtu: '',
       ficheEtudiant: null,
-      envoyant: false,
+      nouvellesAffectations: false,
+      notifications: [],
+      showNotifPanel: false,
+
+      // ✅ NEW: voeux state (mirrors DashboardEnseignant)
+      formulaireActif: null,
+      voeuxSoumis: false,
+      voeuxData: null,
+      dateSoumission: '',
+      modeModifierVoeux: false,
     }
   },
 
   computed: {
+    nbLivrablesPending() {
+      return this.notifications.filter(n => n.message && n.message.includes('livrable')).length
+    },
     etudiantsFiltres() {
       if (!this.searchEtu) return this.etudiantsAffectes
       const q = this.searchEtu.toLowerCase()
@@ -352,6 +442,7 @@ export default {
     },
     breadcrumb() {
       return {
+        voeux:        'Mes vœux d\'encadrement',
         demandes:     'Gérer les demandes',
         affectes:     'Étudiants affectés',
         suivi:        'Suivi & livrables',
@@ -363,10 +454,19 @@ export default {
     dateNow() {
       return new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     },
+    // Allow modification only if deadline not passed and form not locked
+    peutModifier() {
+      if (!this.formulaireActif?.date_limite) return false
+      if (this.formulaireActif.statut === 'verrouille') return false
+      return new Date(this.formulaireActif.date_limite) > new Date()
+    },
   },
 
   methods: {
-    navigate(p) { this.currentPage = p },
+    navigate(p) {
+      this.currentPage = p
+      this.modeModifierVoeux = false
+    },
 
     logout() {
       localStorage.removeItem('user')
@@ -375,61 +475,131 @@ export default {
 
     initiales(n) { return (n||'?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2) },
 
+    formatDate(d) {
+      if (!d) return '—'
+      return new Date(d).toLocaleDateString('fr-FR')
+    },
+
+    labelDisponibilite(d) {
+      return { oui: '✅ Disponible', partielle: '⚡ Partiellement', non: '❌ Non disponible' }[d] || d || '—'
+    },
+
+    async chargerFormulaireActif() {
+      try {
+        const res = await api.get('/formulaires-voeux')
+        const publie = res.data.find(f => f.statut === 'publie' || f.statut === 'verrouille')
+        if (publie) {
+          this.formulaireActif = publie
+          const voeuxRes = await api.get('/voeux-encadrement?formulaire_id=' + publie.id)
+          if (voeuxRes.data && voeuxRes.data.statut === 'soumis') {
+            this.voeuxSoumis    = true
+            this.voeuxData      = voeuxRes.data
+            this.dateSoumission = voeuxRes.data.soumis_at
+              ? new Date(voeuxRes.data.soumis_at).toLocaleDateString('fr-FR')
+              : ''
+          }
+        }
+      } catch (e) {
+        console.error('Erreur chargement formulaire voeux:', e)
+      }
+    },
+
     async chargerDonnees() {
       try {
-        // Étudiants affectés — l'API retourne un tableau pour l'encadrant
-        const affRes = await api.get('/affectations')
-        const raw = affRes.data
-        // Normaliser en tableau
-        const affData = Array.isArray(raw) ? raw : (raw && raw.id ? [raw] : [])
-        const diffusees = affData.filter(a => a.statut === 'diffusee')
-        this.etudiantsAffectes = diffusees.map(a => ({
+        const [affRes, demRes, formRes] = await Promise.all([
+          api.get('/affectations/mes-affectations'),
+          api.get('/demandes-encadrement'),
+          api.get('/formulaires-voeux').catch(() => ({ data: [] })),
+        ])
+
+        // Étudiants affectés (via le chef de département)
+        const prevCount = this.etudiantsAffectes.length
+        this.etudiantsAffectes = (affRes.data || []).map(a => ({
           id:        a.etudiant_id,
-          prenom:    a.etudiant ? a.etudiant.split(' ')[0] : '',
-          nom:       a.etudiant ? a.etudiant.split(' ').slice(1).join(' ') : '',
+          prenom:    a.prenom || '',
+          nom:       a.nom || '',
           matricule: a.matricule || '',
           specialite:a.specialite || '',
           email:     a.email || '',
           telephone: a.telephone || '',
           statut:    a.statut,
         }))
-        // Auto-naviguer vers la liste si des affectations existent
-        if (this.etudiantsAffectes.length && this.currentPage === 'home') {
-          // Laisser sur home mais la bannière permettra d'y aller
+
+        // Notification: new affectations since last load
+        if (this.etudiantsAffectes.length > prevCount && prevCount > 0) {
+          this.afficherToast({
+            message: `${this.etudiantsAffectes.length - prevCount} nouvel(le)(s) étudiant(s) vous ont été affecté(s) !`,
+            type: 'toast-ok'
+          })
+        }
+        // First load notification
+        if (prevCount === 0 && this.etudiantsAffectes.length > 0) {
+          this.nouvellesAffectations = true
         }
 
-        // Nb demandes en attente (via /api/demandes-encadrement)
-        const demRes = await api.get('/demandes-encadrement')
-        const demandes = demRes.data || []
+        // Demandes en attente
+        const demandes = Array.isArray(demRes.data) ? demRes.data : []
         this.nbEnAttente = demandes.filter(d => d.statut === 'en_attente').length
 
-        // Capacité max = nb étudiants dans les vœux soumis
-        const voeuxRes = await api.get('/voeux-encadrement?formulaire_id=1').catch(() => ({ data: null }))
+        // Capacité depuis les vœux
+        const formList = formRes.data || []
+        const latestForm = formList.find(f => f.statut === 'publie' || f.statut === 'verrouille') || formList[0]
+        const voeuxRes = latestForm
+          ? await api.get('/voeux-encadrement?formulaire_id=' + latestForm.id).catch(() => ({ data: null }))
+          : { data: null }
         this.capaciteMax = voeuxRes.data?.nbre_max_pfe || this.etudiantsAffectes.length || 0
+
+        // Load notifications
+        const notifRes = await api.get('/notifications').catch(() => ({ data: [] }))
+        this.notifications = (notifRes.data || []).filter(n => !n.lu)
+
       } catch (e) {
         console.error('Erreur chargement encadrant:', e)
       }
     },
 
+    goToLivrable(n) {
+      this.showNotifPanel = false
+      this.navigate('suivi')
+      this.marquerLu(n.id)
+    },
+
+    async marquerLu(notifId) {
+      try {
+        await api.put('/notifications/' + notifId + '/lire')
+        this.notifications = this.notifications.filter(n => n.id !== notifId)
+      } catch (e) { /* silent */ }
+    },
+
+    async marquerTousLus() {
+      try {
+        await api.put('/notifications/lire-tout')
+        this.notifications = []
+        this.showNotifPanel = false
+      } catch (e) { /* silent */ }
+    },
+
     onNbEnAttente(nb) { this.nbEnAttente = nb },
 
-    async contacterEtudiant(etudiant) {
-      if (!etudiant?.email) return
-      this.envoyant = true
-      try {
-        await api.post('/contact-etudiant', {
-          etudiant_id: etudiant.id,
-          email:       etudiant.email,
-          nom:         etudiant.prenom + ' ' + etudiant.nom,
-        })
-        this.afficherToast({ message: `Email envoyé à ${etudiant.prenom} ${etudiant.nom} ✓`, type: 'toast-ok' })
-        this.ficheEtudiant = null
-      } catch (e) {
-        this.afficherToast({ message: 'Erreur lors de l\'envoi.', type: 'toast-err' })
-      } finally {
-        this.envoyant = false
+    onVoeuxSoumis(voeux) {
+      this.voeuxSoumis      = true
+      this.voeuxData        = voeux
+      this.dateSoumission   = new Date().toLocaleDateString('fr-FR')
+      this.modeModifierVoeux = false
+      this.capaciteMax      = voeux?.nbre_max_pfe || this.capaciteMax
+      this.afficherToast({ message: 'Vos vœux ont été soumis avec succès !', type: 'toast-ok' })
+      this.navigate('voeux')
+    },
+
+    onRoleChanged(newRole) {
+      // encadrant role-changed event is a no-op here (they're already encadrant)
+      // but update localStorage in case the server changed something
+      if (newRole) {
+        this.currentUser = { ...this.currentUser, role: newRole }
+        localStorage.setItem('user', JSON.stringify(this.currentUser))
       }
     },
+
     exporterCSV() {
       const rows = [['#', 'Prénom', 'Nom', 'Matricule', 'Spécialité', 'Statut']]
       this.etudiantsAffectes.forEach((e, i) => {
@@ -472,6 +642,7 @@ export default {
 .nav-item:hover{background:rgba(255,255,255,0.09);color:#fff}.nav-item.active{background:rgba(245,166,35,0.22);color:#F5C518}
 .nav-icon{display:flex;align-items:center;flex-shrink:0;position:relative}.nav-label{overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px}
 .badge-cnt{background:#f5a623;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;flex-shrink:0}
+.badge-soumis{background:rgba(39,174,96,0.3);color:#a8f0c6;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px}
 .badge-dot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;background:#f5a623;border-radius:50%;border:2px solid #2f4f6a}
 .sb-user{display:flex;align-items:center;gap:10px;padding:14px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0}
 .u-av{width:36px;height:36px;border-radius:10px;background:#f5a623;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -485,6 +656,7 @@ export default {
 .topbar-r{display:flex;align-items:center;gap:14px}.tb-date{font-size:12.5px;color:#7A8FA6;text-transform:capitalize}
 .content-area{flex:1;padding:32px;overflow-y:auto}
 .ptb{margin-bottom:24px}.pt{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#E8EDF2;margin-bottom:5px}.ps{font-size:14px;color:#7A8FA6}
+.banner-new-aff{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(39,174,96,0.12),rgba(61,96,128,0.08));border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:16px;flex-wrap:wrap}
 .banner-affectation{display:flex;align-items:center;gap:14px;background:#d4edda;border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:20px}
 .ba-icon{font-size:28px;flex-shrink:0}.ba-body{flex:1}.ba-t{font-size:15px;font-weight:700;color:#1e7e34;margin-bottom:3px}.ba-s{font-size:13.5px;color:#2d6a4f}
 .ba-btn{padding:9px 18px;background:#27ae60;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.ba-btn:hover{background:#1e8449}
@@ -502,38 +674,34 @@ export default {
 .qa-card{display:flex;align-items:center;gap:14px;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
 .qa-card:hover{border-color:#F5C518;box-shadow:0 4px 18px rgba(61,96,128,0.12);transform:translateY(-2px)}
 .qa-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.qa-blue{background:rgba(245,197,24,0.12);color:#F5C518}.qa-gold{background:rgba(245,166,35,0.12);color:#d98e1a}
+.qa-blue{background:rgba(245,197,24,0.12);color:#F5C518}.qa-gold{background:rgba(245,166,35,0.12);color:#d98e1a}.qa-teal{background:rgba(39,174,96,0.12);color:#27ae60}
 .qa-txt{flex:1}.qa-t{font-size:14px;font-weight:600;color:#E8EDF2;margin-bottom:2px}.qa-s{font-size:12.5px;color:#7A8FA6}
 .qa-arr{color:#c8c4bc;flex-shrink:0;transition:transform .18s,color .18s}.qa-card:hover .qa-arr{transform:translateX(3px);color:#F5C518}
-/* Filtres */
-.filtres-row{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.filtre-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;background:#243347;border:1px solid rgba(245,197,24,0.18);border-radius:20px;font-size:13px;font-weight:600;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
-.filtre-btn:hover{border-color:#F5C518;color:#F5C518}.filtre-active{background:rgba(245,197,24,0.2);color:#fff;border-color:#F5C518}
-.filtre-cnt{background:rgba(255,255,255,0.25);border-radius:99px;padding:1px 7px;font-size:11px}.filtre-active .filtre-cnt{background:rgba(255,255,255,0.3)}
-/* Demandes */
-.demandes-list{display:flex;flex-direction:column;gap:14px}
-.demande-card{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:20px;transition:box-shadow .18s}
-.demande-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.08)}
-.dc-s-en-attente{border-left:4px solid #f5a623!important}.dc-s-acceptée{border-left:4px solid #27ae60!important}.dc-s-rejetée{border-left:4px solid #e74c3c!important}
-.dc-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.dc-av{width:38px;height:38px;border-radius:9px;background:rgba(245,197,24,0.2);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.dc-info{flex:1}.dc-nom{font-size:14px;font-weight:700;color:#E8EDF2}.dc-meta{font-size:12px;color:#7A8FA6;margin-top:2px}
-.dc-titre{font-size:14px;font-weight:600;color:#E8EDF2;margin-bottom:6px}
-.dc-desc{font-size:13px;color:#A8BDD4;line-height:1.5;margin-bottom:14px;;-webkit-box-orient:vertical;overflow:hidden}
-.dc-actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn-det{padding:8px 14px;background:#243347;border:1px solid rgba(245,197,24,0.18);border-radius:8px;font-size:13px;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .18s}.btn-det:hover{border-color:#F5C518;color:#F5C518}
-.btn-accept{display:flex;align-items:center;gap:5px;padding:8px 16px;background:rgba(39,174,96,0.1);border:1.5px solid rgba(39,174,96,0.3);border-radius:8px;font-size:13px;font-weight:600;color:#1a6b3a;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}.btn-accept:hover{background:#27ae60;color:#fff;border-color:#27ae60}
-.btn-reject{display:flex;align-items:center;gap:5px;padding:8px 16px;background:rgba(192,57,43,0.08);border:1.5px solid rgba(192,57,43,0.2);border-radius:8px;font-size:13px;font-weight:600;color:#922b21;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}.btn-reject:hover{background:#c0392b;color:#fff;border-color:#c0392b}
-.dc-detail{margin-top:14px;padding:14px;background:#243347;border-radius:10px;border:1px solid rgba(245,197,24,0.18)}
-.det-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #c8c4bc;font-size:13.5px}.det-row:last-child{border-bottom:none}.det-row span{width:110px;color:#7A8FA6;flex-shrink:0;font-size:13px}.det-row p,.det-row a{color:#A8BDD4;line-height:1.5}
-.file-link{color:#F5C518;text-decoration:underline;cursor:pointer}
-.dc-motif{margin-top:10px;font-size:12.5px;color:#922b21;padding:8px 12px;background:rgba(192,57,43,0.06);border-radius:8px}
-/* Cap bar */
-.cap-bar-wrap{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:12px;padding:16px 20px;margin-bottom:18px}
-.cap-info{display:flex;justify-content:space-between;margin-bottom:8px}.cap-l{font-size:13px;font-weight:600;color:#A8BDD4}.cap-v{font-size:13px;font-weight:700;color:#E8EDF2}
-.cap-bar{height:8px;background:#0F1923;border-radius:99px;overflow:hidden}.cap-fill{height:100%;border-radius:99px;background:rgba(245,197,24,0.2);transition:width .4s}
-/* Table */
-/* ── Page étudiants affectés ── */
+/* Voeux read-only fiche (encadrant theme) */
+.page-content{padding:0}
+.page-header-block{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.page-title{font-family:'Syne',sans-serif;font-size:20px;color:#E8EDF2;margin-bottom:4px}
+.page-sub{font-size:13.5px;color:#7A8FA6}
+.header-actions{display:flex;align-items:center;gap:10px}
+.btn-primary-enc{display:flex;align-items:center;gap:8px;padding:10px 20px;background:#F5C518;color:#0F1923;border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;transition:background .18s}
+.btn-primary-enc:hover{background:#d9ae10}
+.deadline-passed-enc{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f8d7da;color:#922b21;border-radius:8px;font-size:13px;font-weight:600}
+.fiche-card-enc{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;overflow:hidden}
+.fiche-statut-enc{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#0F1923;border-bottom:1px solid rgba(245,197,24,0.18)}
+.badge-soumis-lg{padding:5px 14px;background:rgba(39,174,96,0.2);color:#a8f0c6;border-radius:20px;font-size:13px;font-weight:700}
+.fiche-date-enc{font-size:13px;color:#7A8FA6}
+.fiche-table-enc{width:100%;border-collapse:collapse}
+.fiche-table-enc tr{border-top:1px solid rgba(255,255,255,0.07)}
+.fiche-table-enc tr:first-child{border-top:none}
+.fiche-lbl-enc{padding:14px 20px;font-size:13px;font-weight:600;color:#7A8FA6;background:#1A2635;width:200px;white-space:nowrap}
+.fiche-val-enc{padding:14px 20px;font-size:13.5px;color:#E8EDF2;background:#1A2635}
+.dispo-badge{font-weight:600}
+.dispo-badge.oui{color:#27ae60}.dispo-badge.partielle{color:#d98e1a}.dispo-badge.non{color:#e74c3c}
+.spec-tag-enc{display:inline-block;padding:3px 10px;background:rgba(245,197,24,0.1);color:#F5C518;border-radius:20px;font-size:12px;font-weight:600;margin:2px 4px 2px 0}
+.back-header-enc{margin-bottom:20px}
+.back-btn-enc{display:flex;align-items:center;gap:7px;padding:8px 16px;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:9px;font-size:13px;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+.back-btn-enc:hover{border-color:#F5C518;color:#F5C518}
+/* Affectés table */
 .aff-page-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px}
 .aff-stats-strip{display:grid;grid-template-columns:repeat(3,auto) 1fr;gap:0;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:18px 24px;margin-bottom:18px;align-items:center}
 .aff-stat{padding:0 24px;border-right:1.5px solid #c8c4bc;text-align:center}
@@ -544,7 +712,6 @@ export default {
 .aff-stat-bar-wrap{padding-left:24px;flex:1}
 .aff-bar-bg{height:10px;background:#0F1923;border-radius:99px;overflow:hidden}
 .aff-bar-fill{height:100%;background:linear-gradient(90deg,#3d6080,#5a8ab0);border-radius:99px;transition:width .5s ease}
-/* Tableau */
 .aff-table-card{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;overflow:hidden}
 .aff-table{width:100%;border-collapse:collapse}
 .aff-table thead tr{background:#0F1923}
@@ -554,6 +721,7 @@ export default {
 .aff-tr:hover{background:#243347}
 .aff-tr td{padding:14px 16px;vertical-align:middle}
 .row-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:rgba(245,197,24,0.2);color:#fff;border-radius:8px;font-size:12px;font-weight:700}
+.etu-cell{display:flex;align-items:center;gap:10px}
 .etu-av-gold{width:40px;height:40px;border-radius:11px;background:#f5a623;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .etu-nom{font-size:14px;font-weight:700;color:#E8EDF2}
 .etu-sub{font-size:12px;color:#7A8FA6;margin-top:2px}
@@ -568,19 +736,6 @@ export default {
 .search-input{flex:1;border:none;background:transparent;font-size:14px;color:#E8EDF2;font-family:'DM Sans',sans-serif;outline:none}
 .search-clear{background:none;border:none;color:#7A8FA6;cursor:pointer;font-size:16px;padding:0 4px}.search-clear:hover{color:#E8EDF2}
 .btn-export{display:flex;align-items:center;gap:7px;padding:9px 18px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.btn-export:hover{background:#2f4f6a}
-/* Cards étudiants affectés */
-.etu-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:4px}
-.etu-card{display:flex;align-items:center;gap:14px;background:#243347;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:16px 18px;cursor:pointer;transition:all .2s;position:relative}
-.etu-card:hover{border-color:#F5C518;box-shadow:0 4px 18px rgba(61,96,128,0.13);transform:translateY(-2px);background:#fff}
-.etu-card-num{position:absolute;top:10px;right:14px;font-size:11px;color:#aaa;font-weight:700}
-.etu-card-av{width:46px;height:46px;border-radius:12px;background:#f5a623;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.etu-card-body{flex:1;min-width:0}
-.etu-card-nom{font-size:14px;font-weight:700;color:#E8EDF2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.etu-card-mat{font-size:12px;color:#7A8FA6;margin-top:2px}
-.etu-card-spec{display:inline-block;margin-top:6px;padding:2px 10px;background:rgba(245,166,35,0.12);color:#d98e1a;border-radius:20px;font-size:11.5px;font-weight:600}
-.etu-card-arrow{color:#c8c4bc;flex-shrink:0;transition:color .18s}.etu-card:hover .etu-card-arrow{color:#F5C518}
-.empty-search-msg{grid-column:1/-1;text-align:center;padding:32px;color:#7A8FA6;font-size:14px}
-/* Fiche étudiant modale */
 .fiche-etu-modal{max-width:480px;text-align:left}
 .fiche-etu-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
 .fiche-av-lg{width:60px;height:60px;border-radius:16px;background:#f5a623;color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -590,37 +745,34 @@ export default {
 .fiche-rows{margin-bottom:20px}
 .fiche-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #c8c4bc;font-size:13.5px;color:#E8EDF2}
 .fiche-lbl{color:#7A8FA6;font-weight:600;font-size:13px}
-.fiche-etu-actions{display:flex;gap:10px}
-.btn-contact{display:flex;align-items:center;gap:7px;padding:10px 18px;background:#27ae60;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .18s}.btn-contact:hover{background:#1e8449}
 .btn-fermer{padding:10px 18px;background:transparent;border:1px solid rgba(245,197,24,0.18);border-radius:9px;font-size:13px;font-weight:600;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}.btn-fermer:hover{border-color:#F5C518;color:#F5C518}
-.table-card{background:#1A2635;border-radius:14px;border:1px solid rgba(245,197,24,0.18);overflow:hidden}
-.table{width:100%;border-collapse:collapse;font-size:13.5px}
-.table thead tr{background:#243347}
-.table th{text-align:left;padding:12px 16px;font-size:11.5px;font-weight:700;color:#7A8FA6;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
-.tr td{padding:14px 16px;border-top:1px solid rgba(255,255,255,0.07);vertical-align:middle}.tr:hover{background:#243347}
-.td-n{color:#7A8FA6;font-weight:600;font-size:13px;width:36px}.td-mat{font-family:monospace;font-size:12.5px;color:#A8BDD4}.td-sujet{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.etu-cell{display:flex;align-items:center;gap:10px}
-.etu-av{width:32px;height:32px;border-radius:8px;background:rgba(245,197,24,0.2);color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.etu-nom{font-size:13.5px;font-weight:600;color:#E8EDF2}.etu-mail{font-size:12px;color:#7A8FA6}
-/* Badges */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
-.badge-teal{background:#fff8e8;color:#d98e1a}.badge-green{background:#d4edda;color:#1e7e34}.badge-red{background:#f8d7da;color:#a71d2a}.badge-blue{background:rgba(245,197,24,0.12);color:#F5C518}.badge-gray{background:rgba(74,90,106,0.1);color:#A8BDD4}
-/* Empty */
+.badge-green{background:#d4edda;color:#1e7e34}.badge-blue{background:rgba(245,197,24,0.12);color:#F5C518}
 .empty-state{text-align:center;padding:60px 20px;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px}
 .empty-icon{font-size:48px;margin-bottom:12px}.empty-t{font-size:16px;font-weight:600;color:#A8BDD4;margin-bottom:6px}.empty-s{font-size:13.5px;color:#7A8FA6}
-/* Modal */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999}
-.modal{background:#1A2635;border-radius:16px;padding:28px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
-.modal h4{font-family:'Syne',sans-serif;font-size:17px;color:#E8EDF2;margin-bottom:10px}.modal p{font-size:13.5px;color:#A8BDD4;margin-bottom:18px;line-height:1.5}
-.fb{margin-bottom:4px}.fl{display:block;font-size:13px;font-weight:600;color:#E8EDF2;margin-bottom:6px}.req{color:#c0392b}
-.fi{width:100%;padding:10px 13px;background:#243347;border:1px solid rgba(245,197,24,0.18);border-radius:9px;font-size:13.5px;color:#E8EDF2;font-family:'DM Sans',sans-serif;transition:border-color .18s}.fi:focus{outline:none;border-color:#F5C518}.ft{resize:vertical;min-height:80px}
-.err{color:#c0392b;font-size:12px;margin-top:5px}
-.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
-.btn-outline{padding:10px 20px;background:transparent;border:1px solid rgba(245,197,24,0.18);border-radius:9px;font-size:13.5px;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}.btn-outline:hover{border-color:#F5C518;color:#F5C518}
-.btn-danger{padding:10px 22px;background:#c0392b;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .18s}.btn-danger:hover{background:#a93226}
+.modal{background:#1A2635;border-radius:16px;padding:28px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative}
 .modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .25s}.modal-fade-enter-from,.modal-fade-leave-to{opacity:0}
 .page-fade-enter-active{transition:opacity .25s,transform .25s cubic-bezier(.22,1,.36,1)}.page-fade-leave-active{transition:opacity .15s}
 .page-fade-enter-from{opacity:0;transform:translateY(8px)}.page-fade-leave-to{opacity:0}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.qa-grid{grid-template-columns:1fr}}
+
+.notif-wrap{position:relative}
+.notif-bell{position:relative;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#4a5a6a;cursor:pointer;transition:all .18s}
+.notif-bell:hover,.notif-bell.active{border-color:#3d6080;color:#3d6080;background:#ddd9d1}
+.notif-badge{position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;border:2px solid #ddd9d1}
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:200;overflow:hidden}
+.notif-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #c8c4bc;font-size:13px;font-weight:700;color:#1e2a35}
+.notif-mark-all{background:none;border:none;font-size:12px;color:#3d6080;cursor:pointer;font-weight:600}
+.notif-mark-all:hover{text-decoration:underline}
+.notif-empty{padding:20px;text-align:center;font-size:13px;color:#8a9aaa}
+.notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid #c8c4bc;background:#e8e4dc}
+.notif-item-lv{background:#fff8e8;border-left:3px solid #f5a623}
+.notif-item-lv:hover{background:#fff3cd}
+.notif-item:last-child{border-bottom:none}
+.notif-msg{flex:1;font-size:13px;color:#1e2a35;line-height:1.4}
+.notif-close{background:none;border:none;color:#8a9aaa;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px}.notif-close:hover{color:#e74c3c}
+.notif-drop-enter-active,.notif-drop-leave-active{transition:opacity .18s,transform .18s}
+.notif-drop-enter-from,.notif-drop-leave-to{opacity:0;transform:translateY(-6px)}
 </style>

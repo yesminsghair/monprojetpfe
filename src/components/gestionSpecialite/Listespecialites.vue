@@ -88,7 +88,7 @@
 export default {
   name: 'Listespecialites',
   props: { specialites: { type: Array, default: () => [] } },
-  emits: ['specialite-modifiee', 'specialite-supprimee', 'go-create'],
+  emits: ['update-specialite', 'delete-specialite', 'go-create'], 
   data() {
     return { editId: null, editForm: {}, modalSupp: null }
   },
@@ -98,12 +98,12 @@ export default {
       this.editForm = { nom: s.nom, code: s.code, description: s.description || '', dateCreation: s.date_creation || '' }
     },
     sauvegarder(s) {
-      this.$emit('specialite-modifiee', { ...s, ...this.editForm })
+      this.$emit('update-specialite', { ...s, ...this.editForm })
       this.editId = null
     },
     confirmerSuppression(s) { this.modalSupp = s },
     supprimerSpec() {
-      this.$emit('specialite-supprimee', this.modalSupp.id)
+      this.$emit('delete-specialite', this.modalSupp.id)
       this.modalSupp = null
     },
     formatDate(d) {
