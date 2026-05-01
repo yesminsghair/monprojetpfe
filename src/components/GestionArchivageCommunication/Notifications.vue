@@ -41,6 +41,9 @@
               <div class="notif-time">{{ formatTime(notif.date) }}</div>
             </div>
             <span v-if="!notif.read" class="unread-dot"></span>
+            <button class="notif-del" @click="supprimer(notif, $event)" title="Supprimer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
 
           <div v-if="notifications.length === 0" class="empty-notif">
@@ -50,8 +53,8 @@
         </div>
 
         <!-- FOOTER -->
-        <div class="notif-footer">
-          <a href="/notifications" class="footer-link">Voir toutes les notifications →</a>
+        <div class="notif-footer" v-if="notifications.length">
+          <button class="footer-link" @click="markAllRead">✓ Tout marquer comme lu</button>
         </div>
 
       </div>
@@ -61,26 +64,82 @@
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
+  name: 'NotificationsDropdown',
+
   data() {
     return {
       open: false,
-      notifications: [
-        { id: 1, text: "Nouveau message reçu",               read: false, date: new Date() },
-        { id: 2, text: "Résultat d'affectation publié",       read: false, date: new Date() },
-        { id: 3, text: "Nouvelle fonctionnalité disponible",  read: true,  date: new Date() }
-      ]
+      notifications: [],
+      loading: false,
     }
   },
+
   computed: {
-    unreadCount() { return this.notifications.filter(n => !n.read).length }
+    unreadCount() {
+      return this.notifications.filter(n => !n.lu).length
+    }
   },
+
+  mounted() {
+    this.charger()
+    // Poll every 30s for new notifications
+    this._poll = setInterval(this.charger, 30000)
+  },
+
+  beforeUnmount() {
+    clearInterval(this._poll)
+  },
+
   methods: {
-    toggleNotif() { this.open = !this.open },
-    marquerCommeLu(notif) { notif.read = true },
-    markAllRead() { this.notifications.forEach(n => n.read = true) },
+    async charger() {
+      try {
+        const res = await api.get('/notifications')
+        this.notifications = (res.data || []).map(n => ({
+          id:   n.id,
+          text: n.message,
+          read: !!n.lu,
+          date: n.created_at,
+        }))
+      } catch (e) { /* silent */ }
+    },
+
+    toggleNotif() {
+      this.open = !this.open
+      if (this.open) this.charger()
+    },
+
+    async marquerCommeLu(notif) {
+      if (notif.read) return
+      notif.read = true
+      try {
+        await api.put(`/notifications/${notif.id}/lire`)
+      } catch (e) { notif.read = false }
+    },
+
+    async markAllRead() {
+      this.notifications.forEach(n => n.read = true)
+      try {
+        await api.put('/notifications/lire-tout')
+      } catch (e) { await this.charger() }
+    },
+
+    async supprimer(notif, e) {
+      e.stopPropagation()
+      this.notifications = this.notifications.filter(n => n.id !== notif.id)
+      try {
+        await api.delete(`/notifications/${notif.id}`)
+      } catch (e) { await this.charger() }
+    },
+
     formatTime(date) {
-      const d = new Date(date), now = new Date()
+      if (!date) return ''
+      // Normalize "YYYY-MM-DD HH:MM:SS" → local time, not UTC
+      const normalized = typeof date === 'string' ? date.replace(' ', 'T') : date
+      const d = new Date(normalized)
+      const now = new Date()
       const diffMin = Math.floor((now - d) / 60000)
       if (diffMin < 1) return "À l'instant"
       if (diffMin < 60) return `Il y a ${diffMin} min`
@@ -154,5 +213,11 @@ export default {
 /* Footer */
 .notif-footer { padding: 11px 16px; border-top: 1.5px solid #c8c4bc; text-align: center; }
 .footer-link { font-size: 12.5px; font-weight: 700; color: #3d6080; text-decoration: none; transition: color 0.2s; }
+.footer-link:hover { color: #f5a623; }
+
+.notif-del { background: none; border: none; color: #c8c4bc; cursor: pointer; padding: 3px; border-radius: 5px; display: flex; align-items: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s, color 0.15s; }
+.notif-item:hover .notif-del { opacity: 1; }
+.notif-del:hover { color: #e74c3c; }
+.footer-link { background: none; border: none; font-size: 12.5px; font-weight: 700; color: #3d6080; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: color 0.2s; }
 .footer-link:hover { color: #f5a623; }
 </style>

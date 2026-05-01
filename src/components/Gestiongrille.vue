@@ -20,37 +20,41 @@
       <button v-if="!publie && !verrouille" class="btn-outline" @click="publier" :disabled="!totalOk">
         Soumettre au directeur
       </button>
-      <!-- Verrouiller button: chef can lock the grille themselves (brouillon or publie but NOT yet verrouille) -->
-      <button v-if="!verrouille && totalOk" class="btn-lock" @click="verrouillerGrille" :disabled="locking">
-        <span v-if="locking" class="btn-spinner"></span>
+      <!-- Verrouiller button: chef closes the grille after PFE season ends -->
+      <button v-if="verrouille && !ferme" class="btn-fermer" @click="fermerGrille" :disabled="fermant">
+        <span v-if="fermant" class="btn-spinner"></span>
         <svg v-else xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        {{ publie ? 'Verrouiller (validée ✓)' : 'Verrouiller directement' }}
+        Verrouiller définitivement
       </button>
+      <div v-if="ferme" class="ferme-pill">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Grille fermée
+      </div>
     </div>
   </div>
 
   <transition name="toast"><div v-if="toast.show" class="toast" :class="'toast-'+toast.type">{{ toast.msg }}<button @click="toast.show=false" class="toast-x"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></transition>
 
   <!-- CONTEXTUAL STATUS MESSAGE (replaces old status bar pills) -->
-  <div v-if="verrouille" class="status-msg status-msg-locked">
+  <div v-if="ferme" class="status-msg status-msg-ferme">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <div>
+      <div class="sm-title">Grille définitivement fermée</div>
+      <div class="sm-sub">La saison PFE est terminée. Cette grille n'est plus accessible aux encadrants et jurys.</div>
+    </div>
+  </div>
+  <div v-else-if="verrouille" class="status-msg status-msg-locked">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <div>
       <div class="sm-title">Grille publiée et validée par le directeur</div>
-      <div class="sm-sub">Cette grille est officielle — les modifications ne sont plus autorisées.</div>
+      <div class="sm-sub">Cette grille est officielle. Utilisez <strong>Verrouiller définitivement</strong> pour la fermer en fin de saison PFE.</div>
     </div>
   </div>
-  <div v-else-if="publie && !valideeParDirecteur" class="status-msg status-msg-pending">
+  <div v-else-if="publie" class="status-msg status-msg-pending">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     <div>
-      <div class="sm-title">La grille est en attente de validation du directeur</div>
-      <div class="sm-sub">Vous ne pouvez plus modifier les catégories ni les critères. Vous pouvez aussi la verrouiller directement via le bouton en haut à droite.</div>
-    </div>
-  </div>
-  <div v-else-if="publie && valideeParDirecteur" class="status-msg status-msg-validated">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-    <div>
-      <div class="sm-title">✅ Grille validée par le directeur — prête à verrouiller</div>
-      <div class="sm-sub">Le directeur a approuvé votre grille. Cliquez sur <strong>Verrouiller (validée ✓)</strong> pour la publier officiellement aux encadrants et jurys.</div>
+      <div class="sm-title">La grille d'évaluation est en attente de validation du directeur</div>
+      <div class="sm-sub">Vous ne pouvez plus modifier les catégories ni les critères tant que le directeur n'a pas statué.</div>
     </div>
   </div>
   <div v-else class="status-msg status-msg-draft">
@@ -237,8 +241,8 @@ export default {
       categories: [],
       loading: false,
       grilleId: null,
-      locking: false,
-      valideeParDirecteur: false,   // true when statut was 'publie' and directeur locked it
+      ferme: false,
+      fermant: false,
       // Map: category id → assigned color value (stable across reloads)
       catColorMap: {}
     }
@@ -268,11 +272,9 @@ export default {
           const grille = res.data[0]
           this.grilleId = grille.id
           this.publie = grille.statut === 'publie'
-          this.verrouille = grille.statut === 'verrouille'
+          this.verrouille = grille.statut === 'verrouille' || grille.statut === 'ferme'
+          this.ferme = grille.statut === 'ferme'
           this.visibilite = grille.visibilite || 'directeur'
-          // valideeParDirecteur: grille was submitted (publie_le set) AND is now publie
-          // meaning directeur validated it but chef hasn't verrouilled yet
-          this.valideeParDirecteur = grille.statut === 'publie' && !!grille.verrouille_le
           this.categories = grille.categories.map(cat => {
             // Assign a stable color per category id
             if (!this.catColorMap[cat.id]) {
@@ -461,6 +463,20 @@ export default {
       }
     },
 
+    async fermerGrille() {
+      if (!confirm('Verrouiller définitivement cette grille ? Encadrants et jurys n\'auront plus accès. Cette action est irréversible.')) return
+      this.fermant = true
+      try {
+        await api.post(`/grilles/${this.grilleId}/fermer`)
+        this.ferme = true
+        this.showToast('Grille définitivement fermée — plus accessible aux encadrants et jurys ✓')
+      } catch (e) {
+        this.showToast(e.response?.data?.message || 'Erreur lors de la fermeture', 'err')
+      } finally {
+        this.fermant = false
+      }
+    },
+
     async publier() {
       if (!this.totalOk) {
         this.showToast('Le total doit être exactement 20 pts pour soumettre', 'err')
@@ -474,24 +490,6 @@ export default {
         this.showToast('Grille soumise — en attente de validation par le directeur ✓')
       } catch {
         this.showToast('Erreur', 'err')
-      }
-    },
-
-    async verrouillerGrille() {
-      const msg = this.valideeParDirecteur
-        ? 'Verrouiller la grille et la publier aux encadrants et jurys ?'
-        : 'Verrouiller la grille directement sans passer par le directeur ? Les encadrants et jurys seront notifiés.'
-      if (!confirm(msg)) return
-      this.locking = true
-      try {
-        await api.post(`/grilles/${this.grilleId}/verrouiller`)
-        this.verrouille = true
-        this.publie = false
-        this.showToast('Grille verrouillée et publiée — encadrants et jurys notifiés ✓')
-      } catch (e) {
-        this.showToast(e.response?.data?.message || 'Erreur lors du verrouillage', 'err')
-      } finally {
-        this.locking = false
       }
     }
   }
@@ -516,7 +514,6 @@ h2{font-family:'Merriweather',serif;font-size:1.4rem;font-weight:700;color:#1e2a
 .status-msg-draft{background:#eef6fd;border-color:rgba(61,96,128,0.3);color:#2c4f72}
 .status-msg-pending{background:#fff9e8;border-color:#f5a623;color:#7a4f00}
 .status-msg-locked{background:#d4edda;border-color:rgba(39,174,96,0.4);color:#155724}
-.status-msg-validated{background:linear-gradient(135deg,rgba(39,174,96,0.08),rgba(245,197,24,0.06));border-color:rgba(39,174,96,0.5);color:#155724}
 .sm-title{font-weight:700;font-size:13.5px;margin-bottom:2px}
 .sm-sub{font-size:12.5px;opacity:.85;line-height:1.4}
 .sm-warn{color:#c0392b;font-weight:600}
@@ -574,12 +571,14 @@ h2{font-family:'Merriweather',serif;font-size:1.4rem;font-weight:700;color:#1e2a
 .btn-gold:disabled{opacity:.5;cursor:not-allowed}
 .btn-blue{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:linear-gradient(160deg,#4a7090,#3d6080);color:#fff;border:none;border-radius:9px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.2s;box-shadow:0 3px 10px rgba(61,96,128,.2)}
 .btn-blue:hover{transform:translateY(-1px)}
+.btn-fermer{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:linear-gradient(160deg,#c0392b,#922b21);color:#fff;border:none;border-radius:9px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.2s;box-shadow:0 3px 10px rgba(192,57,43,.25)}
+.btn-fermer:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 16px rgba(192,57,43,.35)}
+.btn-fermer:disabled{opacity:.5;cursor:not-allowed}
+.ferme-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-size:0.85rem;font-weight:700;background:#f8d7da;color:#922b21;border:1.5px solid rgba(192,57,43,0.3)}
+.status-msg-ferme{background:#f8d7da;border-color:rgba(192,57,43,0.4);color:#922b21}
 .btn-outline{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:9px;font-size:0.88rem;font-weight:600;cursor:pointer;color:#4a5a6a;font-family:'Source Sans 3',sans-serif;transition:.18s}
 .btn-outline:hover:not(:disabled){border-color:#3d6080;color:#3d6080}
 .btn-outline:disabled{opacity:.4;cursor:not-allowed}
-.btn-lock{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;background:linear-gradient(160deg,#27ae60,#1e8449);color:#fff;border:none;border-radius:9px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.2s;box-shadow:0 3px 10px rgba(39,174,96,.25)}
-.btn-lock:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 16px rgba(39,174,96,.35)}
-.btn-lock:disabled{opacity:.5;cursor:not-allowed}
 .btn-sm-add{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(160deg,#4a7090,#3d6080);color:#fff;border:none;border-radius:7px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:.15s}
 .btn-sm-add:hover:not(:disabled){opacity:.88}
 .btn-sm-add:disabled{opacity:.35;cursor:not-allowed}

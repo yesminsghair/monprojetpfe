@@ -67,6 +67,11 @@
         </button>
       </nav>
 
+        <div class="nav-cat" v-if="!sidebarCollapsed">Communication</div>
+        <button class="nav-item" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
       <div class="sb-user" v-if="!sidebarCollapsed">
         <div class="u-av">{{ initiales(currentUser.prenom+' '+currentUser.nom) }}</div>
         <div class="u-info">
@@ -93,26 +98,8 @@
           </template>
         </div>
         <div class="topbar-r">
+          <NotificationsDropdown />
           <span class="tb-date">{{ dateNow }}</span>
-          <div class="notif-wrap">
-            <button class="notif-bell" @click="showNotifPanel=!showNotifPanel" :class="{active:showNotifPanel}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span v-if="notifications.length" class="notif-badge">{{ notifications.length }}</span>
-            </button>
-            <transition name="notif-drop">
-              <div v-if="showNotifPanel" class="notif-panel">
-                <div class="notif-panel-hdr">
-                  <span>Notifications ({{ notifications.length }})</span>
-                  <button class="notif-mark-all" @click="marquerTousLus" v-if="notifications.length">Tout marquer lu</button>
-                </div>
-                <div v-if="!notifications.length" class="notif-empty">Aucune notification</div>
-                <div v-for="n in notifications" :key="n.id" class="notif-item">
-                  <div class="notif-msg">{{ n.message }}</div>
-                  <button class="notif-close" @click="marquerLu(n.id)">✕</button>
-                </div>
-              </div>
-            </transition>
-          </div>
         </div>
       </header>
 
@@ -288,6 +275,10 @@
           </div>
 
           <!-- ✅ RÉUNIONS (lecture seule pour jury) -->
+          <div v-else-if="currentPage==='messagerie'" key="messagerie">
+            <Messagerie />
+          </div>
+
           <div v-else-if="currentPage==='reunions'" key="reunions">
             <div class="ptb"><h2 class="spt">Réunions</h2><p class="sps">Consultez les réunions liées aux projets de votre jury</p></div>
             <div v-if="loadingReunions" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
@@ -416,9 +407,13 @@
 
 <script>
 import api from '@/services/api.js'
+import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
+import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
+
 
 export default {
   name: 'DashboardJury',
+  components: { Messagerie, NotificationsDropdown },
   data() {
     return {
       sidebarCollapsed: false,
@@ -447,9 +442,6 @@ export default {
 
       savingPlan: false,
       planSlots: [{ date: '', heure: '', salle: '', projet_id: '' }],
-
-      notifications: [],
-      showNotifPanel: false,
     }
   },
 
@@ -478,6 +470,7 @@ export default {
         'proposer-plan':   'Proposer un plan',
         'suivi':           'Suivi des étudiants',
         'reunions':        'Réunions',
+        messagerie:    'Messagerie',
       }[this.currentPage] || ''
     },
     dateNow() {
@@ -575,30 +568,9 @@ export default {
         this.loadingProjets = false
       }
 
-      // Charger les notifications non lues
-      try {
-        const notifRes = await api.get('/notifications').catch(() => ({ data: [] }))
-        this.notifications = (notifRes.data || []).filter(n => !n.lu)
-      } catch(e) { /* silent */ }
-
       // Suivi et réunions en parallèle
       this.chargerSuivi()
       this.chargerReunions()
-    },
-
-    async marquerLu(notifId) {
-      try {
-        await api.put('/notifications/' + notifId + '/lire')
-        this.notifications = this.notifications.filter(n => n.id !== notifId)
-      } catch(e) { /* silent */ }
-    },
-
-    async marquerTousLus() {
-      try {
-        await api.put('/notifications/lire-tout')
-        this.notifications = []
-        this.showNotifPanel = false
-      } catch(e) { /* silent */ }
     },
 
     async chargerSuivi() {
@@ -654,7 +626,7 @@ export default {
         const res = await api.get('/grilles')
         const grilles = res.data || []
         if (grilles.length > 0) {
-          const grille = grilles.find(g => g.statut === 'verrouille') || grilles.find(g => g.statut === 'publie') || grilles[0]
+          const grille = grilles.find(g => g.statut === 'publie') || grilles[0]
           const detail = await api.get(`/grilles/${grille.id}`)
           this.evalCategories = (detail.data.categories || []).map(cat => ({
             id: cat.id,
@@ -960,18 +932,4 @@ export default {
 .modal-fade-enter-from,.modal-fade-leave-to{opacity:0;transform:scale(.97)}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.qa-grid{grid-template-columns:1fr 1fr}.plan-slot-row{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}}
-
-.notif-wrap{position:relative}
-.notif-bell{position:relative;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#4a5a6a;cursor:pointer;transition:all .18s}
-.notif-bell:hover,.notif-bell.active{border-color:#3d6080;color:#3d6080;background:#ddd9d1}
-.notif-badge{position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;border:2px solid #ddd9d1}
-.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:200;overflow:hidden}
-.notif-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #c8c4bc;font-size:13px;font-weight:700;color:#1e2a35}
-.notif-mark-all{background:none;border:none;font-size:12px;color:#3d6080;cursor:pointer;font-weight:600}.notif-mark-all:hover{text-decoration:underline}
-.notif-empty{padding:20px;text-align:center;font-size:13px;color:#8a9aaa}
-.notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid #c8c4bc;background:#e8e4dc}.notif-item:last-child{border-bottom:none}
-.notif-msg{flex:1;font-size:13px;color:#1e2a35;line-height:1.4}
-.notif-close{background:none;border:none;color:#8a9aaa;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px}.notif-close:hover{color:#e74c3c}
-.notif-drop-enter-active,.notif-drop-leave-active{transition:opacity .18s,transform .18s}
-.notif-drop-enter-from,.notif-drop-leave-to{opacity:0;transform:translateY(-6px)}
 </style>

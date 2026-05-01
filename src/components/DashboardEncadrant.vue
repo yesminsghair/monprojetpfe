@@ -74,6 +74,13 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Réunions</span>
         </button>
 
+        <div class="nav-cat" v-if="!sidebarCollapsed">Communication</div>
+
+        <button class="nav-item" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
+
       </nav>
       <div class="sb-user" v-if="!sidebarCollapsed">
         <div class="u-av" style="cursor:pointer" @click="navigate('profil')" :title="'Mon profil'">{{ initiales(currentUser.prenom+' '+currentUser.nom) }}</div>
@@ -87,29 +94,8 @@
       <header class="topbar">
         <div class="breadcrumb"><span class="bc-root">Espace Encadrant</span><template v-if="breadcrumb"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span class="bc-curr">{{ breadcrumb }}</span></template></div>
         <div class="topbar-r">
+          <NotificationsDropdown />
           <span class="tb-date">{{ dateNow }}</span>
-          <div class="notif-wrap" v-if="notifications.length > 0 || showNotifPanel">
-            <button class="notif-bell" @click="showNotifPanel=!showNotifPanel" :class="{active:showNotifPanel}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span v-if="notifications.length" class="notif-badge">{{ notifications.length }}</span>
-            </button>
-            <transition name="notif-drop">
-              <div v-if="showNotifPanel" class="notif-panel" v-click-outside="()=>showNotifPanel=false">
-                <div class="notif-panel-hdr">
-                  <span>Notifications ({{ notifications.length }})</span>
-                  <button class="notif-mark-all" @click="marquerTousLus" v-if="notifications.length">Tout marquer lu</button>
-                </div>
-                <div v-if="!notifications.length" class="notif-empty">Aucune notification</div>
-                <div v-for="n in notifications" :key="n.id" class="notif-item"
-                  :class="{'notif-item-lv': n.message && n.message.includes('livrable')}"
-                  @click="n.message && n.message.includes('livrable') ? goToLivrable(n) : null"
-                  :style="n.message && n.message.includes('livrable') ? 'cursor:pointer' : ''">
-                  <div class="notif-msg">{{ n.message }}</div>
-                  <button class="notif-close" @click.stop="marquerLu(n.id)">✕</button>
-                </div>
-              </div>
-            </transition>
-          </div>
         </div>
       </header>
 
@@ -130,16 +116,7 @@
               <button class="btn-alert" @click="navigate('voeux')">Remplir maintenant →</button>
             </div>
 
-            <div v-if="nouvellesAffectations && etudiantsAffectes.length" class="banner-new-aff">
-              <div class="ba-icon">🎉</div>
-              <div class="ba-body">
-                <div class="ba-t">Nouvelle(s) affectation(s) !</div>
-                <div class="ba-s">Le chef de département vous a affecté <strong>{{ etudiantsAffectes.length }}</strong> étudiant(s). Consultez la liste dès maintenant.</div>
-              </div>
-              <button class="ba-btn" @click="nouvellesAffectations=false; navigate('affectes')">Voir →</button>
-            </div>
-
-            <div v-else-if="etudiantsAffectes.length" class="banner-affectation">
+            <div v-if="etudiantsAffectes.length" class="banner-affectation">
               <div class="ba-icon">📋</div>
               <div class="ba-body">
                 <div class="ba-t">Liste d'affectation publiée</div>
@@ -152,15 +129,6 @@
               <span class="al-icon">📬</span>
               <div class="al-body"><div class="al-t">{{ nbEnAttente }} demande(s) en attente de réponse</div><div class="al-s">Des étudiants attendent votre décision.</div></div>
               <button class="btn-alert" @click="navigate('demandes')">Traiter maintenant →</button>
-            </div>
-
-            <div class="alert-gold" v-if="nbLivrablesPending>0" style="background:#fff8e8;border-color:#f5a623">
-              <span class="al-icon">📄</span>
-              <div class="al-body">
-                <div class="al-t">{{ nbLivrablesPending }} livrable(s) en attente de révision</div>
-                <div class="al-s">Des étudiants ont déposé des fichiers à valider ou rejeter.</div>
-              </div>
-              <button class="btn-alert" @click="navigate('suivi')">Consulter →</button>
             </div>
 
             <div class="kpi-grid">
@@ -278,6 +246,11 @@
             @toast="afficherToast"
           />
 
+          <Messagerie
+            v-else-if="currentPage==='messagerie'"
+            key="messagerie"
+          />
+
           <div v-else-if="currentPage==='affectes'" key="affectes">
             <div class="aff-page-header">
               <div>
@@ -387,16 +360,18 @@
 
 <script>
 import api from '@/services/api.js'
+import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 import ConsulterProfil from './ConsulterProfil.vue'
 import ModifierProfil from './ModifierProfil.vue'
 import DemandesEncadrement from './GestionDemandes/DemandesEncadrement.vue'
 import SuiviEncadrant from './Suiviencadrant.vue'
 import ReunionEncadrant from './Reunionencadrant.vue'
+import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
 import FicheVoeux from './GestionFormulaires/FicheVoeux.vue'
 
 export default {
   name: 'DashboardEncadrant',
-  components: { ConsulterProfil, ModifierProfil, DemandesEncadrement, SuiviEncadrant, ReunionEncadrant, FicheVoeux },
+  components: {ConsulterProfil, ModifierProfil, DemandesEncadrement, SuiviEncadrant, ReunionEncadrant, FicheVoeux, NotificationsDropdown, Messagerie },
 
   async mounted() {
     await this.chargerDonnees()
@@ -414,9 +389,6 @@ export default {
       capaciteMax: 0,
       searchEtu: '',
       ficheEtudiant: null,
-      nouvellesAffectations: false,
-      notifications: [],
-      showNotifPanel: false,
 
       // ✅ NEW: voeux state (mirrors DashboardEnseignant)
       formulaireActif: null,
@@ -428,9 +400,6 @@ export default {
   },
 
   computed: {
-    nbLivrablesPending() {
-      return this.notifications.filter(n => n.message && n.message.includes('livrable')).length
-    },
     etudiantsFiltres() {
       if (!this.searchEtu) return this.etudiantsAffectes
       const q = this.searchEtu.toLowerCase()
@@ -447,6 +416,7 @@ export default {
         affectes:     'Étudiants affectés',
         suivi:        'Suivi & livrables',
         reunions:     'Réunions',
+        messagerie:   'Messagerie',
         profil:       'Mon profil',
         'profil-edit':'Modifier le profil',
       }[this.currentPage] || ''
@@ -506,18 +476,14 @@ export default {
 
     async chargerDonnees() {
       try {
-        const [affRes, demRes, formRes] = await Promise.all([
-          api.get('/affectations/mes-affectations'),
-          api.get('/demandes-encadrement'),
-          api.get('/formulaires-voeux').catch(() => ({ data: [] })),
-        ])
-
-        // Étudiants affectés (via le chef de département)
-        const prevCount = this.etudiantsAffectes.length
-        this.etudiantsAffectes = (affRes.data || []).map(a => ({
+        const affRes = await api.get('/affectations/mes-affectations')
+        const raw = affRes.data
+        const affData = Array.isArray(raw) ? raw : (raw && raw.id ? [raw] : [])
+        // All results are already diffusée — no need to filter further
+        this.etudiantsAffectes = affData.map(a => ({
           id:        a.etudiant_id,
-          prenom:    a.prenom || '',
-          nom:       a.nom || '',
+          prenom:    a.etudiant ? a.etudiant.split(' ')[0] : '',
+          nom:       a.etudiant ? a.etudiant.split(' ').slice(1).join(' ') : '',
           matricule: a.matricule || '',
           specialite:a.specialite || '',
           email:     a.email || '',
@@ -525,58 +491,20 @@ export default {
           statut:    a.statut,
         }))
 
-        // Notification: new affectations since last load
-        if (this.etudiantsAffectes.length > prevCount && prevCount > 0) {
-          this.afficherToast({
-            message: `${this.etudiantsAffectes.length - prevCount} nouvel(le)(s) étudiant(s) vous ont été affecté(s) !`,
-            type: 'toast-ok'
-          })
-        }
-        // First load notification
-        if (prevCount === 0 && this.etudiantsAffectes.length > 0) {
-          this.nouvellesAffectations = true
-        }
-
-        // Demandes en attente
-        const demandes = Array.isArray(demRes.data) ? demRes.data : []
+        const demRes = await api.get('/demandes-encadrement')
+        const demandes = demRes.data || []
         this.nbEnAttente = demandes.filter(d => d.statut === 'en_attente').length
 
-        // Capacité depuis les vœux
+        const formRes = await api.get('/formulaires-voeux').catch(() => ({ data: [] }))
         const formList = formRes.data || []
         const latestForm = formList.find(f => f.statut === 'publie' || f.statut === 'verrouille') || formList[0]
         const voeuxRes = latestForm
           ? await api.get('/voeux-encadrement?formulaire_id=' + latestForm.id).catch(() => ({ data: null }))
           : { data: null }
         this.capaciteMax = voeuxRes.data?.nbre_max_pfe || this.etudiantsAffectes.length || 0
-
-        // Load notifications
-        const notifRes = await api.get('/notifications').catch(() => ({ data: [] }))
-        this.notifications = (notifRes.data || []).filter(n => !n.lu)
-
       } catch (e) {
         console.error('Erreur chargement encadrant:', e)
       }
-    },
-
-    goToLivrable(n) {
-      this.showNotifPanel = false
-      this.navigate('suivi')
-      this.marquerLu(n.id)
-    },
-
-    async marquerLu(notifId) {
-      try {
-        await api.put('/notifications/' + notifId + '/lire')
-        this.notifications = this.notifications.filter(n => n.id !== notifId)
-      } catch (e) { /* silent */ }
-    },
-
-    async marquerTousLus() {
-      try {
-        await api.put('/notifications/lire-tout')
-        this.notifications = []
-        this.showNotifPanel = false
-      } catch (e) { /* silent */ }
     },
 
     onNbEnAttente(nb) { this.nbEnAttente = nb },
@@ -656,7 +584,6 @@ export default {
 .topbar-r{display:flex;align-items:center;gap:14px}.tb-date{font-size:12.5px;color:#7A8FA6;text-transform:capitalize}
 .content-area{flex:1;padding:32px;overflow-y:auto}
 .ptb{margin-bottom:24px}.pt{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#E8EDF2;margin-bottom:5px}.ps{font-size:14px;color:#7A8FA6}
-.banner-new-aff{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(39,174,96,0.12),rgba(61,96,128,0.08));border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:16px;flex-wrap:wrap}
 .banner-affectation{display:flex;align-items:center;gap:14px;background:#d4edda;border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:20px}
 .ba-icon{font-size:28px;flex-shrink:0}.ba-body{flex:1}.ba-t{font-size:15px;font-weight:700;color:#1e7e34;margin-bottom:3px}.ba-s{font-size:13.5px;color:#2d6a4f}
 .ba-btn{padding:9px 18px;background:#27ae60;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.ba-btn:hover{background:#1e8449}
@@ -757,22 +684,4 @@ export default {
 .page-fade-enter-from{opacity:0;transform:translateY(8px)}.page-fade-leave-to{opacity:0}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.qa-grid{grid-template-columns:1fr}}
-
-.notif-wrap{position:relative}
-.notif-bell{position:relative;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#4a5a6a;cursor:pointer;transition:all .18s}
-.notif-bell:hover,.notif-bell.active{border-color:#3d6080;color:#3d6080;background:#ddd9d1}
-.notif-badge{position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;border:2px solid #ddd9d1}
-.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:200;overflow:hidden}
-.notif-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #c8c4bc;font-size:13px;font-weight:700;color:#1e2a35}
-.notif-mark-all{background:none;border:none;font-size:12px;color:#3d6080;cursor:pointer;font-weight:600}
-.notif-mark-all:hover{text-decoration:underline}
-.notif-empty{padding:20px;text-align:center;font-size:13px;color:#8a9aaa}
-.notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid #c8c4bc;background:#e8e4dc}
-.notif-item-lv{background:#fff8e8;border-left:3px solid #f5a623}
-.notif-item-lv:hover{background:#fff3cd}
-.notif-item:last-child{border-bottom:none}
-.notif-msg{flex:1;font-size:13px;color:#1e2a35;line-height:1.4}
-.notif-close{background:none;border:none;color:#8a9aaa;cursor:pointer;font-size:14px;flex-shrink:0;padding:0 2px}.notif-close:hover{color:#e74c3c}
-.notif-drop-enter-active,.notif-drop-leave-active{transition:opacity .18s,transform .18s}
-.notif-drop-enter-from,.notif-drop-leave-to{opacity:0;transform:translateY(-6px)}
 </style>

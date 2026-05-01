@@ -17,7 +17,7 @@
         </button>
         <button class="btn-gold" @click="openModal(null)">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nouvelle session
+          Nouvelle séance
         </button>
         <button class="btn-green" @click="publierCalendrier" :disabled="calendrierPublie">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -190,38 +190,75 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Date *</label>
-                <input type="date" v-model="form.date" />
+                <input type="date" v-model="form.date" @change="form.salle = ''" />
               </div>
               <div class="form-group">
                 <label>Salle *</label>
-                <input type="text" v-model="form.salle" placeholder="ex: Salle A101" />
+                <select v-model="form.salle" :disabled="!form.date || !form.heure_debut || !form.heure_fin">
+                  <option value="">
+                    {{ (!form.date || !form.heure_debut || !form.heure_fin) ? "— Remplir date &amp; horaire d'abord —" : "— Sélectionner une salle —" }}}
+                  </option>
+                  <option
+                    v-for="s in sallesAvecStatut"
+                    :key="s.salle"
+                    :value="s.salle"
+                    :disabled="s.occupee"
+                    :class="s.occupee ? 'option-occupee' : 'option-libre'"
+                  >
+                    {{ s.occupee ? '🔴 ' + s.salle + ' (occupée)' : '🟢 ' + s.salle }}
+                  </option>
+                </select>
+                <span v-if="!form.date || !form.heure_debut || !form.heure_fin" class="field-hint">
+                  Remplissez la date et les horaires pour voir les salles disponibles
+                </span>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label>Heure début *</label>
-                <input type="time" v-model="form.heure_debut" />
+                <input type="time" v-model="form.heure_debut" @change="form.salle = ''" />
               </div>
               <div class="form-group">
                 <label>Heure fin *</label>
-                <input type="time" v-model="form.heure_fin" />
+                <input type="time" v-model="form.heure_fin" @change="form.salle = ''" />
+              </div>
+            </div>
+
+            <!-- Jury member conflicts warning -->
+            <div v-if="conflitsMembresJury.length" class="alert-jury-conflit">
+              <div class="conflit-jury-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                {{ conflitsMembresJury.length }} membre(s) du jury déjà occupé(s) à ce créneau
+              </div>
+              <div v-for="c in conflitsMembresJury" :key="c.id" class="conflit-jury-row">
+                <span class="conflit-nom">{{ c.nom }}</span>
+                <span class="conflit-detail">jury de « {{ c.projet }} » ({{ c.heure }})</span>
               </div>
             </div>
 
             <div class="form-group" v-if="!editSession">
-              <label>Jury *</label>
-              <select v-model="form.jury_id">
-                <option value="">— Sélectionner un jury —</option>
-                <option v-for="j in jurysDisponibles" :key="j.id" :value="j.id">{{ j.label }}</option>
+              <label>Projet PFE *</label>
+              <select v-model="form.jury_id" @change="syncProjetFromJury">
+                <option value="">— Sélectionner un projet —</option>
+                <option v-for="j in jurysDisponibles" :key="j.id" :value="j.id">
+                  {{ j.titre }} – {{ j.etudiant }}
+                </option>
               </select>
-            </div>
-
-            <div class="form-group">
-              <label>Projet PFE (optionnel)</label>
-              <select v-model="form.projet_id">
-                <option value="">— Aucun projet affecté —</option>
-                <option v-for="p in projetsDisponibles" :key="p.id" :value="p.id">{{ p.titre }} – {{ p.etudiant }}</option>
-              </select>
+              <!-- Preview card shown after selection -->
+              <div v-if="selectedJuryPreview" class="projet-preview">
+                <div class="preview-row">
+                  <span class="preview-label">🎓 Étudiant</span>
+                  <span class="preview-val">{{ selectedJuryPreview.etudiant }}</span>
+                </div>
+                <div class="preview-row" v-if="selectedJuryPreview.encadrant">
+                  <span class="preview-label">👨‍🏫 Encadrant</span>
+                  <span class="preview-val">{{ selectedJuryPreview.encadrant }}</span>
+                </div>
+                <div class="preview-row" v-if="selectedJuryPreview.membres && selectedJuryPreview.membres.length">
+                  <span class="preview-label">⚖️ Jury</span>
+                  <span class="preview-val">{{ selectedJuryPreview.membres.map(m => m.nom).join(', ') }}</span>
+                </div>
+              </div>
             </div>
 
             <!-- Vérification conflits inline -->
@@ -297,6 +334,15 @@ export default {
       plans: [],
       projetsDisponibles: [],
       jurysDisponibles: [],
+      selectedJuryPreview: null,
+
+      // Master list of available rooms — edit to match your building
+      allSalles: [
+        'Salle A101', 'Salle A102', 'Salle A103',
+        'Salle B201', 'Salle B202', 'Salle B203',
+        'Salle C301', 'Salle C302',
+        'Amphi 1',   'Amphi 2',
+      ],
 
       form: {
         date: '',
@@ -313,6 +359,76 @@ export default {
     sallesUniques() {
       return new Set(this.sessions.map(s => s.salle).filter(Boolean)).size
     },
+
+    // Helper: check if two time ranges [a1,a2] and [b1,b2] overlap
+    // (used by both sallesDisponibles and conflitsMembresJury)
+    _creneauOverlap() {
+      return (d1, h1, f1, d2, h2, f2) => {
+        if (!d1 || !h1 || !f1 || !d2 || !h2 || !f2) return false
+        if (d1 !== d2) return false
+        const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+        return toMin(h1) < toMin(f2) && toMin(h2) < toMin(f1)
+      }
+    },
+
+    // Salles occupied during the currently-selected slot
+    sallesOccupees() {
+      const { date, heure_debut, heure_fin } = this.form
+      if (!date || !heure_debut || !heure_fin) return new Set()
+      const busy = new Set()
+      this.sessions.forEach(s => {
+        if (!s.salle) return
+        // Skip the session being edited
+        if (this.editSession && s.id === this.editSession.id) return
+        if (this._creneauOverlap(date, heure_debut, heure_fin, s.date, s.heure_debut, s.heure_fin)) {
+          busy.add(s.salle)
+        }
+      })
+      return busy
+    },
+
+    // Salles list annotated with availability
+    sallesAvecStatut() {
+      return this.allSalles.map(salle => ({
+        salle,
+        occupee: this.sallesOccupees.has(salle),
+      }))
+    },
+
+    // Jury members busy at the selected slot
+    conflitsMembresJury() {
+      const { date, heure_debut, heure_fin } = this.form
+      if (!date || !heure_debut || !heure_fin || !this.selectedJuryPreview) return []
+
+      // Collect enseignant_ids of the selected jury
+      const membreIds = new Set(
+        (this.selectedJuryPreview.membres || []).map(m => m.enseignant_id).filter(Boolean)
+      )
+      if (!membreIds.size) return []
+
+      const conflits = []
+      this.sessions.forEach(s => {
+        if (this.editSession && s.id === this.editSession.id) return
+        if (!this._creneauOverlap(date, heure_debut, heure_fin, s.date, s.heure_debut, s.heure_fin)) return
+        // Check each member of that session's jury
+        ;(s.jury_membres_ids || []).forEach(id => {
+          if (membreIds.has(id)) {
+            const membre = (this.selectedJuryPreview.membres || []).find(m => m.enseignant_id === id)
+            const nom = membre?.nom || ('Membre #' + id)
+            if (!conflits.find(c => c.id === id)) {
+              conflits.push({
+                id,
+                nom,
+                projet: s.projet || ('Soutenance #' + s.id),
+                heure: `${s.heure_debut}–${s.heure_fin}`,
+              })
+            }
+          }
+        })
+      })
+      return conflits
+    },
+
     joursAvecSessions() {
       const map = {}
       this.sessions.forEach(s => {
@@ -335,11 +451,21 @@ export default {
 
     async chargerJurys() {
       try {
-        const res = await api.get('/jurys')
-        this.jurysDisponibles = res.data.map(j => ({
-          id: j.id,
-          label: (j.projet_titre || 'Projet #' + j.id) + ' — ' + (j.etudiant_nom || '')
-        }))
+        const res = await api.get('/jurys-pfe')
+        // Only show jurys that have no soutenance scheduled yet (not planifie/termine)
+        this.jurysDisponibles = (res.data || [])
+          .filter(j => !j.date_soutenance || j.statut === 'en_attente')
+          .map(j => ({
+            id:       j.id,
+            titre:    j.projet_titre || ('Projet #' + j.id),
+            etudiant: j.etudiant_nom || '—',
+            encadrant: j.encadrant_nom || null,
+            membres:  (j.membres || []).map(m => ({
+            enseignant_id: m.enseignant_id ?? m.id,
+            nom: m.nom || (m.prenom ? m.prenom + ' ' + m.nom : ''),
+            fonction: m.fonction,
+          })),
+          }))
       } catch (error) {
         console.error('Erreur chargement jurys:', error)
         this.jurysDisponibles = []
@@ -349,8 +475,10 @@ export default {
     async chargerSessions() {
       this.loadingSessions = true
       try {
-        const res = await api.get('/soutenances')
-        this.sessions = (res.data || []).map(s => this.mapSession(s))
+        const res = await api.get('/jurys-pfe')
+        this.sessions = (res.data || [])
+          .filter(s => s.date_soutenance)
+          .map(s => this.mapSession(s))
         this.detecterConflits()
       } catch (error) {
         console.error('Erreur chargement sessions:', error)
@@ -364,13 +492,15 @@ export default {
     mapSession(s) {
       return {
         id: s.id,
-        date: s.date || (s.date_seance ? s.date_seance.split('T')[0] : ''),
-        heure_debut: s.heure_debut || (s.date_seance ? s.date_seance.split('T')[1]?.substring(0, 5) : ''),
-        heure_fin: s.heure_fin || this.calculerHeureFin(s.date_seance),
-        salle: s.salle,
-        projet: s.projet_titre || s.projet?.titre || null,
-        etudiant: s.etudiant_nom || s.etudiant?.nom_complet || null,
-        jury_membres: (s.membres || []).map(m => m.nom || m),
+        date: s.date_soutenance || '',
+        heure_debut: (s.heure_debut || '').substring(0, 5),
+        heure_fin: (s.heure_fin || '').substring(0, 5),
+        salle: s.salle || '',
+        projet: s.projet_titre || null,
+        etudiant: s.etudiant_nom || null,
+        jury_membres: (s.membres || []).map(m => m.nom || ''),
+        // Keep IDs for jury-member conflict detection (parallel array — same index as jury_membres)
+        jury_membres_ids: (s.membres || []).map(m => m.enseignant_id).filter(Boolean),
         conflit: false
       }
     },
@@ -384,8 +514,8 @@ export default {
 
     async chargerProjets() {
       try {
-        const res = await api.get('/soutenances/projets-disponibles')
-        this.projetsDisponibles = res.data || []
+        const res = await api.get('/jurys-pfe/projets-disponibles')
+        this.projetsDisponibles = (res.data || []).map(p => ({ id: p.id, titre: p.titre || ('Projet #' + p.id), etudiant: p.etudiant_nom || '—' }))
       } catch (error) {
         console.error('Erreur chargement projets:', error)
         this.projetsDisponibles = []
@@ -393,27 +523,47 @@ export default {
     },
 
     async chargerPlans() {
-      try {
-        const res = await api.get('/soutenances/plans-proposes')
-        this.plans = res.data || []
-      } catch (error) {
-        console.error('Erreur chargement plans:', error)
-        this.plans = []
-      }
+      // No backend endpoint for proposals yet — leave list empty
+      this.plans = []
     },
 
     detecterConflits() {
       this.conflits = []
-      const parCreneau = {}
-      this.sessions.forEach(s => {
-        const key = s.date + '_' + s.heure_debut + '_' + s.salle
-        if (parCreneau[key]) {
-          this.conflits.push({ id: s.id, message: `Salle ${s.salle} double-réservée le ${s.date} à ${s.heure_debut}` })
-          s.conflit = true
-        } else {
-          parCreneau[key] = s
-          s.conflit = false
-        }
+      const toMin = t => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m }
+      const overlaps = (s1, s2) => {
+        if (s1.date !== s2.date || s1.id === s2.id) return false
+        return toMin(s1.heure_debut) < toMin(s2.heure_fin) && toMin(s2.heure_debut) < toMin(s1.heure_fin)
+      }
+
+      this.sessions.forEach((s, i) => {
+        s.conflit = false
+      })
+
+      this.sessions.forEach((s, i) => {
+        this.sessions.forEach((other, j) => {
+          if (i >= j) return
+          if (!overlaps(s, other)) return
+
+          // Salle conflict
+          if (s.salle && s.salle === other.salle) {
+            const msg = `Salle ${s.salle} occupée deux fois le ${s.date} : ${s.heure_debut}-${s.heure_fin} et ${other.heure_debut}-${other.heure_fin}`
+            if (!this.conflits.find(c => c.message === msg)) this.conflits.push({ id: s.id, message: msg })
+            s.conflit = true; other.conflit = true
+          }
+
+          // Jury member conflict
+          const idsA = new Set(s.jury_membres_ids || [])
+          const idsB = new Set(other.jury_membres_ids || [])
+          idsA.forEach(id => {
+            if (idsB.has(id)) {
+              const membreIdx = (s.jury_membres_ids || []).indexOf(id)
+              const membreNom = membreIdx !== -1 ? (s.jury_membres[membreIdx] || ('Membre #' + id)) : ('Membre #' + id)
+              const msg = `Conflit de jury le ${s.date} : « ${s.projet || 'Séance #' + s.id} » et « ${other.projet || 'Séance #' + other.id} » partagent un membre (${membreNom})`
+              if (!this.conflits.find(c => c.message === msg)) this.conflits.push({ id: s.id, message: msg })
+              s.conflit = true; other.conflit = true
+            }
+          })
+        })
       })
     },
 
@@ -429,6 +579,7 @@ export default {
         }
       } else {
         this.form = { date: '', salle: '', heure_debut: '', heure_fin: '', projet_id: '' }
+        this.selectedJuryPreview = null
       }
       this.conflitDetecte = false
       this.showModal = true
@@ -437,6 +588,12 @@ export default {
     closeModal() {
       this.showModal = false
       this.editSession = null
+      this.selectedJuryPreview = null
+    },
+
+    syncProjetFromJury() {
+      const jury = this.jurysDisponibles.find(j => j.id === this.form.jury_id)
+      this.selectedJuryPreview = jury || null
     },
 
     async sauvegarder() {
@@ -444,27 +601,37 @@ export default {
         this.$emit('toast', { message: 'Veuillez remplir tous les champs obligatoires.', type: 'toast-err' })
         return
       }
+      // Block if the selected salle is occupied at this slot
+      const salleChoisie = this.sallesAvecStatut.find(s => s.salle === this.form.salle)
+      if (salleChoisie && salleChoisie.occupee) {
+        this.$emit('toast', { message: `La salle « ${this.form.salle} » est déjà réservée à ce créneau. Veuillez choisir une autre salle.`, type: 'toast-err' })
+        return
+      }
+
+      // Warn (but allow override) if jury members are busy
+      if (this.conflitsMembresJury.length) {
+        const noms = this.conflitsMembresJury.map(c => c.nom).join(', ')
+        if (!confirm(`⚠ Conflit de jury détecté : ${noms} sont déjà dans un autre jury à ce créneau.\n\nConfirmer quand même ?`)) return
+      }
 
       this.saving = true
       try {
-        // Construction de la date/heure pour l'API
-        const dateTime = `${this.form.date} ${this.form.heure_debut}:00`
+        // Laravel expects H:i exactly — strip seconds if browser added them (e.g. "09:30:00" → "09:30")
+        const trimTime = t => t ? t.substring(0, 5) : t
+        const payload = {
+          date_soutenance: this.form.date,
+          heure_debut: trimTime(this.form.heure_debut),
+          heure_fin: trimTime(this.form.heure_fin),
+          salle: this.form.salle,
+          statut: 'planifie',
+        }
 
         if (this.editSession) {
-          await api.put(`/soutenances/${this.editSession.id}`, {
-            date_seance: dateTime,
-            salle: this.form.salle
-          })
-          this.$emit('toast', { message: 'Session mise à jour.', type: 'toast-ok' })
+          await api.put(`/jurys-pfe/${this.editSession.id}`, payload)
+          this.$emit('toast', { message: 'Séance mise à jour.', type: 'toast-ok' })
         } else {
-          // Pour créer une session, il faut un jury_id
-          // À adapter selon votre logique métier
-          await api.post('/soutenances', {
-            jury_id: this.form.jury_id,
-            date_seance: dateTime,
-            salle: this.form.salle
-          })
-          this.$emit('toast', { message: 'Session créée avec succès.', type: 'toast-ok' })
+          await api.put(`/jurys-pfe/${this.form.jury_id}`, payload)
+          this.$emit('toast', { message: 'Séance créée avec succès.', type: 'toast-ok' })
         }
         this.closeModal()
         await this.chargerSessions()
@@ -489,7 +656,7 @@ export default {
       }
 
       try {
-        await api.put(`/soutenances/${this.affectSession.id}/affecter`, {
+        await api.put(`/jurys-pfe/${this.affectSession.id}`, {
           projet_id: this.affectProjetId
         })
         await this.chargerSessions()
@@ -504,9 +671,9 @@ export default {
     async supprimer(id) {
       if (!confirm('Supprimer cette session de soutenance ?')) return
       try {
-        await api.delete(`/soutenances/${id}`)
+        await api.put(`/jurys-pfe/${id}`, { statut: 'annule', date_soutenance: null, heure_debut: null, heure_fin: null, salle: null })
         await this.chargerSessions()
-        this.$emit('toast', { message: 'Session supprimée.', type: 'toast-ok' })
+        this.$emit('toast', { message: 'Soutenance annulée.', type: 'toast-ok' })
       } catch (error) {
         console.error('Erreur suppression:', error)
         this.$emit('toast', { message: 'Erreur lors de la suppression', type: 'toast-err' })
@@ -516,7 +683,7 @@ export default {
     async publierCalendrier() {
       if (!confirm('Publier le calendrier des soutenances ? Tous les participants seront notifiés.')) return
       try {
-        await api.post('/soutenances/publier-calendrier')
+        await api.post('/jurys-pfe/publier-calendrier')
         this.calendrierPublie = true
         this.$emit('toast', { message: 'Calendrier publié. Tous les participants ont été notifiés.', type: 'toast-ok' })
       } catch (error) {
@@ -670,6 +837,22 @@ export default {
 .form-group input,.form-group select{padding:10px 12px;border:1.5px solid #c8c4bc;border-radius:9px;background:#e8e4dc;font-size:14px;color:#1e2a35;font-family:'Source Sans 3',sans-serif}
 .form-group input:focus,.form-group select:focus{outline:none;border-color:#F5C518}
 .alert-conflit-inline{padding:10px 14px;background:#fff3cd;border:1px solid #ffeeba;border-radius:8px;font-size:13px;color:#856404}
+.field-hint{font-size:11.5px;color:#7A8FA6;margin-top:4px;display:block;font-style:italic}
+.option-occupee{color:#e74c3c}
+.option-libre{color:#27ae60}
+.alert-jury-conflit{padding:12px 16px;background:rgba(231,76,60,0.08);border:1.5px solid rgba(231,76,60,0.35);border-radius:10px;display:flex;flex-direction:column;gap:7px}
+.conflit-jury-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:#e74c3c}
+.conflit-jury-row{display:flex;align-items:baseline;gap:8px;padding:5px 10px;background:rgba(231,76,60,0.06);border-radius:7px}
+.conflit-nom{font-weight:700;font-size:13px;color:#1e2a35;min-width:130px}
+.conflit-detail{font-size:12.5px;color:#7A8FA6}
+.projet-preview{margin-top:10px;padding:12px 14px;background:#1A2635;border:1.5px solid #3d6080;border-radius:10px;display:flex;flex-direction:column;gap:7px}
+.preview-row{display:flex;align-items:baseline;gap:10px}
+.preview-label{font-size:11.5px;font-weight:700;color:#7A8FA6;min-width:90px;flex-shrink:0}
+.preview-val{font-size:13px;color:#e8e4dc;font-weight:500}
+.projet-preview{margin-top:10px;padding:12px 14px;background:#1A2635;border:1.5px solid #3d6080;border-radius:10px;display:flex;flex-direction:column;gap:7px}
+.preview-row{display:flex;align-items:baseline;gap:10px}
+.preview-label{font-size:11.5px;font-weight:700;color:#7A8FA6;min-width:90px;flex-shrink:0}
+.preview-val{font-size:13px;color:#e8e4dc;font-weight:500}
 .affect-session-info{padding:10px 14px;background:#e8e4dc;border-radius:9px;font-size:13.5px;color:#F5C518;font-weight:500}
 /* MISC */
 .loading-state{text-align:center;padding:60px;color:#7A8FA6}

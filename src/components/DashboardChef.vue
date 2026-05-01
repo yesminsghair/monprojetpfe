@@ -107,6 +107,11 @@
         </transition>
 
       </nav>
+        <div class="nav-cat" v-if="!sidebarCollapsed">Communication</div>
+        <button class="nav-item" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
       <div class="sb-user" v-if="!sidebarCollapsed">
         <div class="u-av">{{ initiales(currentUser.prenom+' '+currentUser.nom) }}</div>
         <div class="u-info"><div class="u-name">{{ currentUser.prenom }} {{ currentUser.nom }}</div><div class="u-role">Chef de département</div></div>
@@ -119,7 +124,10 @@
     <div class="main-wrap">
       <header class="topbar">
         <div class="breadcrumb"><span class="bc-root">Chef de Département</span><template v-if="breadcrumb"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span class="bc-curr">{{ breadcrumb }}</span></template></div>
-        <div class="topbar-r"><span class="tb-date">{{ dateNow }}</span></div>
+        <div class="topbar-r">
+          <NotificationsDropdown />
+          <span class="tb-date">{{ dateNow }}</span>
+        </div>
       </header>
 
       <div class="content-area">
@@ -180,6 +188,7 @@
           <GestionPhases v-else-if="currentPage==='phases'" key="phases" @toast="afficherToast"/>
           <GestionGrille v-else-if="currentPage==='grille'" key="grille" @toast="afficherToast"/>
           <GestionJury v-else-if="currentPage==='jury'" key="jury" @toast="afficherToast"/>
+          <Messagerie v-else-if="currentPage==='messagerie'" key="messagerie" />
           <GestionSoutenance v-else-if="currentPage==='soutenance'" key="soutenance" @toast="afficherToast"/>
 
           <!-- ═══ ÉTUDIANTS DE MA SPÉCIALITÉ ═══ -->
@@ -311,6 +320,7 @@
 
 <script>
 import api from '@/services/api.js'
+import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 import CreerFormulaire     from './GestionFormulaires/CreerFormulaire.vue'
 import ListeFormulaires    from './GestionFormulaires/ListeFormulaires.vue'
 import GestionAffectations from './GestionAffectations/GestionAffectations.vue'
@@ -318,10 +328,11 @@ import GestionPhases       from './Gestionphases.vue'
 import GestionGrille       from './Gestiongrille.vue'
 import GestionJury         from './Gestionjury.vue'
 import GestionSoutenance   from './Gestionsoutenance.vue'
+import Messagerie          from './GestionArchivageCommunication/Messagerie.vue'
 
 export default {
   name: 'DashboardChef',
-  components: { CreerFormulaire, ListeFormulaires, GestionAffectations, GestionPhases, GestionGrille, GestionJury, GestionSoutenance },
+  components: {CreerFormulaire, ListeFormulaires, GestionAffectations, GestionPhases, GestionGrille, GestionJury, GestionSoutenance, NotificationsDropdown, Messagerie },
   data() {
     return {
       sidebarCollapsed: false,

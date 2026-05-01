@@ -191,15 +191,21 @@ export default {
     async chargerReunions() {
       try {
         const res = await api.get('/reunions')
-        this.propositions = res.data.map(r => ({
-          id: r.id,
-          date: new Date(r.date_reunion),
-          heure: this.formatHeure(r.date_reunion),
-          // Keep raw API statut names: planifiee / confirmee / annulee / effectuee
-          statut: r.statut,
-          _showRejet: false,
-          _raison: ''
-        }))
+        this.propositions = res.data.map(r => {
+          // Normalize "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS" so the
+          // browser parses it as local time, not UTC.
+          const normalized = typeof r.date_reunion === 'string'
+            ? r.date_reunion.replace(' ', 'T')
+            : r.date_reunion
+          return {
+            id: r.id,
+            date: new Date(normalized),
+            heure: this.formatHeure(r.date_reunion),
+            statut: r.statut,
+            _showRejet: false,
+            _raison: ''
+          }
+        })
       } catch (error) {
         console.error('Erreur:', error)
       }
@@ -217,7 +223,10 @@ export default {
 
     formatHeure(date) {
       if (!date) return ''
-      const d = new Date(date)
+      // If the string has no timezone info (e.g. "2026-02-15 14:00:00"),
+      // replace the space with T so the browser doesn't treat it as UTC.
+      const normalized = typeof date === 'string' ? date.replace(' ', 'T') : date
+      const d = new Date(normalized)
       return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     },
 

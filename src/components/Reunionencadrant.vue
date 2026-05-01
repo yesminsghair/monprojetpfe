@@ -185,19 +185,23 @@ export default {
     async chargerReunions() {
       try {
         const res = await api.get('/reunions')
-        // ✅ FIX: quand étudiant annule (statut=annulee) → slot redevient libre dans le calendrier encadrant
         this.propositions = res.data
-          .filter(r => r.statut !== 'annulee') // annulée = créneau libéré
-          .map(r => ({
-            id: r.id,
-            etudiant: r.etudiant_nom,
-            date: new Date(r.date_reunion),
-            heure: this.formatHeure(r.date_reunion),
-            statut: r.statut === 'planifiee' ? 'attente'
-                  : r.statut === 'confirmee' ? 'confirme'
-                  : r.statut,
-            raison: r.motif
-          }))
+          .filter(r => r.statut !== 'annulee')
+          .map(r => {
+            const normalized = typeof r.date_reunion === 'string'
+              ? r.date_reunion.replace(' ', 'T')
+              : r.date_reunion
+            return {
+              id: r.id,
+              etudiant: r.etudiant_nom,
+              date: new Date(normalized),
+              heure: this.formatHeure(r.date_reunion),
+              statut: r.statut === 'planifiee' ? 'attente'
+                    : r.statut === 'confirmee' ? 'confirme'
+                    : r.statut,
+              raison: r.motif
+            }
+          })
       } catch (error) {
         console.error('Erreur:', error)
       }
@@ -205,7 +209,8 @@ export default {
 
     formatHeure(date) {
       if (!date) return ''
-      const d = new Date(date)
+      const normalized = typeof date === 'string' ? date.replace(' ', 'T') : date
+      const d = new Date(normalized)
       return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     },
 
@@ -223,7 +228,16 @@ export default {
     },
 
     statLabel(s) {
-      const labels = { proposee: 'En attente', confirmee: 'Confirmé', annulee: 'Rejeté' }
+      const labels = {
+        attente:   'En attente',
+        confirme:  'Confirmé',
+        rejete:    'Rejeté',
+        rappele:   'Rappelé',
+        // raw API values (fallback)
+        planifiee: 'En attente',
+        confirmee: 'Confirmé',
+        annulee:   'Rejeté',
+      }
       return labels[s] || s
     },
 
@@ -239,7 +253,7 @@ export default {
       return this.propositions.some(p =>
         new Date(p.date).toDateString() === date.toDateString() &&
         p.heure === h &&
-        p.statut === 'confirmee'
+        (p.statut === 'confirme' || p.statut === 'confirmee')
       )
     },
 
@@ -247,7 +261,7 @@ export default {
       return this.propositions.some(p =>
         new Date(p.date).toDateString() === date.toDateString() &&
         p.heure === h &&
-        p.statut === 'annulee'
+        (p.statut === 'rejete' || p.statut === 'annulee')
       )
     },
 
@@ -298,9 +312,12 @@ export default {
 
     combinerDateHeure(date, heure) {
       const [hours, minutes] = heure.split(':')
-      const newDate = new Date(date)
-      newDate.setHours(parseInt(hours), parseInt(minutes), 0)
-      return newDate.toISOString()
+      const d = new Date(date)
+      d.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+      // Build a local datetime string (YYYY-MM-DD HH:MM:SS) so the server
+      // stores the time the encadrant actually selected, not UTC-shifted.
+      const pad = n => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`
     },
 
     showToast(msg, type = 'ok') {

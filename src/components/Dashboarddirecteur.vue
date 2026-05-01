@@ -100,6 +100,11 @@
           </transition>
         </div>
 
+        <div class="nav-section-title" v-if="!sidebarCollapsed" style="padding:8px 16px;font-size:10px;font-weight:700;color:rgba(245,166,35,0.7);text-transform:uppercase;letter-spacing:.1em">Communication</div>
+        <button class="nav-btn" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon-dir"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="nav-label-dir" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
       </nav>
 
       <div class="sb-user" v-if="!sidebarCollapsed">
@@ -139,10 +144,7 @@
             <span>{{ currentUser.prenom }}</span>
           </button>
           <div class="topbar-date">{{ dateNow }}</div>
-          <button class="notif-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span v-if="grillesEnAttente > 0" class="notif-dot"></span>
-          </button>
+          <NotificationsDropdown />
         </div>
       </header>
 
@@ -307,6 +309,10 @@
           </div>
 
           <!-- PROFIL -->
+          <div v-else-if="currentPage==='messagerie'" key="messagerie">
+            <Messagerie />
+          </div>
+
           <ConsulterProfil v-else-if="currentPage === 'profil'" key="profil" :user="currentUser" @modifier="currentPage = 'profil-edit'"/>
           <ModifierProfil v-else-if="currentPage === 'profil-edit'" key="profil-edit" :user="currentUser" @annuler="currentPage = 'profil'" @sauvegarde="onProfilSauvegarde"/>
 
@@ -360,6 +366,8 @@
 
 <script>
 import api from '@/services/api.js'
+import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
+import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 import Creerspecialite  from './gestionSpecialite/Creerspecialite.vue'
 import Listespecialites from './gestionSpecialite/Listespecialites.vue'
 import AjouterChef      from './gestionChefs/Ajouterchef.vue'
@@ -369,7 +377,7 @@ import ModifierProfil   from './ModifierProfil.vue'
 
 export default {
   name: 'DashboardDirecteur',
-  components: { Creerspecialite, Listespecialites, AjouterChef, ConsulterChefs, ConsulterProfil, ModifierProfil },
+  components: {Creerspecialite, Listespecialites, AjouterChef, ConsulterChefs, ConsulterProfil, ModifierProfil, NotificationsDropdown, NotificationsDropdown, Messagerie },
 
   data() {
     return {

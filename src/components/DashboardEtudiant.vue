@@ -48,8 +48,14 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Mon résultat final</span>
         </button>
 
-      </nav>
+        <div class="nav-cat" v-if="!sidebarCollapsed">Communication</div>
 
+        <button class="nav-item" :class="{active:currentPage==='messagerie'}" @click="navigate('messagerie')" :title="sidebarCollapsed?'Messagerie':''">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
+        </button>
+
+      </nav>
       <div class="sb-user" v-if="!sidebarCollapsed">
         <div class="u-av" style="cursor:pointer" @click="navigate('profil')" :title="'Mon profil'">{{ initiales(currentUser.prenom+' '+currentUser.nom) }}</div>
         <div class="u-info"><div class="u-name">{{ currentUser.prenom }} {{ currentUser.nom }}</div><div class="u-role">Étudiant</div></div>
@@ -61,7 +67,10 @@
     <div class="main-wrap">
       <header class="topbar">
         <div class="breadcrumb"><span class="bc-root">Espace Étudiant</span><template v-if="breadcrumb"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span class="bc-curr">{{ breadcrumb }}</span></template></div>
-        <div class="topbar-r"><span class="tb-date">{{ dateNow }}</span></div>
+        <div class="topbar-r">
+          <NotificationsDropdown />
+          <span class="tb-date">{{ dateNow }}</span>
+        </div>
       </header>
 
       <div class="content-area">
@@ -72,28 +81,6 @@
             <div class="ptb"><h1 class="pt">Bonjour, {{ currentUser.prenom }} 👋</h1><p class="ps">Soumettez et suivez votre demande d'encadrement PFE.</p></div>
 
             <div v-if="monAffectation && monAffectation.statut === 'diffusee'" class="banner-affectation">
-
-            <!-- ── Phase countdown alert ── -->
-            <div v-if="phaseEnCours && joursRestants !== null"
-              class="banner-phase-countdown"
-              :class="{
-                'bpc-urgent':  joursRestants <= 3,
-                'bpc-warning': joursRestants > 3 && joursRestants <= 7,
-                'bpc-normal':  joursRestants > 7
-              }">
-              <div class="bpc-icon">{{ joursRestants <= 3 ? '🔴' : joursRestants <= 7 ? '🟡' : '📅' }}</div>
-              <div class="bpc-body">
-                <div class="bpc-t">Phase en cours : <strong>{{ phaseEnCours.nom }}</strong></div>
-                <div class="bpc-s" v-if="joursRestants > 0">
-                  Il vous reste <strong>{{ joursRestants }} jour{{ joursRestants > 1 ? 's' : '' }}</strong>
-                  pour soumettre votre livrable
-                  <span v-if="phaseEnCours.date_fin">
-                    (échéance : {{ new Date(phaseEnCours.date_fin).toLocaleDateString('fr-FR') }})
-                  </span>
-                </div>
-                <div class="bpc-s bpc-expired" v-else>⚠️ La date limite de cette phase est dépassée.</div>
-              </div>
-            </div>
               <div class="ba-icon">🎓</div>
               <div class="ba-body">
                 <div class="ba-t">Votre affectation a été publiée !</div>
@@ -105,25 +92,9 @@
               <span class="ba-badge">✓ Officiel</span>
             </div>
 
-            <div v-if="loadingDonnees" class="loading-state" style="padding:32px;text-align:center;color:#8a9aaa">
-              <div class="spinner" style="width:24px;height:24px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;margin-bottom:8px"></div>
-              <p>Chargement...</p>
-            </div>
-
-            <template v-else>
-
             <div v-if="!accordMutuelActif && !monAffectation" class="banner-info">
               <span>ℹ️</span>
-              <div>Le chef de département n'a pas encore activé le mode accord mutuel. Les demandes directes ne sont pas disponibles pour le moment.</div>
-            </div>
-
-            <div v-if="accordMutuelActif && !maDemande && !monAffectation" class="banner-accord-mutuel">
-              <div class="bam-icon">🤝</div>
-              <div class="bam-body">
-                <div class="bam-t">Mode accord mutuel activé</div>
-                <div class="bam-s">Le chef de département vous invite à choisir votre encadrant et soumettre une demande. Consultez la liste des encadrants disponibles et envoyez votre demande dès maintenant.</div>
-              </div>
-              <button class="bam-btn" @click="navigate('encadrants')">Choisir un encadrant →</button>
+              <div>Le chef de département gère les affectations automatiquement. Les demandes directes ne sont pas disponibles pour votre promotion.</div>
             </div>
 
             <div v-if="maDemande && accordMutuelActif" class="statut-card-rich">
@@ -190,8 +161,6 @@
                 <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </div>
-
-            </template><!-- end v-else loading -->
           </div>
 
           <!-- MA DEMANDE -->
@@ -269,11 +238,11 @@
                 <div class="field-block">
                   <label class="fl">Document du sujet <span style="font-size:12px;color:#7A8FA6">(PDF, optionnel)</span></label>
                   <div class="file-upload-zone" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="handleDrop">
-                    <input type="file" ref="fileInput" accept=".pdf,.doc,.docx" style="display:none" @change="handleFile"/>
+                    <input type="file" ref="fileInput" accept=".pdf" style="display:none" @change="handleFile"/>
                     <div v-if="!formDemande.fichier" class="file-upload-placeholder">
                       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8a9aaa" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                       <p>Cliquez ou glissez un fichier PDF ici</p>
-                      <span>Max 5 Mo</span>
+                      <span>Max 10 Mo — PDF uniquement</span>
                     </div>
                     <div v-else class="file-selected">
                       <span>📄 {{ formDemande.fichier.name }}</span>
@@ -371,7 +340,7 @@
               <div class="field-block">
                 <label class="fl">Nouveau document <span style="font-size:12px;color:#7A8FA6">(optionnel — remplace l'existant)</span></label>
                 <div class="file-upload-zone" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="handleDrop">
-                  <input type="file" ref="fileInput" accept=".pdf,.doc,.docx" style="display:none" @change="handleFile"/>
+                  <input type="file" ref="fileInput" accept=".pdf" style="display:none" @change="handleFile"/>
                   <div v-if="!formDemande.fichier" class="file-upload-placeholder">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8a9aaa" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     <p>Cliquez ou glissez un PDF</p>
@@ -427,13 +396,7 @@
               <p class="sps">Recherchez et choisissez votre encadrant PFE</p>
             </div>
 
-            <div v-if="!accordMutuelActif && !monAffectation" class="lock-card">
-              <div class="lock-icon">🔒</div>
-              <h3>Mode accord mutuel non activé</h3>
-              <p>Le chef de département n'a pas encore activé le mode accord mutuel. Revenez plus tard.</p>
-              <button class="btn-outline" @click="navigate('home')">← Retour</button>
-            </div>
-            <div v-else-if="maDemande && (maDemande.statut==='en_attente' || maDemande.statut==='acceptee')" class="lock-card">
+            <div v-if="maDemande && (maDemande.statut==='en_attente' || maDemande.statut==='acceptee')" class="lock-card">
               <div class="lock-icon">🔒</div>
               <h3>Liste non disponible</h3>
               <p v-if="maDemande.statut==='en_attente'">Vous avez déjà une demande <strong>en attente</strong>. Vous ne pouvez pas parcourir les encadrants tant qu'elle n'est pas traitée.</p>
@@ -510,13 +473,16 @@
             @toast="afficherToast"
           />
 
-          <!-- ✅ Student uses ReunionEtudiant (confirmation view) -->
           <ReunionEtudiant
             v-else-if="currentPage==='reunions'"
             key="reunions"
             @toast="afficherToast"
           />
 
+          <Messagerie
+            v-else-if="currentPage==='messagerie'"
+            key="messagerie"
+          />
           <div v-else-if="currentPage==='resultats'" key="resultats">
             <div class="ptb"><h2 class="spt">Mon résultat final</h2><p class="sps">Consultez votre note, mention et décision suite à la délibération</p></div>
             <div v-if="monResultat" class="resultat-card">
@@ -563,6 +529,8 @@
 
 <script>
 import api from '@/services/api.js'
+import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
+import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 import ConsulterProfil from './ConsulterProfil.vue'
 import ModifierProfil from './ModifierProfil.vue'
 import LivrableEtudiant from './Livrablesetudiant.vue'
@@ -571,17 +539,14 @@ import ReunionEtudiant from './Reunionetudiant.vue'
 export default {
   name: 'DashboardEtudiant',
 
-  components: {
-    ConsulterProfil,
+  components: {ConsulterProfil,
     ModifierProfil,
     LivrableEtudiant,
-    ReunionEtudiant
-  },
+    ReunionEtudiant, NotificationsDropdown, Messagerie },
 
   async mounted() {
     await this.chargerDonnees()
     await this.chargerResultat()
-    await this.chargerPhaseActive()
   },
 
   data() {
@@ -612,25 +577,16 @@ export default {
       encadrants: [],
       accordMutuelActif: false,
       monAffectation: null,
-      loadingDonnees: true,
 
       searchEnc: '',
       ficheEncadrant: null,
 
       monResultat: null,
       loadingResultat: false,
-      phaseEnCours: null,
     }
   },
 
   computed: {
-    joursRestants() {
-      if (!this.phaseEnCours?.date_fin) return null
-      const fin = new Date(this.phaseEnCours.date_fin)
-      fin.setHours(23, 59, 59, 999)
-      return Math.ceil((fin - new Date()) / (1000 * 60 * 60 * 24))
-    },
-
     encadrantsFiltres() {
       if (!this.searchEnc) return this.encadrants
 
@@ -652,6 +608,7 @@ export default {
         encadrants: 'Encadrants disponibles',
         livrables: 'Mes livrables',
         reunions: 'Réunions',
+        messagerie: 'Messagerie',
         resultats: 'Mon résultat final',
         profil: 'Mon profil',
         'profil-edit': 'Modifier le profil',
@@ -676,6 +633,19 @@ export default {
     const parts = fullname.split(' ')
     return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase()
   },
+
+    async logout() {
+      try {
+        await api.post('/logout')
+      } catch (_) {
+        // proceed even if the API call fails
+      } finally {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/'
+      }
+    },
+
     navigate(page) {
       this.currentPage = page
 
@@ -698,18 +668,6 @@ export default {
       }, 3000)
     },
 
-    async chargerPhaseActive() {
-      try {
-        // /api/phases returns only active phases for non-chef users
-        const res = await api.get('/phases')
-        const phases = res.data || []
-        // Find the active (not yet terminated) phase
-        this.phaseEnCours = phases.find(p => p.active && !p.terminee) || null
-      } catch {
-        this.phaseEnCours = null
-      }
-    },
-
     async chargerResultat() {
       this.loadingResultat = true
 
@@ -730,7 +688,6 @@ export default {
     },
 
     async chargerDonnees() {
-      this.loadingDonnees = true
       try {
         const [demRes, encRes, modeRes, affRes] = await Promise.all([
           api.get('/demandes-encadrement'),
@@ -739,38 +696,47 @@ export default {
           api.get('/affectations/mon-affectation').catch(() => ({ data: null })),
         ])
 
-        // API returns a single object (not array) for students
+        // API returns a single object for the student (not an array)
         const demData = demRes.data
         if (!demData) {
           this.maDemande = null
         } else if (Array.isArray(demData)) {
           this.maDemande = demData[0] || null
-        } else if (typeof demData === 'object' && demData.id) {
+        } else if (demData.id) {
           this.maDemande = demData
         } else {
           this.maDemande = null
         }
 
-        this.encadrants = encRes.data || []
+        // Normalise encadrants — backend now returns full fields
+        this.encadrants = (encRes.data || []).map(e => ({
+          id:          e.id,
+          nom:         e.nom || '',
+          prenom:      e.prenom || '',
+          nom_complet: e.nom_complet || ((e.prenom||'') + ' ' + (e.nom||'')).trim(),
+          domaine:     e.domaine || e.specialite || '',
+          specialite:  e.specialite || '',
+          nb_affectes: e.nb_affectes || 0,
+          disponible:  e.disponible !== false,
+          email:       e.email || '',
+          telephone:   e.telephone || '',
+        }))
 
-        // mode === 'manuel' means accord-mutuel is active for this promo
-        const mode = modeRes.data?.mode
-        this.accordMutuelActif = mode === 'manuel'
+        // mode === 'manuel' means accord-mutuel is active for this department
+        this.accordMutuelActif = modeRes.data?.mode === 'manuel'
 
         const affData = affRes.data
-        if (Array.isArray(affData)) {
-          this.monAffectation = affData.find(a => a.statut === 'diffusee') || null
-        } else if (affData && affData.id) {
+        if (affData && affData.id) {
           this.monAffectation = affData
+        } else if (Array.isArray(affData)) {
+          this.monAffectation = affData.find(a => a.statut === 'diffusee') || null
         } else {
           this.monAffectation = null
         }
 
       } catch (error) {
         console.error('Erreur chargement:', error)
-        this.accordMutuelActif = false
-      } finally {
-        this.loadingDonnees = false
+        this.accordMutuelActif = false   // safe: don't show form if we can't confirm mode
       }
     },
 
@@ -800,7 +766,7 @@ export default {
           fd.append('doc_pdf', this.formDemande.fichier, this.formDemande.fichier.name)
         }
 
-        // Let browser set multipart/form-data with correct boundary
+        // Let browser set correct multipart/form-data boundary
         const res = await api.post('/demandes-encadrement', fd, {
           headers: { 'Content-Type': undefined }
         })
@@ -819,7 +785,7 @@ export default {
           type: 'toast-ok'
         })
 
-        this.navigate('home')
+        this.navigate('consulter-demande')
 
       } catch (error) {
         this.afficherToast({
@@ -831,38 +797,54 @@ export default {
       }
     },
 
-    // ── Encadrant selection from the list ──────────────────────────
     choisirEncadrant(enc) {
       this.formDemande.encadrant_id = enc.id
-      const nom = enc.nom_complet || ((enc.prenom || '') + ' ' + (enc.nom || '')).trim()
+      const nom = enc.nom_complet || ((enc.prenom||'') + ' ' + (enc.nom||'')).trim()
       this.afficherToast({ message: nom + ' sélectionné(e).', type: 'toast-ok' })
       this.navigate('ma-demande')
       this.editMode = false
     },
 
-    // ── File upload handlers ────────────────────────────────────
     handleFile(event) {
       const file = event.target.files[0]
-      if (file) this.formDemande.fichier = file
+      if (!file) return
+      if (file.type !== 'application/pdf') {
+        this.errs.fichier = 'Seuls les fichiers PDF sont acceptés.'
+        event.target.value = ''
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        this.errs.fichier = 'Le fichier ne doit pas dépasser 10 Mo.'
+        event.target.value = ''
+        return
+      }
+      this.errs.fichier = ''
+      this.formDemande.fichier = file
     },
 
     handleDrop(event) {
-      const file = event.dataTransfer.files[0]
-      if (file) this.formDemande.fichier = file
+      const file = event.dataTransfer?.files?.[0]
+      if (!file) return
+      if (file.type !== 'application/pdf') {
+        this.errs.fichier = 'Seuls les fichiers PDF sont acceptés.'
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        this.errs.fichier = 'Le fichier ne doit pas dépasser 10 Mo.'
+        return
+      }
+      this.errs.fichier = ''
+      this.formDemande.fichier = file
     },
 
-    // ── Status helpers ──────────────────────────────────────────
     statutIcon(statut) {
-      const icons = { en_attente: '⏳', acceptee: '✅', rejetee: '❌' }
-      return icons[statut] || '📄'
+      return { en_attente: '⏳', acceptee: '✅', rejetee: '❌' }[statut] || '📄'
     },
 
     labelStatut(statut) {
-      const labels = { en_attente: 'En attente', acceptee: 'Acceptée', rejetee: 'Rejetée' }
-      return labels[statut] || statut
+      return { en_attente: 'En attente', acceptee: 'Acceptée', rejetee: 'Rejetée' }[statut] || statut
     },
 
-    // ── Result helpers ──────────────────────────────────────────
     mention(note) {
       if (note >= 16) return 'Très bien'
       if (note >= 14) return 'Bien'
@@ -879,44 +861,43 @@ export default {
       return 'mention-ins'
     },
 
-    // ── Auth ────────────────────────────────────────────────────
-    logout() {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      this.$router.push('/login')
-    },
-
-    // ── Modify existing request ─────────────────────────────────
+    // ── Modify existing demande ────────────────────────────────────
+    // Calls PUT via _method spoofing in FormData (works with multipart)
     async modifierDemande() {
       this.errs = {}
       if (!this.formDemande.sujet)        this.errs.sujet       = 'Le sujet est obligatoire'
       if (!this.formDemande.description)  this.errs.description = 'La description est obligatoire'
       if (!this.formDemande.encadrant_id) this.errs.encadrant   = 'Choisissez un encadrant'
+      if (this.formDemande.fichier && this.formDemande.fichier.type !== 'application/pdf') {
+        this.errs.fichier = 'Seuls les fichiers PDF sont acceptés.'
+      }
       if (Object.keys(this.errs).length) return
 
       this.submitting = true
       try {
+        // Always use PUT — works with both JSON and multipart
+        let res
         const fd = new FormData()
         fd.append('sujet',        this.formDemande.sujet)
         fd.append('description',  this.formDemande.description)
         fd.append('encadrant_id', String(this.formDemande.encadrant_id))
-        if (this.formDemande.fichier instanceof File) fd.append('doc_pdf', this.formDemande.fichier, this.formDemande.fichier.name)
-
-        // Laravel method spoofing via form field (works with multipart)
-        fd.append('_method', 'PUT')
-        const res = await api.post(
-          '/demandes-encadrement/' + this.maDemande.id,
+        if (this.formDemande.fichier instanceof File) {
+          fd.append('doc_pdf', this.formDemande.fichier, this.formDemande.fichier.name)
+        }
+        // Use POST with X-HTTP-Method-Override header — most reliable way
+        // to send multipart + PUT in Laravel (works with any route definition)
+        res = await api.post(
+          '/demandes-encadrement/' + this.maDemande.id + '/modifier',
           fd,
           { headers: { 'Content-Type': undefined } }
         )
         this.maDemande = res.data.demande || res.data
         this.editMode  = false
         this.afficherToast({ message: 'Demande mise à jour !', type: 'toast-ok' })
-        this.navigate('ma-demande')
+        this.navigate('consulter-demande')
       } catch (error) {
         this.afficherToast({
-          message: (error.response && error.response.data && error.response.data.message)
-            || 'Erreur lors de la modification.',
+          message: error.response?.data?.message || 'Erreur lors de la modification.',
           type: 'toast-err'
         })
       } finally {
@@ -924,20 +905,19 @@ export default {
       }
     },
 
-    // ── Cancel request ──────────────────────────────────────────
+    // ── Cancel demande ─────────────────────────────────────────────
     async annulerDemande() {
       this.submitting = true
       try {
         await api.delete('/demandes-encadrement/' + this.maDemande.id)
-        this.maDemande = null
-        this.editMode  = false
+        this.maDemande   = null
+        this.editMode    = false
         this.formDemande = { sujet: '', description: '', encadrant_id: null, fichier: null }
         this.afficherToast({ message: 'Demande annulée.', type: 'toast-ok' })
         this.navigate('home')
       } catch (error) {
         this.afficherToast({
-          message: (error.response && error.response.data && error.response.data.message)
-            || "Impossible d'annuler.",
+          message: error.response?.data?.message || "Impossible d'annuler.",
           type: 'toast-err'
         })
       } finally {
@@ -1025,16 +1005,11 @@ export default {
 .annul-warning{font-size:13px;color:#8a9aaa;font-style:italic;margin-top:8px}
 .annul-actions{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
 .btn-danger{display:flex;align-items:center;gap:7px;padding:10px 20px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger:hover:not(:disabled){background:#c0392b}.btn-danger:disabled{opacity:.6;cursor:not-allowed}
-.btn-danger-sm{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger-sm:hover:not(:disabled){background:#c0392b}.btn-danger-sm:disabled{opacity:.6;cursor:not-allowed}
-.dv-footer{display:flex;gap:10px;padding:16px 18px;border-top:1.5px solid #c8c4bc;background:#e8e4dc}
 .file-link{display:inline-flex;align-items:center;gap:6px;color:#F5C518;font-weight:600;font-size:13.5px;text-decoration:none;padding:6px 12px;background:rgba(245,197,24,0.08);border-radius:8px;transition:background .18s}.file-link:hover{background:rgba(245,197,24,0.16)}
 .banner-affectation{display:flex;align-items:center;gap:14px;background:#d4edda;border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:20px}
 .ba-icon{font-size:28px;flex-shrink:0}
 .ba-body{flex:1}.ba-t{font-size:15px;font-weight:700;color:#1e7e34;margin-bottom:3px}.ba-s{font-size:13.5px;color:#2d6a4f}
 .ba-badge{padding:5px 14px;background:#27ae60;color:#fff;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
-.banner-accord-mutuel{display:flex;align-items:center;gap:14px;background:rgba(61,96,128,0.08);border:1.5px solid rgba(61,96,128,0.25);border-radius:14px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
-.bam-icon{font-size:28px;flex-shrink:0}.bam-body{flex:1;min-width:200px}.bam-t{font-size:14px;font-weight:700;color:#1e2a35;margin-bottom:3px}.bam-s{font-size:13px;color:#4a5a6a;line-height:1.5}
-.bam-btn{padding:10px 18px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;white-space:nowrap;transition:all .18s;flex-shrink:0}.bam-btn:hover{background:#2f4f6a}
 .banner-info{display:flex;align-items:flex-start;gap:12px;background:#fff8e8;border:1.5px solid #bee3f8;border-radius:14px;padding:16px 20px;margin-bottom:20px;font-size:13.5px;color:#2b6cb0}
 .qa-card-result{cursor:default!important;border-color:rgba(39,174,96,0.4)!important;background:rgba(39,174,96,0.08)!important}
 .qa-green{background:rgba(39,174,96,0.12);color:#27ae60}
@@ -1060,6 +1035,10 @@ export default {
 .fi:focus{outline:none;border-color:#3d6080;box-shadow:0 0 0 3px rgba(61,96,128,0.1)}.ft{resize:vertical;min-height:100px}
 .err{color:#c0392b;font-size:12px;margin-top:5px}
 .form-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1.5px solid #c8c4bc}
+.dv-footer{display:flex;gap:10px;padding:16px 18px;border-top:1.5px solid #c8c4bc;background:#e8e4dc}
+.btn-danger-sm{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger-sm:hover:not(:disabled){background:#c0392b}.btn-danger-sm:disabled{opacity:.6;cursor:not-allowed}
+.btn-danger{display:flex;align-items:center;gap:7px;padding:10px 20px;background:#e74c3c;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:background .18s}.btn-danger:hover:not(:disabled){background:#c0392b}.btn-danger:disabled{opacity:.6;cursor:not-allowed}
+.btn-danger-outline{display:flex;align-items:center;gap:7px;padding:10px 20px;background:transparent;border:1.5px solid #e74c3c;border-radius:9px;font-size:13.5px;font-weight:600;color:#e74c3c;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-danger-outline:hover{background:#e74c3c;color:#fff}
 .btn-primary{display:flex;align-items:center;gap:8px;padding:11px 22px;background:rgba(245,197,24,0.2);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-primary:hover{background:#2f4f6a}.btn-primary:disabled{opacity:.6;cursor:not-allowed}
 .btn-outline{padding:11px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:10px;font-size:13.5px;color:#4a5a6a;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}.btn-outline:hover{border-color:#3d6080;color:#F5C518}
 .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
@@ -1119,14 +1098,4 @@ export default {
 .loading-state{text-align:center;padding:60px;color:#7A8FA6}
 @media(max-width:1100px){.enc-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.kpi-grid{grid-template-columns:1fr 1fr}.qa-grid{grid-template-columns:1fr}.enc-grid{grid-template-columns:1fr}}
-.banner-phase-countdown{display:flex;align-items:flex-start;gap:14px;border-radius:14px;padding:16px 20px;margin-bottom:16px;border:1.5px solid}
-.bpc-normal{background:#e8f4fd;border-color:rgba(61,96,128,0.3)}
-.bpc-warning{background:#fff8e8;border-color:rgba(245,166,35,0.5)}
-.bpc-urgent{background:#fdf0f0;border-color:rgba(231,76,60,0.5);animation:pulse-bpc 2s ease-in-out infinite}
-@keyframes pulse-bpc{0%,100%{border-color:rgba(231,76,60,0.4)}50%{border-color:rgba(231,76,60,0.9)}}
-.bpc-icon{font-size:22px;flex-shrink:0;margin-top:1px}
-.bpc-body{flex:1}
-.bpc-t{font-size:14px;font-weight:600;color:#1e2a35;margin-bottom:3px}
-.bpc-s{font-size:13px;color:#4a5a6a;line-height:1.5}
-.bpc-expired{color:#c0392b;font-weight:600}
 </style>

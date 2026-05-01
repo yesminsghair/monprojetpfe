@@ -84,12 +84,10 @@
       </div>
 
       <div class="sc-actions">
-        <!-- Valider: only when phase is active (en_cours) -->
         <button class="btn-act btn-valider" @click="validerPhase(e)" :disabled="!e.phaseActive">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Valider phase
         </button>
-        <!-- Rejeter: only when phase is active (en_cours) -->
         <button class="btn-act btn-rejeter" @click="openRejet(e)" :disabled="!e.phaseActive">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Rejeter phase
@@ -110,24 +108,38 @@
         <div v-for="lv in livrablesParEtudiant(e.etudiant_id)" :key="lv.id" class="lv-row">
           <div class="lv-row-info">
             <div class="lv-phase-name">{{ lv.phase_nom }}</div>
-            <div class="lv-file-name">📎 {{ lv.file_name }}</div>
+            <div class="lv-file-name">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              {{ lv.file_name }}
+            </div>
             <div class="lv-date">{{ formatDate(lv.depose_le) }}</div>
           </div>
           <span class="lv-badge" :class="'lvb-'+lv.statut">
-            {{ {en_attente:'En attente',valide:'Validé ✓',rejete:'Rejeté'}[lv.statut] || lv.statut }}
+            {{ {en_attente:'En attente',valide:'Validé',rejete:'Rejeté'}[lv.statut] || lv.statut }}
           </span>
           <div class="lv-row-actions" v-if="lv.statut === 'en_attente'">
-            <button class="btn-lv-dl"  @click="telecharger(lv)" title="Télécharger">
+            <!-- View/Preview -->
+            <button class="btn-lv-eye" @click="previewLivrable(lv)" title="Consulter">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <!-- Download -->
+            <button class="btn-lv-dl" @click="telecharger(lv)" title="Télécharger">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
-            <button class="btn-lv-ok"  @click="validerLivrable(lv)" title="Valider">
+            <!-- Validate livrable -->
+            <button class="btn-lv-ok" @click="validerLivrable(lv)" title="Valider le livrable">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </button>
-            <button class="btn-lv-ko"  @click="openRejetLivrable(lv)" title="Rejeter">
+            <!-- Reject livrable -->
+            <button class="btn-lv-ko" @click="openRejetLivrable(lv)" title="Rejeter le livrable">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
           <div class="lv-row-actions" v-else>
+            <!-- View even for already processed -->
+            <button class="btn-lv-eye" @click="previewLivrable(lv)" title="Consulter">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
             <button class="btn-lv-dl" @click="telecharger(lv)" title="Télécharger">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
@@ -138,7 +150,7 @@
     </div>
   </div>
 
-  <!-- MODAL REJET -->
+  <!-- MODAL REJET PHASE -->
   <transition name="modal-fade">
     <div v-if="modalRejet" class="modal-overlay" @click.self="modalRejet=false">
       <div class="modal">
@@ -193,7 +205,7 @@
         <div class="modal-footer">
           <button class="btn-cancel" @click="modalRejetLv=false">Annuler</button>
           <button class="btn-reject" @click="confirmerRejetLivrable" :disabled="!commentaireRejetLv.trim()">
-            Confirmer le rejet
+            Rejeter le livrable
           </button>
         </div>
       </div>
@@ -250,14 +262,12 @@ export default {
       ],
       etudiants: [],
       livrables: [],
-      modalRejet: false,
-      modalHist:  false,
-      modalRejetLv: false,
-      currentEt: null,
-      currentLv: null,
-      commentaireRejet: '',
+      modalRejet:    false,
+      modalHist:     false,
+      modalRejetLv:  false,
+      commentaireRejet:   '',
       commentaireRejetLv: '',
-      historique: [],
+      historique:    [],
       toast: { show: false, msg: '', type: 'ok' },
       loading: false
     }
@@ -279,10 +289,8 @@ export default {
     async chargerSuivi() {
       this.loading = true
       try {
-        const [suiviRes, lvRes] = await Promise.all([
-          api.get('/suivi/encadrant'),
-          api.get('/livrables/encadrant').catch(() => ({ data: [] }))
-        ])
+        // Load separately so one failure doesn't silently kill the other
+        const suiviRes = await api.get('/suivi/encadrant')
         this.etudiants = suiviRes.data.map(e => ({
           id:           e.id,
           etudiant_id:  e.etudiant_id,
@@ -295,10 +303,19 @@ export default {
           color:        this.colorFor(e.id),
           termineTotal: e.termineTotal,
         }))
-        this.livrables = lvRes.data || []
       } catch (error) {
         console.error('Erreur chargement suivi:', error)
-        this.showToast('Erreur de chargement', 'err')
+        this.showToast('Erreur chargement suivi: ' + (error?.response?.data?.error || error.message), 'err')
+      }
+
+      try {
+        const lvRes = await api.get('/livrables/encadrant')
+        this.livrables = lvRes.data || []
+        console.log('Livrables chargés:', this.livrables.length, this.livrables)
+      } catch (error) {
+        console.error('Erreur chargement livrables:', error?.response?.data || error.message)
+        this.showToast('Erreur livrables: ' + (error?.response?.data?.error || error.message), 'err')
+        this.livrables = []
       } finally {
         this.loading = false
       }
@@ -314,7 +331,6 @@ export default {
       return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     },
 
-    // Find the current active phase_id for a student
     getActivePhaseId(e) {
       const active = e.phases.find(p => p.statut === 'en_cours')
       return active?.phase_id ?? null
@@ -389,10 +405,34 @@ export default {
       return new Date(d).toLocaleDateString('fr-FR')
     },
 
+    // Download: fetch blob with auth header then trigger save
     telecharger(lv) {
-      window.open(`/api/livrables/${lv.id}/download`, '_blank')
+      if (!lv) return
+      api.get(`/livrables/${lv.id}/download`, { responseType: 'blob' }).then(response => {
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href     = url
+        a.download = lv.file_name || `livrable_${lv.id}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      }).catch(() => this.showToast('Erreur lors du téléchargement', 'err'))
     },
 
+    // Eye button: fetch blob with auth header then open in new browser tab
+    async previewLivrable(lv) {
+      if (!lv) return
+      try {
+        const response = await api.get(`/livrables/${lv.id}/download`, { responseType: 'blob' })
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const url  = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+      } catch (e) {
+        this.showToast('Impossible d\'ouvrir le fichier', 'err')
+      }
+    },
+
+    // ── VALIDER LIVRABLE ─────────────────────────────────────────────────────
     async validerLivrable(lv) {
       try {
         await api.put(`/livrables/${lv.id}/valider`)
@@ -403,6 +443,7 @@ export default {
       }
     },
 
+    // ── REJETER LIVRABLE ─────────────────────────────────────────────────────
     openRejetLivrable(lv) {
       this.currentLv          = lv
       this.commentaireRejetLv = ''
@@ -500,7 +541,7 @@ h2 { font-family:'Merriweather',serif; font-size:1.4rem; font-weight:700; color:
 .modal-close:hover { color:#1e2a35; }
 .modal-body { padding:20px 24px; }
 .modal-phase-info { font-size:13px; color:#4a5a6a; background:#e8e4dc; border:1.5px solid #c8c4bc; border-radius:8px; padding:9px 13px; margin-bottom:14px; }
-.modal-footer { padding:16px 24px; border-top:1px solid #c8c4bc; display:flex; justify-content:flex-end; gap:10px; }
+.modal-footer { padding:16px 24px; border-top:1px solid #c8c4bc; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
 .fg { display:flex; flex-direction:column; gap:6px; }
 .fg label { font-size:0.88rem; font-weight:600; color:#2f4f6a; }
 .req { color:#e74c3c; }
@@ -508,9 +549,11 @@ h2 { font-family:'Merriweather',serif; font-size:1.4rem; font-weight:700; color:
 .ta:focus { outline:none; border-color:#e74c3c; background:#fff; }
 .btn-cancel { padding:10px 18px; background:#c8c4bc; border:1.5px solid #b0aba2; border-radius:9px; font-size:0.88rem; font-weight:600; cursor:pointer; color:#4a5a6a; font-family:'Source Sans 3',sans-serif; transition:.15s; }
 .btn-cancel:hover { background:#b0aba2; }
-.btn-reject { padding:10px 18px; background:#e74c3c; border:none; border-radius:9px; font-size:0.88rem; font-weight:700; cursor:pointer; color:#fff; font-family:'Source Sans 3',sans-serif; transition:.18s; }
+.btn-reject { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; background:#e74c3c; border:none; border-radius:9px; font-size:0.88rem; font-weight:700; cursor:pointer; color:#fff; font-family:'Source Sans 3',sans-serif; transition:.18s; }
 .btn-reject:hover:not(:disabled) { background:#c0392b; }
 .btn-reject:disabled { opacity:.4; cursor:not-allowed; }
+.btn-lv-ok-lg { display:inline-flex; align-items:center; gap:6px; padding:10px 18px; background:#27ae60; border:none; border-radius:9px; font-size:0.88rem; font-weight:700; cursor:pointer; color:#fff; font-family:'Source Sans 3',sans-serif; transition:.18s; }
+.btn-lv-ok-lg:hover { background:#219a52; }
 .empty-hist { text-align:center; padding:24px; color:#8a9aaa; font-size:0.88rem; }
 .modal-fade-enter-active, .modal-fade-leave-active { transition:opacity .2s, transform .2s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity:0; transform:scale(.97); }
@@ -521,20 +564,24 @@ h2 { font-family:'Merriweather',serif; font-size:1.4rem; font-weight:700; color:
 .lv-row { background:#ddd9d1; border:1.5px solid #c8c4bc; border-radius:10px; padding:9px 11px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .lv-row-info { flex:1; min-width:0; }
 .lv-phase-name { font-size:0.82rem; font-weight:700; color:#1e2a35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lv-file-name  { font-size:0.75rem; color:#4a5a6a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lv-file-name  { font-size:0.75rem; color:#4a5a6a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; }
 .lv-date       { font-size:0.72rem; color:#8a9aaa; }
 .lv-badge { font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
 .lvb-en_attente { background:#fff3cd; color:#856404; border:1px solid #ffc107; }
 .lvb-valide     { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
 .lvb-rejete     { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
 .lv-row-actions { display:flex; gap:5px; flex-shrink:0; }
-.btn-lv-dl, .btn-lv-ok, .btn-lv-ko { width:28px; height:28px; border:1.5px solid; border-radius:7px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s; }
+.btn-lv-dl, .btn-lv-ok, .btn-lv-ko, .btn-lv-eye { width:28px; height:28px; border:1.5px solid; border-radius:7px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s; }
+.btn-lv-eye { background:#e8e4dc; border-color:#c8c4bc; color:#3d6080; }
+.btn-lv-eye:hover { background:#3d6080; color:#fff; border-color:#3d6080; }
 .btn-lv-dl { background:#e8e4dc; border-color:#c8c4bc; color:#4a5a6a; }
-.btn-lv-dl:hover { background:#3d6080; color:#fff; border-color:#3d6080; }
+.btn-lv-dl:hover { background:#4a5a6a; color:#fff; border-color:#4a5a6a; }
 .btn-lv-ok { background:#d4edda; border-color:#c3e6cb; color:#155724; }
 .btn-lv-ok:hover { background:#27ae60; color:#fff; border-color:#27ae60; }
 .btn-lv-ko { background:#f8d7da; border-color:#f5c6cb; color:#c0392b; }
 .btn-lv-ko:hover { background:#e74c3c; color:#fff; border-color:#e74c3c; }
+/* PREVIEW MODAL */
+/* TIMELINE */
 .timeline { display:flex; flex-direction:column; gap:14px; }
 .tl-item { display:flex; gap:14px; align-items:flex-start; }
 .tl-dot { width:13px; height:13px; border-radius:50%; flex-shrink:0; margin-top:4px; background:#c8c4bc; }

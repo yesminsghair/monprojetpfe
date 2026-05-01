@@ -13,7 +13,7 @@
       </button>
       <button class="tab-btn" :class="{active: onglet==='deliberation'}" @click="onglet='deliberation'">
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        Délibération & résultats
+        Délibération &amp; résultats
       </button>
     </div>
 
@@ -26,72 +26,122 @@
           <span class="header-icon">⚖️</span>
           <div>
             <h2>Composition des jurys</h2>
-            <p class="subtitle">Affecter les membres de jury à chaque projet PFE</p>
+            <p class="subtitle">Affecter les membres de jury à chaque étudiant de votre département</p>
           </div>
         </div>
-        <button class="btn-gold" @click="openJuryModal(null)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Affecter un jury
-        </button>
       </div>
 
       <!-- Stats -->
-      <div class="stats-bar" v-if="jurys.length">
-        <div class="stat-card"><span class="stat-val">{{ jurys.length }}</span><span class="stat-label">Projets</span></div>
-        <div class="stat-card"><span class="stat-val">{{ totalMembres }}</span><span class="stat-label">Membres affectés</span></div>
-        <div class="stat-card"><span class="stat-val">{{ jurys.filter(j=>j.membres.length>=2).length }}</span><span class="stat-label">Jurys complets</span></div>
+      <div class="stats-bar" v-if="etudiants.length">
+        <div class="stat-card"><span class="stat-val">{{ etudiants.length }}</span><span class="stat-label">Étudiants</span></div>
+        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>e.jury_id).length }}</span><span class="stat-label">Jurys créés</span></div>
+        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>e.membres && e.membres.length>=2).length }}</span><span class="stat-label">Jurys complets</span></div>
+        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>!e.projet_titre).length }}</span><span class="stat-label">Sans projet</span></div>
       </div>
 
       <!-- Loading / Empty -->
-      <div v-if="loadingJurys" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
-      <div v-else-if="!jurys.length" class="empty-state">
-        <div class="empty-icon">⚖️</div>
-        <p>Aucun jury composé pour le moment.</p>
-        <button class="btn-gold" @click="openJuryModal(null)">Composer un premier jury</button>
+      <div v-if="loadingEtudiants" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
+      <div v-else-if="!etudiants.length" class="empty-state">
+        <div class="empty-icon">🎓</div>
+        <p>Aucun étudiant trouvé dans votre département.</p>
       </div>
 
-      <!-- Table -->
+      <!-- Table étudiants + composition -->
       <div v-else class="table-wrapper">
         <table class="table">
           <thead>
             <tr>
-              <th>Projet / Étudiant</th>
+              <th>Étudiant</th>
+              <th>Projet PFE</th>
+              <th>Encadrant</th>
               <th>Membres du jury</th>
               <th>Président</th>
-              <th>Statut</th>
+              <th style="text-align:center">Statut</th>
               <th style="text-align:center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="j in jurys" :key="j.id" :class="{'row-complete': j.membres.length>=2}">
+            <tr v-for="et in etudiants" :key="et.etudiant_id"
+                :class="{'row-complete': et.membres && et.membres.length>=2, 'row-no-projet': !et.projet_titre}">
+              <!-- Étudiant -->
               <td>
-                <div class="projet-nom">{{ j.projet_titre }}</div>
-                <div class="projet-etudiant">{{ j.etudiant_nom }}</div>
+                <div class="u-nom">{{ et.etudiant_nom }}</div>
+                <div class="u-mat">{{ et.matricule }}</div>
               </td>
+
+              <!-- Projet -->
               <td>
-                <div class="membres-list">
-                  <span v-for="m in j.membres" :key="m.id" class="membre-chip">
+                <span v-if="et.projet_titre" class="projet-titre-cell">{{ et.projet_titre }}</span>
+                <span v-else class="no-projet">⚠ Pas encore de projet</span>
+              </td>
+
+              <!-- Encadrant -->
+              <td>
+                <span class="encadrant-chip">{{ et.encadrant_nom }}</span>
+              </td>
+
+              <!-- Membres actuels -->
+              <td>
+                <div class="membres-list" v-if="et.membres && et.membres.length">
+                  <span v-for="m in et.membres" :key="m.id" class="membre-chip">
                     <span class="chip-av">{{ initiales(m.nom) }}</span>
                     {{ m.nom }}
-                    <button class="chip-del" @click.stop="retirerMembre(j, m)" title="Retirer">×</button>
+                    <span class="chip-role">{{ roleLabel(m.fonction) }}</span>
+                    <button v-if="et.jury_id" class="chip-del"
+                            @click.stop="retirerMembre(et, m)" title="Retirer">×</button>
                   </span>
-                  <span v-if="!j.membres.length" class="no-membre">Aucun membre</span>
                 </div>
+                <span v-else class="no-membre">Aucun membre</span>
               </td>
+
+              <!-- Président -->
               <td>
-                <span v-if="j.president" class="badge-president">{{ j.president }}</span>
+                <span v-if="presidentDe(et)" class="badge-president">{{ presidentDe(et) }}</span>
                 <span v-else class="badge-none">—</span>
               </td>
-              <td>
-                <span class="badge-jury" :class="j.membres.length>=2 ? 'badge-complet' : 'badge-incomplet'">
-                  {{ j.membres.length>=2 ? '✓ Complet' : '⚠ Incomplet' }}
-                </span>
+
+              <!-- Statut -->
+              <td class="td-center">
+                <span v-if="!et.projet_titre" class="badge-jury badge-no-projet">Sans projet</span>
+                <span v-else-if="!et.jury_id" class="badge-jury badge-incomplet">⊘ Non créé</span>
+                <span v-else-if="et.membres && et.membres.length>=2" class="badge-jury badge-complet">✓ Complet</span>
+                <span v-else class="badge-jury badge-incomplet">⚠ Incomplet</span>
               </td>
+
+              <!-- Actions -->
               <td class="td-actions">
-                <button class="btn-icon btn-edit" @click="openJuryModal(j)" title="Modifier">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-                <button class="btn-icon btn-del" @click="supprimerJury(j.id)" title="Supprimer">
+                <!-- Ajouter membre via liste déroulante -->
+                <div class="inline-add" v-if="et.projet_titre">
+                  <div class="add-membre-row">
+                    <select
+                      class="select-role"
+                      v-model="selectionRole[et.etudiant_id]"
+                      title="Choisir le rôle"
+                    >
+                      <option value="examinateur">Examinateur</option>
+                      <option value="president">Président</option>
+                      <option value="encadrant">Encadrant</option>
+                    </select>
+                    <select
+                      class="select-membre"
+                      v-model="selectionMembre[et.etudiant_id]"
+                      @change="ajouterMembreRapide(et)"
+                      :title="!et.jury_id ? 'Crée le jury et ajoute le membre' : 'Ajouter un membre'"
+                    >
+                      <option value="">+ Ajouter membre</option>
+                      <optgroup label="Encadrants du département">
+                        <option
+                          v-for="ens in enseignantsDisposPour(et)"
+                          :key="ens.id"
+                          :value="ens.id + '|' + ens.nom_complet"
+                        >{{ ens.nom_complet }}</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+                <!-- Supprimer jury -->
+                <button v-if="et.jury_id" class="btn-icon btn-del"
+                        @click="supprimerJury(et)" title="Supprimer le jury">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                 </button>
               </td>
@@ -143,7 +193,7 @@
             </div>
           </div>
           <div v-if="ev.commentaire" class="eval-comment">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 0 2 2z"/></svg>
             {{ ev.commentaire }}
           </div>
         </div>
@@ -159,33 +209,21 @@
           <span class="header-icon">🏆</span>
           <div>
             <h2>Délibération &amp; résultats</h2>
-            <p class="subtitle">Consolidation des notes et publication des résultats finals</p>
+            <p class="subtitle">Délibérer et publier les résultats jury par jury</p>
           </div>
         </div>
         <div class="header-actions">
-          <button class="btn-blue" @click="declencher" :disabled="deliberationLancee">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            {{ deliberationLancee ? 'Délibération lancée' : 'Lancer la délibération' }}
-          </button>
-          <button class="btn-gold" @click="publierResultats" :disabled="!deliberationLancee || resultatsPublies">
+          <button class="btn-blue" @click="publierCalendrier">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            {{ resultatsPublies ? 'Résultats publiés' : 'Publier les résultats' }}
+            Publier calendrier soutenances
           </button>
         </div>
       </div>
 
-      <div v-if="deliberationLancee" class="banner-delib">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        La délibération est en cours. Les notes sont consolidées automatiquement.
-      </div>
-      <div v-if="resultatsPublies" class="banner-publie">
-        🎉 Les résultats ont été publiés. Les étudiants peuvent consulter leurs notes.
-      </div>
-
-      <div v-if="loadingResultats" class="loading-state"><div class="spinner"></div><p>Calcul en cours...</p></div>
-      <div v-else-if="!resultats.length" class="empty-state">
+      <div v-if="loadingResultats" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
+      <div v-else-if="!jurysDelib.length" class="empty-state">
         <div class="empty-icon">🏆</div>
-        <p>Lancez la délibération pour voir les résultats consolidés.</p>
+        <p>Aucun jury créé pour le moment. Composez d'abord les jurys dans l'onglet Composition.</p>
       </div>
       <div v-else class="table-wrapper">
         <table class="table">
@@ -193,28 +231,54 @@
             <tr>
               <th>Étudiant</th>
               <th>Projet</th>
-              <th style="text-align:center">Note jury</th>
-              <th style="text-align:center">Note encadrant</th>
+              <th>Date soutenance</th>
               <th style="text-align:center">Note finale</th>
               <th style="text-align:center">Mention</th>
               <th style="text-align:center">Décision</th>
+              <th style="text-align:center">Statut</th>
+              <th style="text-align:center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in resultats" :key="r.id">
-              <td>
-                <div class="u-nom">{{ r.etudiant_nom }}</div>
-                <div class="u-mat">{{ r.matricule }}</div>
-              </td>
-              <td class="projet-nom-sm">{{ r.projet_titre }}</td>
-              <td class="td-center"><span class="note-chip">{{ r.note_jury }}/20</span></td>
-              <td class="td-center"><span class="note-chip">{{ r.note_encadrant }}/20</span></td>
-              <td class="td-center"><span class="note-chip note-finale">{{ r.note_finale }}/20</span></td>
-              <td class="td-center"><span class="mention-badge" :class="mentionClass(r.note_finale)">{{ mention(r.note_finale) }}</span></td>
+            <tr v-for="j in jurysDelib" :key="j.jury_id">
+              <td><div class="u-nom">{{ j.etudiant_nom }}</div></td>
+              <td class="projet-nom-sm">{{ j.projet_titre || '—' }}</td>
+              <td class="td-date">{{ j.date_soutenance || '—' }}</td>
               <td class="td-center">
-                <span class="decision-badge" :class="r.note_finale>=10 ? 'decision-ok' : 'decision-nok'">
-                  {{ r.note_finale>=10 ? '✓ Admis' : '✗ Ajourné' }}
+                <span v-if="j.note_finale !== null" class="note-chip note-finale">{{ j.note_finale }}/20</span>
+                <span v-else class="badge-none">—</span>
+              </td>
+              <td class="td-center">
+                <span v-if="j.note_finale !== null" class="mention-badge" :class="mentionClass(j.note_finale)">{{ mention(j.note_finale) }}</span>
+                <span v-else class="badge-none">—</span>
+              </td>
+              <td class="td-center">
+                <span v-if="j.note_finale !== null" class="decision-badge" :class="j.note_finale>=10?'decision-ok':'decision-nok'">
+                  {{ j.note_finale>=10 ? '✓ Admis' : '✗ Ajourné' }}
                 </span>
+                <span v-else class="badge-none">—</span>
+              </td>
+              <td class="td-center">
+                <span v-if="j.publie" class="badge-jury badge-complet">✓ Publié</span>
+                <span v-else-if="j.note_finale !== null" class="badge-jury badge-incomplet">Délibéré</span>
+                <span v-else class="badge-jury badge-no-projet">En attente</span>
+              </td>
+              <td class="td-actions">
+                <!-- Délibérer : disponible si jury existe et pas encore délibéré -->
+                <button v-if="j.note_finale === null"
+                        class="btn-small btn-ok"
+                        @click="delibererJury(j)"
+                        title="Délibérer">
+                  ⚖ Délibérer
+                </button>
+                <!-- Publier : disponible si délibéré mais pas encore publié -->
+                <button v-if="j.note_finale !== null && !j.publie"
+                        class="btn-small btn-gold-sm"
+                        @click="publierJury(j)"
+                        title="Publier le résultat">
+                  📢 Publier
+                </button>
+                <span v-if="j.publie" class="check-published">✓</span>
               </td>
             </tr>
           </tbody>
@@ -222,63 +286,9 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════ -->
-    <!-- MODAL : COMPOSER / MODIFIER UN JURY                   -->
-    <!-- ══════════════════════════════════════════════════════ -->
-    <transition name="modal-fade">
-      <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>{{ editJury ? 'Modifier le jury' : 'Composer un jury' }}</h3>
-            <button class="modal-close" @click="closeModal">×</button>
-          </div>
-          <div class="modal-body">
-
-            <!-- Projet -->
-            <div class="form-group">
-              <label>Projet PFE</label>
-              <select v-model="form.projet_id" :disabled="!!editJury">
-                <option value="">— Sélectionner un projet —</option>
-                <option v-for="p in projetsDisponibles" :key="p.id" :value="p.id">{{ p.titre }} ({{ p.etudiant }})</option>
-              </select>
-            </div>
-
-            <!-- Membres -->
-            <div class="form-group">
-              <label>Membres du jury</label>
-              <div class="membres-select">
-                <div v-for="ens in enseignantsDispo" :key="ens.id" class="membre-check">
-                  <label class="check-label">
-                    <input type="checkbox" :value="ens.id" v-model="form.membres_ids" />
-                    <span class="check-av">{{ initiales(ens.nom_complet) }}</span>
-                    <span class="check-nom">{{ ens.nom_complet }}</span>
-                    <span class="check-grade">{{ ens.grade || 'Enseignant' }}</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Président -->
-            <div class="form-group" v-if="form.membres_ids.length">
-              <label>Président du jury</label>
-              <select v-model="form.president_id">
-                <option value="">— Aucun président désigné —</option>
-                <option v-for="mid in form.membres_ids" :key="mid" :value="mid">
-                  {{ enseignantsDispo.find(e=>e.id===mid)?.nom_complet || mid }}
-                </option>
-              </select>
-            </div>
-
-          </div>
-          <div class="modal-footer">
-            <button class="btn-cancel" @click="closeModal">Annuler</button>
-            <button class="btn-gold" @click="sauvegarder" :disabled="saving">
-              <span v-if="saving" class="spin-sm"></span>
-              {{ saving ? 'Enregistrement...' : (editJury ? 'Mettre à jour' : 'Enregistrer') }}
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- Toast inline -->
+    <transition name="toast-fade">
+      <div v-if="toast.show" class="toast-inline" :class="toast.type">{{ toast.message }}</div>
     </transition>
 
   </div>
@@ -294,119 +304,107 @@ export default {
   data() {
     return {
       onglet: 'composition',
-      loadingJurys: false,
-      loadingEvals: false,
+
+      loadingEtudiants: false,
+      loadingEvals:     false,
       loadingResultats: false,
-      saving: false,
-      showModal: false,
-      editJury: null,
 
-      jurys: [],
+      // Onglet 1 : liste des étudiants du chef avec leur jury
+      etudiants:      [],
+      enseignants:    [],   // tous enseignants/encadrants dispo
+      // reactive map : etudiant_id → selected value "id|nom" dans le select
+      selectionMembre: {},
+      selectionRole: {},
+
+      // Onglet 2
       evaluations: [],
-      resultats: [],
-      enseignantsDispo: [],
-      projetsDisponibles: [],
 
-      deliberationLancee: false,
-      resultatsPublies: false,
+      // Onglet 3 — built by chargerResultats() merging jurys + resultats_pfe
+      jurysDelib: [],
 
-      form: {
-        projet_id: '',
-        membres_ids: [],
-        president_id: '',
-      },
+      toast: { show: false, message: '', type: 'toast-ok' },
     }
   },
 
-  computed: {
-    totalMembres() {
-      return this.jurys.reduce((s, j) => s + (j.membres?.length || 0), 0)
-    },
-  },
-
   mounted() {
-    this.chargerJurys()
-    this.chargerEnseignants()
-    this.chargerProjets()
+    this.chargerEtudiants()
     this.chargerEvaluations()
     this.chargerResultats()
   },
 
   methods: {
+    // ── TOAST LOCAL ───────────────────────────────────────────
+    showToast(message, type = 'toast-ok') {
+      this.$emit('toast', { message, type })
+      this.toast = { show: true, message, type }
+      setTimeout(() => { this.toast.show = false }, 3500)
+    },
 
+    // ── CHARGEMENTS ───────────────────────────────────────────
 
-    async chargerJurys() {
-      this.loadingJurys = true
+    async chargerEtudiants() {
+      this.loadingEtudiants = true
       try {
-        const res = await api.get('/jurys')
-        this.jurys = res.data.map(j => ({
-          id: j.id,
-          affectation_id: j.affectation_id,
-          projet_titre: j.projet_titre || 'Projet #' + (j.affectation_id || j.id),
-          etudiant_nom: j.etudiant_nom || '—',
-          membres: (j.membres || []).map(m => ({
-            id: m.id,
-            nom: m.nom || (m.enseignant?.nom + ' ' + m.enseignant?.prenom) || 'Membre',
-            enseignant_id: m.enseignant_id
-          })),
-          president: (j.membres || []).find(m => m.fonction === 'president')?.nom || null,
-          president_id: (j.membres || []).find(m => m.fonction === 'president')?.enseignant_id || null
-        }))
-      } catch (error) {
-        console.error('Erreur chargement jurys:', error)
-        this.$emit('toast', { message: 'Erreur de chargement des jurys', type: 'toast-err' })
+        // Nouvel endpoint : liste des étudiants du chef avec infos jury
+        const res = await api.get('/jurys-pfe/etudiants-du-chef')
+        this.etudiants = res.data || []
+        // Initialiser la map de sélection
+        this.etudiants.forEach(et => {
+          if (!(et.etudiant_id in this.selectionMembre)) {
+            this.selectionMembre[et.etudiant_id] = ''
+          }
+          if (!(et.etudiant_id in this.selectionRole)) {
+            this.selectionRole[et.etudiant_id] = 'examinateur'
+          }
+        })
+        // Load encadrants AFTER etudiants so the dept filter has data
+        await this.chargerEnseignants()
+      } catch (err) {
+        console.error('Erreur chargement étudiants:', err)
+        this.showToast('Impossible de charger la liste des étudiants.', 'toast-err')
       } finally {
-        this.loadingJurys = false
+        this.loadingEtudiants = false
       }
     },
 
     async chargerEnseignants() {
       try {
         const res = await api.get('/utilisateurs')
-        // ✅ FIX: filter enseignants/encadrants client-side
-        this.enseignantsDispo = res.data
-          .filter(e => e.role === 'enseignant' || e.role === 'encadrant')
-          .map(e => ({
-            id: e.id,
-            nom_complet: e.nom + ' ' + e.prenom,
-            grade: e.role || 'Enseignant'
+        // Build the set of encadrant IDs that supervise students in this department
+        // (derived from etudiants-du-chef which is already scoped to the chef's specialité)
+        const encadrantIdsInDept = new Set(
+          (this.etudiants || [])
+            .map(et => et.encadrant_id)
+            .filter(Boolean)
+        )
+        this.enseignants = (res.data || [])
+          .filter(u => u.role === 'encadrant' && encadrantIdsInDept.has(u.id))
+          .map(u => ({
+            id:          u.id,
+            nom_complet: `${u.prenom ?? ''} ${u.nom ?? ''}`.trim(),
+            role:        u.role,
           }))
-      } catch (error) {
-        console.error('Erreur chargement enseignants:', error)
-        this.enseignantsDispo = []
-      }
-    },
-
-    async chargerProjets() {
-      try {
-        const res = await api.get('/affectations/sans-jury')
-        this.projetsDisponibles = res.data.map(a => ({
-          id: a.id,
-          titre: a.titre_projet || 'Projet #' + a.id,
-          etudiant: a.etudiant?.nom + ' ' + a.etudiant?.prenom || 'Étudiant'
-        }))
-      } catch (error) {
-        console.error('Erreur chargement projets:', error)
-        this.projetsDisponibles = []
+      } catch (err) {
+        console.error('Erreur chargement enseignants:', err)
       }
     },
 
     async chargerEvaluations() {
       this.loadingEvals = true
       try {
-        const res = await api.get('/notes-jury')
-        this.evaluations = res.data.map(ev => ({
-          id: ev.id,
-          projet_titre: ev.projet_titre || 'Projet',
-          etudiant_nom: ev.etudiant_nom || 'Étudiant',
-          membre_jury: ev.membre_nom || 'Membre',
-          date: new Date(ev.created_at).toLocaleDateString('fr-FR'),
-          note_totale: ev.note,
-          criteres: ev.criteres || [],
-          commentaire: ev.commentaire
+        // Notes PFE (fiches d'évaluation = notes par jury)
+        const res = await api.get('/resultats-pfe')
+        this.evaluations = (res.data || []).map(ev => ({
+          id:            ev.id,
+          projet_titre:  ev.projet_titre || 'Projet',
+          etudiant_nom:  ev.etudiant_nom || 'Étudiant',
+          membre_jury:   ev.encadrant_nom || '—',
+          note_totale:   ev.note_finale || 0,
+          criteres:      [],
+          commentaire:   null,
         }))
-      } catch (error) {
-        console.error('Erreur chargement évaluations:', error)
+      } catch (err) {
+        console.error('Erreur chargement évaluations:', err)
         this.evaluations = []
       } finally {
         this.loadingEvals = false
@@ -416,143 +414,190 @@ export default {
     async chargerResultats() {
       this.loadingResultats = true
       try {
-        const res = await api.get('/resultats')
-        this.resultats = res.data.map(r => ({
-          id: r.id,
-          etudiant_nom: r.etudiant_nom || 'Étudiant',
-          matricule: r.matricule || '—',
-          projet_titre: r.projet_titre || 'Projet',
-          note_jury: r.note_jury || 0,
-          note_encadrant: r.note_encadrant || 0,
-          note_finale: r.note_finale || 0
-        }))
-        this.deliberationLancee = this.resultats.length > 0
-        this.resultatsPublies = res.data.some(r => r.publie)
-      } catch (error) {
-        console.error('Erreur chargement résultats:', error)
-        this.resultats = []
+        // Fetch all jurys (contains date_soutenance, statut, etudiant, projet)
+        const [jurysRes, resultatsRes] = await Promise.all([
+          api.get('/jurys-pfe'),
+          api.get('/resultats-pfe'),
+        ])
+
+        const resultatsMap = {}
+        for (const r of (resultatsRes.data || [])) {
+          // Key by jury_id — but resultats-pfe doesn't return jury_id directly.
+          // We match by etudiant_nom / projet_titre. Better: use jury from jurys list.
+          resultatsMap[r.etudiant_nom] = r
+        }
+
+        this.jurysDelib = (jurysRes.data || []).map(j => {
+          // Try to find a matching resultat for this jury
+          const res = (resultatsRes.data || []).find(r => r.etudiant_nom === j.etudiant_nom)
+          return {
+            jury_id:         j.id,
+            etudiant_nom:    j.etudiant_nom || '—',
+            projet_titre:    j.projet_titre || '—',
+            date_soutenance: j.date_soutenance || null,
+            note_finale:     res ? parseFloat(res.note_finale) : null,
+            mention:         res?.mention || null,
+            decision:        res?.decision || null,
+            publie:          res?.publie ?? false,
+          }
+        })
+      } catch (err) {
+        console.error('Erreur chargement résultats:', err)
+        this.jurysDelib = []
       } finally {
         this.loadingResultats = false
       }
     },
 
-    openJuryModal(jury) {
-      this.editJury = jury
-      if (jury) {
-        this.form = {
-          projet_id: jury.affectation_id || '',
-          membres_ids: jury.membres.map(m => m.enseignant_id || m.id),
-          president_id: jury.president_id || '',
+    // ── COMPOSITION RAPIDE ────────────────────────────────────
+
+    // Retourne la liste des enseignants pas encore membres de ce jury
+    enseignantsDisposPour(et) {
+      const dejaDans = new Set((et.membres || []).map(m => m.enseignant_id))
+      return this.enseignants.filter(e => !dejaDans.has(e.id))
+    },
+
+    // Appelé au @change du select
+    async ajouterMembreRapide(et) {
+      const val = this.selectionMembre[et.etudiant_id]
+      if (!val) return
+
+      const [ensId] = val.split('|')
+      const enseignantId = parseInt(ensId)
+
+      // Réinitialiser le select immédiatement
+      this.selectionMembre[et.etudiant_id] = ''
+
+      // 1. Si le jury n'existe pas encore, le créer d'abord
+      if (!et.jury_id) {
+        if (!et.projet_pfe_id) {
+          this.showToast('Cet étudiant n\'a pas encore de projet PFE enregistré.', 'toast-err')
+          return
         }
-      } else {
-        this.form = { projet_id: '', membres_ids: [], president_id: '' }
+        try {
+          const juryRes = await api.post('/jurys-pfe', { projet_id: et.projet_pfe_id })
+          et.jury_id = juryRes.data.id
+          // Backend auto-adds the encadrant as a member — map with correct nom
+          et.membres = (juryRes.data.membres || []).map(m => ({
+            id:            m.id,
+            enseignant_id: m.enseignant_id,
+            nom:           m.enseignant
+              ? `${m.enseignant.prenom ?? ''} ${m.enseignant.nom ?? ''}`.trim()
+              : (et.encadrant_nom || '—'),
+            fonction:      m.fonction,
+          }))
+          if (et.membres.length) {
+            this.showToast(`Jury créé — encadrant ${et.encadrant_nom} ajouté automatiquement.`, 'toast-ok')
+          }
+        } catch (err) {
+          const msg = err.response?.data?.message || 'Erreur lors de la création du jury.'
+          this.showToast(msg, 'toast-err')
+          return
+        }
       }
-      this.showModal = true
-    },
 
-    closeModal() {
-      this.showModal = false
-      this.editJury = null
-    },
-
-    async sauvegarder() {
-      if (!this.form.projet_id && !this.editJury) {
-        this.$emit('toast', { message: 'Veuillez sélectionner un projet.', type: 'toast-err' })
-        return
-      }
-      if (!this.form.membres_ids.length) {
-        this.$emit('toast', { message: 'Veuillez sélectionner au moins un membre.', type: 'toast-err' })
-        return
-      }
-      
-      this.saving = true
+      // 2. Ajouter le membre
       try {
-        if (this.editJury) {
-          // Mise à jour du jury - d'abord supprimer les anciens membres
-          for (const m of this.editJury.membres) {
-            try {
-              await api.delete(`/jurys/${this.editJury.id}/membres/${m.id}`)
-            } catch(e) {}
-          }
-          // Ajouter les nouveaux membres
-          for (const id of this.form.membres_ids) {
-            await api.post(`/jurys/${this.editJury.id}/membres`, {
-              enseignant_id: id,
-              fonction: id === this.form.president_id ? 'president' : 'examinateur'
-            })
-          }
-          this.$emit('toast', { message: 'Jury mis à jour avec succès.', type: 'toast-ok' })
-        } else {
-          // Créer le jury
-          const juryRes = await api.post('/jurys', { affectation_id: this.form.projet_id })
-          const juryId = juryRes.data.id
-          
-          // Ajouter les membres
-          for (const id of this.form.membres_ids) {
-            await api.post(`/jurys/${juryId}/membres`, {
-              enseignant_id: id,
-              fonction: id === this.form.president_id ? 'president' : 'examinateur'
-            })
-          }
-          this.$emit('toast', { message: 'Jury composé avec succès.', type: 'toast-ok' })
-        }
-        this.closeModal()
-        await this.chargerJurys()
-      } catch (error) {
-        console.error('Erreur sauvegarde:', error)
-        this.$emit('toast', { message: 'Erreur lors de l\'enregistrement', type: 'toast-err' })
-      } finally {
-        this.saving = false
+        // Déterminer la fonction : s'il n'y a pas encore de président, proposer
+        const fonction = this.selectionRole[et.etudiant_id] || 'examinateur'
+
+        const res = await api.post(`/jurys-pfe/${et.jury_id}/membres`, {
+          enseignant_id: enseignantId,
+          fonction,
+        })
+
+        // Mettre à jour la ligne localement
+        const nouveauMembre = res.data
+        et.membres = [...(et.membres || []), {
+          id:            nouveauMembre.id,
+          enseignant_id: nouveauMembre.enseignant_id,
+          nom:           `${nouveauMembre.enseignant?.prenom ?? ''} ${nouveauMembre.enseignant?.nom ?? ''}`.trim(),
+          fonction:      nouveauMembre.fonction,
+        }]
+
+        this.showToast('Membre ajouté au jury.', 'toast-ok')
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors de l\'ajout du membre.'
+        this.showToast(msg, 'toast-err')
       }
     },
 
-    async retirerMembre(jury, membre) {
+    async retirerMembre(et, membre) {
       if (!confirm(`Retirer ${membre.nom} du jury ?`)) return
       try {
-        await api.delete(`/jurys/${jury.id}/membres/${membre.id}`)
-        await this.chargerJurys()
-        this.$emit('toast', { message: 'Membre retiré.', type: 'toast-ok' })
-      } catch (error) {
-        console.error('Erreur:', error)
-        this.$emit('toast', { message: 'Erreur lors du retrait', type: 'toast-err' })
+        await api.delete(`/jurys-pfe/${et.jury_id}/membres/${membre.id}`)
+        et.membres = et.membres.filter(m => m.id !== membre.id)
+        this.showToast('Membre retiré.', 'toast-ok')
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors du retrait.'
+        this.showToast(msg, 'toast-err')
       }
     },
 
-    async supprimerJury(id) {
-      if (!confirm('Supprimer ce jury ?')) return
+    async supprimerJury(et) {
+      if (!confirm(`Supprimer le jury de ${et.etudiant_nom} ? Tous les membres seront retirés.`)) return
       try {
-        await api.delete(`/jurys/${id}`)
-        await this.chargerJurys()
-        this.$emit('toast', { message: 'Jury supprimé.', type: 'toast-ok' })
-      } catch (error) {
-        console.error('Erreur:', error)
-        this.$emit('toast', { message: 'Erreur lors de la suppression', type: 'toast-err' })
+        await api.delete(`/jurys-pfe/${et.jury_id}`)
+        et.jury_id  = null
+        et.membres  = []
+        this.showToast('Jury supprimé.', 'toast-ok')
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors de la suppression.'
+        this.showToast(msg, 'toast-err')
       }
     },
 
-    async declencher() {
-      if (!confirm('Lancer la délibération finale ? Cette action consolidera toutes les notes.')) return
+    // ── DÉLIBÉRATION ──────────────────────────────────────────
+    // La délibération se fait jury par jury via le tableau
+    // de l'onglet délibération. Pas de route globale.
+
+    async delibererJury(jury) {
+      if (!confirm(`Délibérer pour ${jury.etudiant_nom} ? Les notes finalisées seront consolidées.`)) return
       try {
-        await api.post('/deliberation/declencher')
-        this.$emit('toast', { message: 'Délibération lancée avec succès.', type: 'toast-ok' })
+        await api.post(`/jurys-pfe/${jury.jury_id}/deliberer`)
+        this.showToast('Délibération effectuée.', 'toast-ok')
         await this.chargerResultats()
-      } catch (error) {
-        console.error('Erreur:', error)
-        this.$emit('toast', { message: 'Erreur lors du lancement', type: 'toast-err' })
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors de la délibération.'
+        this.showToast(msg, 'toast-err')
       }
     },
 
-    async publierResultats() {
-      if (!confirm('Publier les résultats ? Les étudiants seront notifiés.')) return
+    async publierJury(jury) {
+      if (!confirm(`Publier le résultat de ${jury.etudiant_nom} ? L'étudiant sera notifié.`)) return
       try {
-        await api.post('/deliberation/publier')
-        this.$emit('toast', { message: 'Résultats publiés. Les étudiants ont été notifiés.', type: 'toast-ok' })
-        this.resultatsPublies = true
+        await api.post(`/jurys-pfe/${jury.jury_id}/publier`)
+        this.showToast('Résultat publié. L\'étudiant a été notifié.', 'toast-ok')
         await this.chargerResultats()
-      } catch (error) {
-        console.error('Erreur:', error)
-        this.$emit('toast', { message: 'Erreur lors de la publication', type: 'toast-err' })
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors de la publication.'
+        this.showToast(msg, 'toast-err')
       }
+    },
+
+    // Publier le calendrier des soutenances (jurys planifiés)
+    async publierCalendrier() {
+      if (!confirm('Publier le calendrier des soutenances ? Tous les participants seront notifiés.')) return
+      try {
+        await api.post('/jurys-pfe/publier-calendrier')
+        this.showToast('Calendrier publié.', 'toast-ok')
+        await this.chargerEtudiants()
+      } catch (err) {
+        const msg = err.response?.data?.message || 'Erreur lors de la publication.'
+        this.showToast(msg, 'toast-err')
+      }
+    },
+
+    // ── HELPERS ───────────────────────────────────────────────
+
+    presidentDe(et) {
+      const p = (et.membres || []).find(m => m.fonction === 'president')
+      return p ? p.nom : null
+    },
+
+    roleLabel(fonction) {
+      const map = { president: 'Prés.', encadrant: 'Enc.', examinateur: 'Exam.' }
+      return map[fonction] || fonction
     },
 
     mention(note) {
@@ -574,7 +619,7 @@ export default {
     initiales(n) {
       if (!n) return '?'
       return n.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)
-    }
+    },
   }
 }
 </script>
@@ -601,13 +646,11 @@ export default {
 
 /* BUTTONS */
 .btn-gold{display:flex;align-items:center;gap:7px;padding:10px 18px;background:#F5C518;color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .2s;box-shadow:0 4px 16px rgba(245,197,24,0.3)}
-.btn-gold:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 14px rgba(245,166,35,.35)}
+.btn-gold:hover:not(:disabled){transform:translateY(-1px)}
 .btn-gold:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-blue{display:flex;align-items:center;gap:7px;padding:10px 18px;background:rgba(245,197,24,0.15);color:#fff;border:none;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .2s;box-shadow:0 2px 8px rgba(61,96,128,.25)}
-.btn-blue:hover:not(:disabled){transform:translateY(-1px)}
+.btn-blue{display:flex;align-items:center;gap:7px;padding:10px 18px;background:rgba(61,96,128,0.15);color:#3d6080;border:1.5px solid #3d6080;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .2s}
+.btn-blue:hover:not(:disabled){background:rgba(61,96,128,0.25)}
 .btn-blue:disabled{opacity:.5;cursor:not-allowed}
-.btn-cancel{padding:10px 18px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;color:#4a5a6a;transition:all .18s}
-.btn-cancel:hover{background:#1A2635}
 
 /* STATS */
 .stats-bar{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
@@ -616,49 +659,63 @@ export default {
 .stat-label{font-size:12px;color:#8a9aaa;margin-top:4px}
 
 /* TABLE */
-.table-wrapper{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;overflow:hidden}
-.table{width:100%;border-collapse:collapse}
+.table-wrapper{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;overflow:auto}
+.table{width:100%;border-collapse:collapse;min-width:900px}
 .table thead tr{background:#0F1923}
-.table th{padding:11px 14px;font-size:11px;font-weight:700;color:#4a5a6a;text-transform:uppercase;letter-spacing:.05em;text-align:left}
-.table td{padding:13px 14px;font-size:13.5px;border-top:1px solid rgba(255,255,255,0.07);vertical-align:middle;background:#243347}
-.table tr:hover td{background:rgba(245,197,24,.06)}
-.row-complete td{background:rgba(39,174,96,0.08)}
-.row-complete:hover td{background:rgba(39,174,96,0.12)}
+.table th{padding:11px 14px;font-size:11px;font-weight:700;color:#7a9ab5;text-transform:uppercase;letter-spacing:.05em;text-align:left}
+.table td{padding:12px 14px;font-size:13.5px;border-top:1px solid rgba(200,196,188,0.3);vertical-align:middle;background:#fff}
+.table tr:hover td{background:#f5f3ef}
+.row-complete td{background:rgba(39,174,96,0.04)}
+.row-no-projet td{background:rgba(255,180,0,0.03)}
 
-/* PROJETS */
-.projet-nom{font-weight:700;color:#1e2a35;font-size:14px}
-.projet-etudiant{font-size:12.5px;color:#8a9aaa;margin-top:2px}
-.projet-nom-sm{font-size:13px;color:#A8BDD4}
+/* STUDENT */
+.u-nom{font-weight:700;color:#1e2a35;font-size:14px}
+.u-mat{font-size:12px;color:#7A8FA6;margin-top:1px}
+
+/* PROJET */
+.projet-titre-cell{font-size:13px;color:#2c4a6e;font-weight:500;line-height:1.4}
+.no-projet{font-size:12.5px;color:#c0781a;font-style:italic}
+
+/* ENCADRANT */
+.encadrant-chip{font-size:12.5px;color:#4a7090;background:rgba(74,112,144,0.1);padding:2px 8px;border-radius:12px}
 
 /* MEMBRES */
-.membres-list{display:flex;flex-wrap:wrap;gap:6px}
-.membre-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:20px;font-size:12.5px;color:#1e2a35}
-.chip-av{width:20px;height:20px;border-radius:50%;background:rgba(245,197,24,0.2);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.chip-del{background:none;border:none;cursor:pointer;color:#aaa;font-size:14px;line-height:1;padding:0 0 0 3px;transition:color .15s}
+.membres-list{display:flex;flex-wrap:wrap;gap:5px}
+.membre-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#e8f0f8;border:1px solid #b8d0e8;border-radius:16px;font-size:12px;color:#2c4a6e}
+.chip-av{width:18px;height:18px;border-radius:50%;background:#3d6080;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chip-role{font-size:10px;color:#7a9ab5;padding:1px 5px;background:rgba(255,255,255,0.6);border-radius:8px}
+.chip-del{background:none;border:none;cursor:pointer;color:#aaa;font-size:13px;line-height:1;padding:0 0 0 2px;transition:color .15s}
 .chip-del:hover{color:#e74c3c}
 .no-membre{font-size:12.5px;color:#aaa;font-style:italic}
 
-/* BADGES */
+/* PRESIDENT */
+.badge-president{padding:3px 10px;background:rgba(245,197,24,.12);color:#b8900a;border:1px solid rgba(245,197,24,.3);border-radius:20px;font-size:12px;font-weight:600}
+.badge-none{color:#ccc;font-size:13px}
+
+/* BADGES STATUT */
 .badge-jury{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
 .badge-complet{background:#d4edda;color:#155724}
 .badge-incomplet{background:#fff3cd;color:#856404}
-.badge-president{padding:3px 10px;background:rgba(245,197,24,.12);color:#F5C518;border-radius:20px;font-size:12px;font-weight:600}
-.badge-none{color:#aaa;font-size:13px}
-.badge-note{padding:4px 12px;background:rgba(245,197,24,0.2);color:#fff;border-radius:20px;font-size:13px;font-weight:700}
+.badge-no-projet{background:#f0e0c0;color:#7a4500}
 
-/* ACTIONS */
-.td-actions{text-align:center}
-.btn-icon{width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;margin:0 2px}
-.btn-edit{background:rgba(245,197,24,.12);color:#F5C518}.btn-edit:hover{background:rgba(245,197,24,0.2);color:#fff}
+/* INLINE ADD */
+.td-actions{text-align:center;white-space:nowrap}
+.inline-add{display:inline-block;margin-right:6px}
+.add-membre-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.select-role{padding:6px 8px;border:1.5px solid #c8c4bc;border-radius:8px;font-size:12px;color:#2c4a6e;background:#fff;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:border-color .15s}
+.select-role:focus{outline:none;border-color:#F5C518}
+.select-membre{padding:6px 10px;border:1.5px solid #c8c4bc;border-radius:8px;font-size:12.5px;color:#2c4a6e;background:#fff;cursor:pointer;font-family:'Source Sans 3',sans-serif;max-width:200px;transition:border-color .15s}
+.select-membre:focus{outline:none;border-color:#3d6080}
+.btn-icon{width:30px;height:30px;border:none;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;margin:0 2px;vertical-align:middle}
 .btn-del{background:rgba(231,76,60,.08);color:#e74c3c}.btn-del:hover{background:#e74c3c;color:#fff}
 
 /* EVAL CARDS */
-.eval-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:22px;margin-bottom:16px}
+.eval-card{background:#fff;border:1.5px solid #c8c4bc;border-radius:14px;padding:22px;margin-bottom:16px}
 .eval-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:10px}
 .eval-titre{font-weight:700;font-size:15px;color:#1e2a35;display:block}
 .eval-etudiant{font-size:13px;color:#8a9aaa;margin-top:2px;display:block}
 .eval-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.eval-jury-name{font-size:13px;color:#A8BDD4}
+.eval-jury-name{font-size:13px;color:#4a7090}
 .eval-date{font-size:12.5px;color:#aaa}
 .eval-criteres{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .critere-row{display:flex;align-items:center;gap:12px}
@@ -666,55 +723,43 @@ export default {
 .critere-bar-wrap{flex:1;height:8px;background:#f0ede8;border-radius:4px;overflow:hidden}
 .critere-bar{height:100%;background:linear-gradient(90deg,#4a7090,#f5a623);border-radius:4px;transition:width .4s}
 .critere-note{font-size:13px;font-weight:700;color:#1e2a35;min-width:48px;text-align:right}
-.eval-comment{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#e8e4dc;border-radius:9px;font-size:13px;color:#4a5a6a;font-style:italic}
+.eval-comment{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#f5f3ef;border-radius:9px;font-size:13px;color:#4a5a6a;font-style:italic}
 
 /* RÉSULTATS */
-.u-nom{font-weight:700;color:#1e2a35;font-size:14px}
-.u-mat{font-size:12px;color:#7A8FA6}
+.projet-nom-sm{font-size:13px;color:#4a7090}
 .td-center{text-align:center}
 .note-chip{padding:4px 10px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:8px;font-size:13px;font-weight:700;color:#1e2a35}
-.note-finale{background:rgba(245,197,24,0.2);color:#fff;border-color:#F5C518}
+.note-finale{background:rgba(245,197,24,0.15);color:#9a7200;border-color:rgba(245,197,24,.4)}
 .mention-badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
 .mention-tb{background:#d4edda;color:#155724}.mention-b{background:#cce5ff;color:#004085}
 .mention-ab{background:#d1ecf1;color:#0c5460}.mention-p{background:#fff3cd;color:#856404}
 .mention-ins{background:#f8d7da;color:#721c24}
 .decision-badge{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
 .decision-ok{background:#d4edda;color:#155724}.decision-nok{background:#f8d7da;color:#721c24}
+.badge-note{padding:4px 12px;background:rgba(245,197,24,0.15);color:#9a7200;border:1px solid rgba(245,197,24,.3);border-radius:20px;font-size:13px;font-weight:700}
 
 /* BANNERS */
 .banner-delib{display:flex;align-items:center;gap:10px;padding:14px 18px;background:#cce5ff;border:1px solid #b8daff;border-radius:10px;font-size:13.5px;color:#004085;font-weight:500;margin-bottom:20px}
 .banner-publie{padding:14px 18px;background:#d4edda;border:1px solid #c3e6cb;border-radius:10px;font-size:13.5px;color:#155724;font-weight:500;margin-bottom:20px}
 
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:#ddd9d1;border-radius:16px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:22px 24px 0}
-.modal-header h3{font-family:'Merriweather',serif;font-size:17px;color:#1e2a35}
-.modal-close{background:none;border:none;font-size:22px;color:#8a9aaa;cursor:pointer;line-height:1;transition:color .15s}.modal-close:hover{color:#1e2a35}
-.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
-.modal-footer{padding:16px 24px;border-top:1px solid rgba(255,255,255,0.07);display:flex;justify-content:flex-end;gap:10px}
-.form-group{display:flex;flex-direction:column;gap:6px}
-.form-group label{font-size:13.5px;font-weight:600;color:#F5C518}
-.form-group select{padding:10px 12px;border:1.5px solid #c8c4bc;border-radius:9px;background:#e8e4dc;font-size:14px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;cursor:pointer}
-.form-group select:focus{outline:none;border-color:#F5C518}
+/* TOAST INLINE */
+.toast-inline{position:fixed;bottom:28px;right:28px;padding:12px 20px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.toast-ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.toast-err{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.toast-fade-enter-active,.toast-fade-leave-active{transition:opacity .3s,transform .3s}
+.toast-fade-enter-from,.toast-fade-leave-to{opacity:0;transform:translateY(8px)}
 
-/* MEMBRES SELECT */
-.membres-select{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;border:1.5px solid #c8c4bc;border-radius:9px;padding:10px;background:#243347}
-.membre-check{padding:6px 8px;border-radius:8px;transition:background .15s}
-.membre-check:hover{background:rgba(245,197,24,.07)}
-.check-label{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px}
-.check-label input{width:15px;height:15px;cursor:pointer;accent-color:#F5C518}
-.check-av{width:28px;height:28px;border-radius:8px;background:rgba(245,197,24,0.2);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.check-nom{flex:1;font-weight:600;color:#1e2a35}
-.check-grade{font-size:12px;color:#7A8FA6}
+/* DELIBERATION TABLE extras */
+.td-date{font-size:13px;color:#4a7090}
+.btn-small{padding:6px 11px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-ok{background:#d4edda;color:#155724}.btn-ok:hover{background:#27ae60;color:#fff}
+.btn-gold-sm{background:rgba(245,197,24,.2);color:#9a7200;border:1px solid rgba(245,197,24,.4)}.btn-gold-sm:hover{background:#F5C518;color:#fff}
+.check-published{font-size:18px;color:#27ae60}
 
 /* MISC */
 .loading-state{text-align:center;padding:60px;color:#7A8FA6}
 .spinner{width:32px;height:32px;border:3px solid #c8c4bc;border-top-color:#3d6080;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-.spin-sm{width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty-state{text-align:center;padding:60px;color:#8a9aaa;line-height:1.7}
 .empty-icon{font-size:48px;margin-bottom:14px}
-.modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .2s,transform .2s}
-.modal-fade-enter-from,.modal-fade-leave-to{opacity:0;transform:scale(.97)}
 </style>
