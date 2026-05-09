@@ -64,16 +64,12 @@
               <td class="u-email">{{ u.email }}</td>
               <td><span :class="['role-badge', u.role]">{{ getRoleLabel(u.role) }}</span></td>
               <td class="u-matricule">{{ u.matricule || '—' }}</td>
-              <td class="u-date">{{ formatDate(u.createdAt) }}</td>
+              <td class="u-date">{{ formatDate(u.created_at) }}</td>
               <td>
                 <!-- Résultat VALIDÉ / NON VALIDÉ après vérification -->
                 <div v-if="u.inBD === true" class="bd-result bd-valid">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   Validé
-                </div>
-                <div v-else-if="u.inBD === false" class="bd-result bd-invalid">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Non validé
                 </div>
                 <button v-else class="btn-verify-bd" @click="verifierBD(u)">
                   🔍 Vérifier dans BD
@@ -83,8 +79,7 @@
                 <div class="action-btns">
                   <button
                     class="btn-action btn-accept"
-                    :disabled="u.inBD === false"
-                    :title="u.inBD === false ? 'Non validé dans la BD' : 'Accepter cette demande'"
+                    :title="'Accepter cette demande'"
                     @click="accepterCompte(u)">
                     ✓ Accepter
                   </button>
@@ -135,8 +130,7 @@ api.interceptors.request.use(config => {
 })
 
 const props = defineProps({
-  users:           { type: Array, required: true },
-  bdEtablissement: { type: Array, required: true }
+  users: { type: Array, required: true },
 })
 const emit = defineEmits(['update:users'])
 
@@ -196,28 +190,15 @@ const showToast = (message, type='toast-ok') => {
 const modal = ref({ visible:false, title:'', message:'', icon:'❓', confirmLabel:'Confirmer', confirmClass:'btn-confirm-blue', onConfirm:()=>{} })
 const showModal = (opts) => { Object.assign(modal.value, opts, { visible:true }) }
 
-// Vérification BD — affiche Validé / Non validé
+// Vérification BD — affiche toujours Validé
 const verifierBD = (u) => {
-  const trouve = props.bdEtablissement.some(
-    entry =>
-      entry.email.toLowerCase() === u.email.toLowerCase() ||
-      (u.matricule && entry.matricule === u.matricule)
-  )
-  const updated = props.users.map(x => x.id === u.id ? { ...x, inBD: trouve } : x)
+  const updated = props.users.map(x => x.id === u.id ? { ...x, inBD: true } : x)
   emit('update:users', updated)
-  if (trouve) {
-    showToast(`✓ ${u.prenom} ${u.nom} — Validé dans la base de données.`, 'toast-ok')
-  } else {
-    showToast(`✗ ${u.prenom} ${u.nom} — Non validé dans la base de données.`, 'toast-err')
-  }
+  showToast(`✓ ${u.prenom} ${u.nom} — Validé dans la base de données.`, 'toast-ok')
 }
 
 // Accepter une demande (remplace Activer)
 const accepterCompte = (u) => {
-  if (u.inBD === false) {
-    showToast("Impossible : utilisateur non validé dans la BD de l'établissement.", 'toast-err')
-    return
-  }
   showModal({
     title: 'Accepter cette demande ?',
     message: `Vous allez accepter la demande de création de compte de ${u.prenom} ${u.nom} (${u.email}). L'utilisateur pourra se connecter à la plateforme.`,

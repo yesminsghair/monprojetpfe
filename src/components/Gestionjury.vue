@@ -1,295 +1,162 @@
 <template>
   <div class="page-content">
 
-    <!-- TABS -->
-    <div class="tabs-bar">
-      <button class="tab-btn" :class="{active: onglet==='composition'}" @click="onglet='composition'">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Composition des jurys
-      </button>
-      <button class="tab-btn" :class="{active: onglet==='evaluation'}" @click="onglet='evaluation'">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Fiches d'évaluation
-      </button>
-      <button class="tab-btn" :class="{active: onglet==='deliberation'}" @click="onglet='deliberation'">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        Délibération &amp; résultats
-      </button>
-    </div>
-
     <!-- ══════════════════════════════════════════════════════ -->
-    <!-- ONGLET 1 : COMPOSITION DES JURYS                      -->
+    <!-- COMPOSITION DES JURYS                                  -->
     <!-- ══════════════════════════════════════════════════════ -->
-    <div v-if="onglet==='composition'">
-      <div class="page-header">
-        <div class="header-left">
-          <span class="header-icon">⚖️</span>
-          <div>
-            <h2>Composition des jurys</h2>
-            <p class="subtitle">Affecter les membres de jury à chaque étudiant de votre département</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-bar" v-if="etudiants.length">
-        <div class="stat-card"><span class="stat-val">{{ etudiants.length }}</span><span class="stat-label">Étudiants</span></div>
-        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>e.jury_id).length }}</span><span class="stat-label">Jurys créés</span></div>
-        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>e.membres && e.membres.length>=2).length }}</span><span class="stat-label">Jurys complets</span></div>
-        <div class="stat-card"><span class="stat-val">{{ etudiants.filter(e=>!e.projet_titre).length }}</span><span class="stat-label">Sans projet</span></div>
-      </div>
-
-      <!-- Loading / Empty -->
-      <div v-if="loadingEtudiants" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
-      <div v-else-if="!etudiants.length" class="empty-state">
-        <div class="empty-icon">🎓</div>
-        <p>Aucun étudiant trouvé dans votre département.</p>
-      </div>
-
-      <!-- Table étudiants + composition -->
-      <div v-else class="table-wrapper">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Étudiant</th>
-              <th>Projet PFE</th>
-              <th>Encadrant</th>
-              <th>Membres du jury</th>
-              <th>Président</th>
-              <th style="text-align:center">Statut</th>
-              <th style="text-align:center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="et in etudiants" :key="et.etudiant_id"
-                :class="{'row-complete': et.membres && et.membres.length>=2, 'row-no-projet': !et.projet_titre}">
-              <!-- Étudiant -->
-              <td>
-                <div class="u-nom">{{ et.etudiant_nom }}</div>
-                <div class="u-mat">{{ et.matricule }}</div>
-              </td>
-
-              <!-- Projet -->
-              <td>
-                <span v-if="et.projet_titre" class="projet-titre-cell">{{ et.projet_titre }}</span>
-                <span v-else class="no-projet">⚠ Pas encore de projet</span>
-              </td>
-
-              <!-- Encadrant -->
-              <td>
-                <span class="encadrant-chip">{{ et.encadrant_nom }}</span>
-              </td>
-
-              <!-- Membres actuels -->
-              <td>
-                <div class="membres-list" v-if="et.membres && et.membres.length">
-                  <span v-for="m in et.membres" :key="m.id" class="membre-chip">
-                    <span class="chip-av">{{ initiales(m.nom) }}</span>
-                    {{ m.nom }}
-                    <span class="chip-role">{{ roleLabel(m.fonction) }}</span>
-                    <button v-if="et.jury_id" class="chip-del"
-                            @click.stop="retirerMembre(et, m)" title="Retirer">×</button>
-                  </span>
-                </div>
-                <span v-else class="no-membre">Aucun membre</span>
-              </td>
-
-              <!-- Président -->
-              <td>
-                <span v-if="presidentDe(et)" class="badge-president">{{ presidentDe(et) }}</span>
-                <span v-else class="badge-none">—</span>
-              </td>
-
-              <!-- Statut -->
-              <td class="td-center">
-                <span v-if="!et.projet_titre" class="badge-jury badge-no-projet">Sans projet</span>
-                <span v-else-if="!et.jury_id" class="badge-jury badge-incomplet">⊘ Non créé</span>
-                <span v-else-if="et.membres && et.membres.length>=2" class="badge-jury badge-complet">✓ Complet</span>
-                <span v-else class="badge-jury badge-incomplet">⚠ Incomplet</span>
-              </td>
-
-              <!-- Actions -->
-              <td class="td-actions">
-                <!-- Ajouter membre via liste déroulante -->
-                <div class="inline-add" v-if="et.projet_titre">
-                  <div class="add-membre-row">
-                    <select
-                      class="select-role"
-                      v-model="selectionRole[et.etudiant_id]"
-                      title="Choisir le rôle"
-                    >
-                      <option value="examinateur">Examinateur</option>
-                      <option value="president">Président</option>
-                      <option value="encadrant">Encadrant</option>
-                    </select>
-                    <select
-                      class="select-membre"
-                      v-model="selectionMembre[et.etudiant_id]"
-                      @change="ajouterMembreRapide(et)"
-                      :title="!et.jury_id ? 'Crée le jury et ajoute le membre' : 'Ajouter un membre'"
-                    >
-                      <option value="">+ Ajouter membre</option>
-                      <optgroup label="Encadrants du département">
-                        <option
-                          v-for="ens in enseignantsDisposPour(et)"
-                          :key="ens.id"
-                          :value="ens.id + '|' + ens.nom_complet"
-                        >{{ ens.nom_complet }}</option>
-                      </optgroup>
-                    </select>
-                  </div>
-                </div>
-                <!-- Supprimer jury -->
-                <button v-if="et.jury_id" class="btn-icon btn-del"
-                        @click="supprimerJury(et)" title="Supprimer le jury">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════ -->
-    <!-- ONGLET 2 : FICHES D'ÉVALUATION                        -->
-    <!-- ══════════════════════════════════════════════════════ -->
-    <div v-if="onglet==='evaluation'">
-      <div class="page-header">
-        <div class="header-left">
-          <span class="header-icon">📋</span>
-          <div>
-            <h2>Fiches d'évaluation</h2>
-            <p class="subtitle">Consulter les évaluations soumises par les membres de jury</p>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="loadingEvals" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
-      <div v-else-if="!evaluations.length" class="empty-state">
-        <div class="empty-icon">📋</div>
-        <p>Aucune fiche d'évaluation soumise pour le moment.</p>
-      </div>
-      <div v-else>
-        <div v-for="ev in evaluations" :key="ev.id" class="eval-card">
-          <div class="eval-header">
-            <div class="eval-projet">
-              <span class="eval-titre">{{ ev.projet_titre }}</span>
-              <span class="eval-etudiant">{{ ev.etudiant_nom }}</span>
-            </div>
-            <div class="eval-meta">
-              <span class="eval-jury-name">👤 {{ ev.membre_jury }}</span>
-              <span class="eval-date">{{ ev.date }}</span>
-              <span class="badge-note">{{ ev.note_totale }}/20</span>
-            </div>
-          </div>
-          <div class="eval-criteres">
-            <div v-for="c in ev.criteres" :key="c.id" class="critere-row">
-              <span class="critere-label">{{ c.nom }}</span>
-              <div class="critere-bar-wrap">
-                <div class="critere-bar" :style="{width: (c.note/c.bareme*100)+'%'}"></div>
-              </div>
-              <span class="critere-note">{{ c.note }}/{{ c.bareme }}</span>
-            </div>
-          </div>
-          <div v-if="ev.commentaire" class="eval-comment">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 0 2 2z"/></svg>
-            {{ ev.commentaire }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════ -->
-    <!-- ONGLET 3 : DÉLIBÉRATION & RÉSULTATS                   -->
-    <!-- ══════════════════════════════════════════════════════ -->
-    <div v-if="onglet==='deliberation'">
-      <div class="page-header">
-        <div class="header-left">
-          <span class="header-icon">🏆</span>
-          <div>
-            <h2>Délibération &amp; résultats</h2>
-            <p class="subtitle">Délibérer et publier les résultats jury par jury</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button class="btn-blue" @click="publierCalendrier">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Publier calendrier soutenances
-          </button>
-        </div>
-      </div>
-
-      <div v-if="loadingResultats" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
-      <div v-else-if="!jurysDelib.length" class="empty-state">
-        <div class="empty-icon">🏆</div>
-        <p>Aucun jury créé pour le moment. Composez d'abord les jurys dans l'onglet Composition.</p>
-      </div>
-      <div v-else class="table-wrapper">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Étudiant</th>
-              <th>Projet</th>
-              <th>Date soutenance</th>
-              <th style="text-align:center">Note finale</th>
-              <th style="text-align:center">Mention</th>
-              <th style="text-align:center">Décision</th>
-              <th style="text-align:center">Statut</th>
-              <th style="text-align:center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="j in jurysDelib" :key="j.jury_id">
-              <td><div class="u-nom">{{ j.etudiant_nom }}</div></td>
-              <td class="projet-nom-sm">{{ j.projet_titre || '—' }}</td>
-              <td class="td-date">{{ j.date_soutenance || '—' }}</td>
-              <td class="td-center">
-                <span v-if="j.note_finale !== null" class="note-chip note-finale">{{ j.note_finale }}/20</span>
-                <span v-else class="badge-none">—</span>
-              </td>
-              <td class="td-center">
-                <span v-if="j.note_finale !== null" class="mention-badge" :class="mentionClass(j.note_finale)">{{ mention(j.note_finale) }}</span>
-                <span v-else class="badge-none">—</span>
-              </td>
-              <td class="td-center">
-                <span v-if="j.note_finale !== null" class="decision-badge" :class="j.note_finale>=10?'decision-ok':'decision-nok'">
-                  {{ j.note_finale>=10 ? '✓ Admis' : '✗ Ajourné' }}
-                </span>
-                <span v-else class="badge-none">—</span>
-              </td>
-              <td class="td-center">
-                <span v-if="j.publie" class="badge-jury badge-complet">✓ Publié</span>
-                <span v-else-if="j.note_finale !== null" class="badge-jury badge-incomplet">Délibéré</span>
-                <span v-else class="badge-jury badge-no-projet">En attente</span>
-              </td>
-              <td class="td-actions">
-                <!-- Délibérer : disponible si jury existe et pas encore délibéré -->
-                <button v-if="j.note_finale === null"
-                        class="btn-small btn-ok"
-                        @click="delibererJury(j)"
-                        title="Délibérer">
-                  ⚖ Délibérer
-                </button>
-                <!-- Publier : disponible si délibéré mais pas encore publié -->
-                <button v-if="j.note_finale !== null && !j.publie"
-                        class="btn-small btn-gold-sm"
-                        @click="publierJury(j)"
-                        title="Publier le résultat">
-                  📢 Publier
-                </button>
-                <span v-if="j.publie" class="check-published">✓</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
 
     <!-- Toast inline -->
     <transition name="toast-fade">
       <div v-if="toast.show" class="toast-inline" :class="toast.type">{{ toast.message }}</div>
     </transition>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <span class="header-icon">👥</span>
+        <div>
+          <h2>Composition des jurys</h2>
+          <span class="subtitle">Gérez les membres de jury pour chaque étudiant de votre département</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-blue" @click="chargerEtudiants" :disabled="loadingEtudiants">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Actualiser
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-val">{{ etudiants.length }}</span>
+        <span class="stat-label">Étudiants</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">{{ etudiants.filter(e=>e.jury_id).length }}</span>
+        <span class="stat-label">Jurys créés</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">{{ etudiants.filter(e=>(e.membres||[]).length>=3).length }}</span>
+        <span class="stat-label">Jurys complets</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">{{ etudiants.filter(e=>!e.projet_pfe_id).length }}</span>
+        <span class="stat-label">Sans projet</span>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loadingEtudiants" class="loading-state">
+      <div class="spinner"></div>
+      Chargement des données…
+    </div>
+
+    <!-- Empty -->
+    <div v-else-if="!etudiants.length" class="empty-state">
+      <div class="empty-icon">🎓</div>
+      <div>Aucun étudiant trouvé pour votre département.</div>
+    </div>
+
+    <!-- Table -->
+    <div v-else class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Étudiant</th>
+            <th>Projet PFE</th>
+            <th>Encadrant</th>
+            <th>Membres du jury</th>
+            <th>Président</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="et in etudiants" :key="et.etudiant_id"
+              :class="{
+                'row-complete':  (et.membres||[]).length >= 3,
+                'row-no-projet': !et.projet_pfe_id,
+              }">
+
+            <!-- Étudiant -->
+            <td>
+              <div class="u-nom">{{ et.etudiant_nom }}</div>
+              <div class="u-mat">{{ et.matricule || '—' }}</div>
+            </td>
+
+            <!-- Projet -->
+            <td>
+              <span v-if="et.projet_titre" class="projet-titre-cell">{{ et.projet_titre }}</span>
+              <span v-else class="no-projet">Aucun projet PFE</span>
+            </td>
+
+            <!-- Encadrant -->
+            <td>
+              <span v-if="et.encadrant_nom" class="encadrant-chip">{{ et.encadrant_nom }}</span>
+              <span v-else class="no-membre">—</span>
+            </td>
+
+            <!-- Membres du jury -->
+            <td>
+              <div v-if="(et.membres||[]).length" class="membres-list">
+                <span v-for="m in et.membres" :key="m.id" class="membre-chip">
+                  <span class="chip-av">{{ initiales(m.nom) }}</span>
+                  {{ m.nom }}
+                  <span class="chip-role">{{ roleLabel(m.fonction) }}</span>
+                  <button class="chip-del" @click="retirerMembre(et, m)" title="Retirer">×</button>
+                </span>
+              </div>
+              <span v-else class="no-membre">Aucun membre</span>
+            </td>
+
+            <!-- Président -->
+            <td>
+              <span v-if="presidentDe(et)" class="badge-president">{{ presidentDe(et) }}</span>
+              <span v-else class="badge-none">—</span>
+            </td>
+
+            <!-- Statut -->
+            <td>
+              <span v-if="!et.projet_pfe_id" class="badge-jury badge-no-projet">Sans projet</span>
+              <span v-else-if="(et.membres||[]).length >= 3" class="badge-jury badge-complet">✓ Complet</span>
+              <span v-else class="badge-jury badge-incomplet">⚠ Incomplet</span>
+            </td>
+
+            <!-- Actions : ajouter membre -->
+            <td class="td-actions">
+              <div v-if="et.projet_pfe_id && (et.membres||[]).length < 3" class="add-membre-row">
+                <!-- Rôle -->
+                <select v-model="selectionRole[et.etudiant_id]" class="select-role">
+                  <option value="examinateur">Examinateur</option>
+                  <option value="president">Président</option>
+                  <option value="encadrant">Encadrant</option>
+                </select>
+
+                <!-- Membre : grouped by dept encadrants first -->
+                <select v-model="selectionMembre[et.etudiant_id]"
+                        class="select-membre"
+                        @change="ajouterMembreRapide(et)">
+                  <option value="">+ Ajouter membre</option>
+                  <optgroup label="Encadrants du département">
+                    <option v-for="e in enseignantsDisposPour(et)" :key="e.id"
+                            :value="e.id + '|' + e.nom_complet">
+                      {{ e.nom_complet }}
+                    </option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Supprimer jury -->
+              <button v-if="et.jury_id" class="btn-icon btn-del" @click="supprimerJury(et)" title="Supprimer le jury">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
   </div>
 </template>
@@ -303,24 +170,14 @@ export default {
 
   data() {
     return {
-      onglet: 'composition',
-
       loadingEtudiants: false,
-      loadingEvals:     false,
-      loadingResultats: false,
 
-      // Onglet 1 : liste des étudiants du chef avec leur jury
+      // Composition : liste des étudiants du chef avec leur jury
       etudiants:      [],
       enseignants:    [],   // tous enseignants/encadrants dispo
       // reactive map : etudiant_id → selected value "id|nom" dans le select
       selectionMembre: {},
       selectionRole: {},
-
-      // Onglet 2
-      evaluations: [],
-
-      // Onglet 3 — built by chargerResultats() merging jurys + resultats_pfe
-      jurysDelib: [],
 
       toast: { show: false, message: '', type: 'toast-ok' },
     }
@@ -328,8 +185,6 @@ export default {
 
   mounted() {
     this.chargerEtudiants()
-    this.chargerEvaluations()
-    this.chargerResultats()
   },
 
   methods: {
@@ -389,65 +244,7 @@ export default {
       }
     },
 
-    async chargerEvaluations() {
-      this.loadingEvals = true
-      try {
-        // Notes PFE (fiches d'évaluation = notes par jury)
-        const res = await api.get('/resultats-pfe')
-        this.evaluations = (res.data || []).map(ev => ({
-          id:            ev.id,
-          projet_titre:  ev.projet_titre || 'Projet',
-          etudiant_nom:  ev.etudiant_nom || 'Étudiant',
-          membre_jury:   ev.encadrant_nom || '—',
-          note_totale:   ev.note_finale || 0,
-          criteres:      [],
-          commentaire:   null,
-        }))
-      } catch (err) {
-        console.error('Erreur chargement évaluations:', err)
-        this.evaluations = []
-      } finally {
-        this.loadingEvals = false
-      }
-    },
 
-    async chargerResultats() {
-      this.loadingResultats = true
-      try {
-        // Fetch all jurys (contains date_soutenance, statut, etudiant, projet)
-        const [jurysRes, resultatsRes] = await Promise.all([
-          api.get('/jurys-pfe'),
-          api.get('/resultats-pfe'),
-        ])
-
-        const resultatsMap = {}
-        for (const r of (resultatsRes.data || [])) {
-          // Key by jury_id — but resultats-pfe doesn't return jury_id directly.
-          // We match by etudiant_nom / projet_titre. Better: use jury from jurys list.
-          resultatsMap[r.etudiant_nom] = r
-        }
-
-        this.jurysDelib = (jurysRes.data || []).map(j => {
-          // Try to find a matching resultat for this jury
-          const res = (resultatsRes.data || []).find(r => r.etudiant_nom === j.etudiant_nom)
-          return {
-            jury_id:         j.id,
-            etudiant_nom:    j.etudiant_nom || '—',
-            projet_titre:    j.projet_titre || '—',
-            date_soutenance: j.date_soutenance || null,
-            note_finale:     res ? parseFloat(res.note_finale) : null,
-            mention:         res?.mention || null,
-            decision:        res?.decision || null,
-            publie:          res?.publie ?? false,
-          }
-        })
-      } catch (err) {
-        console.error('Erreur chargement résultats:', err)
-        this.jurysDelib = []
-      } finally {
-        this.loadingResultats = false
-      }
-    },
 
     // ── COMPOSITION RAPIDE ────────────────────────────────────
 
@@ -551,42 +348,8 @@ export default {
     // La délibération se fait jury par jury via le tableau
     // de l'onglet délibération. Pas de route globale.
 
-    async delibererJury(jury) {
-      if (!confirm(`Délibérer pour ${jury.etudiant_nom} ? Les notes finalisées seront consolidées.`)) return
-      try {
-        await api.post(`/jurys-pfe/${jury.jury_id}/deliberer`)
-        this.showToast('Délibération effectuée.', 'toast-ok')
-        await this.chargerResultats()
-      } catch (err) {
-        const msg = err.response?.data?.message || 'Erreur lors de la délibération.'
-        this.showToast(msg, 'toast-err')
-      }
-    },
 
-    async publierJury(jury) {
-      if (!confirm(`Publier le résultat de ${jury.etudiant_nom} ? L'étudiant sera notifié.`)) return
-      try {
-        await api.post(`/jurys-pfe/${jury.jury_id}/publier`)
-        this.showToast('Résultat publié. L\'étudiant a été notifié.', 'toast-ok')
-        await this.chargerResultats()
-      } catch (err) {
-        const msg = err.response?.data?.message || 'Erreur lors de la publication.'
-        this.showToast(msg, 'toast-err')
-      }
-    },
 
-    // Publier le calendrier des soutenances (jurys planifiés)
-    async publierCalendrier() {
-      if (!confirm('Publier le calendrier des soutenances ? Tous les participants seront notifiés.')) return
-      try {
-        await api.post('/jurys-pfe/publier-calendrier')
-        this.showToast('Calendrier publié.', 'toast-ok')
-        await this.chargerEtudiants()
-      } catch (err) {
-        const msg = err.response?.data?.message || 'Erreur lors de la publication.'
-        this.showToast(msg, 'toast-err')
-      }
-    },
 
     // ── HELPERS ───────────────────────────────────────────────
 
@@ -600,21 +363,7 @@ export default {
       return map[fonction] || fonction
     },
 
-    mention(note) {
-      if (note >= 16) return 'Très bien'
-      if (note >= 14) return 'Bien'
-      if (note >= 12) return 'Assez bien'
-      if (note >= 10) return 'Passable'
-      return 'Insuffisant'
-    },
 
-    mentionClass(note) {
-      if (note >= 16) return 'mention-tb'
-      if (note >= 14) return 'mention-b'
-      if (note >= 12) return 'mention-ab'
-      if (note >= 10) return 'mention-p'
-      return 'mention-ins'
-    },
 
     initiales(n) {
       if (!n) return '?'

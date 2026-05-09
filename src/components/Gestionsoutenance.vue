@@ -523,8 +523,32 @@ export default {
     },
 
     async chargerPlans() {
-      // No backend endpoint for proposals yet — leave list empty
-      this.plans = []
+      // Nouvelle structure : chaque ligne plans_soutenance = un créneau proposé
+      // (date, heure_debut, salle directement dans la ligne, plus de creneaux[])
+      try {
+        const res = await api.get('/plans-soutenance')
+        this.plans = (res.data || []).map(p => ({
+          id:               p.id,
+          membre_jury:      p.proposant_nom || ('Proposant #' + p.proposant_id),
+          date_proposition: p.created_at
+            ? new Date(p.created_at).toLocaleDateString('fr-FR')
+            : '—',
+          statut: p.statut === 'approuve' ? 'validé'
+                : p.statut === 'rejete'  ? 'rejeté'
+                : 'En attente',
+          soutenance_id:    p.soutenance_id || null,
+          // Créneau proposé (directement dans la ligne)
+          sessions: [{
+            date:   p.date || '—',
+            heure:  p.heure_debut || '—',
+            salle:  p.salle || '—',
+            projet: p.projet_titre || (p.soutenance_id ? ('Soutenance #' + p.soutenance_id) : '—'),
+          }],
+        }))
+      } catch (e) {
+        console.error('Erreur chargement plans:', e)
+        this.plans = []
+      }
     },
 
     detecterConflits() {
@@ -694,7 +718,7 @@ export default {
 
     async validerPlan(plan) {
       try {
-        await api.put(`/soutenances/plans/${plan.id}/valider`)
+        await api.put(`/plans-soutenance/${plan.id}/valider`)
         plan.statut = 'validé'
         this.$emit('toast', { message: 'Plan validé avec succès.', type: 'toast-ok' })
       } catch (error) {
@@ -705,7 +729,7 @@ export default {
 
     async rejeterPlan(plan) {
       try {
-        await api.put(`/soutenances/plans/${plan.id}/rejeter`)
+        await api.put(`/plans-soutenance/${plan.id}/rejeter`)
         plan.statut = 'rejeté'
         this.$emit('toast', { message: 'Plan rejeté.', type: 'toast-ok' })
       } catch (error) {

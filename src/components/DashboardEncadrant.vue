@@ -20,7 +20,6 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Tableau de bord</span>
         </button>
 
-        <!-- ✅ NEW: Vœux d'encadrement section -->
         <div class="nav-cat" v-if="!sidebarCollapsed">Vœux d'encadrement</div>
 
         <button v-if="!voeuxSoumis" class="nav-item" :class="{active:currentPage==='voeux'}" @click="navigate('voeux')" :title="sidebarCollapsed?'Mes vœux':''">
@@ -81,6 +80,43 @@
           <span class="nav-label" v-if="!sidebarCollapsed">Messagerie</span>
         </button>
 
+        <div class="nav-cat" v-if="!sidebarCollapsed">Soutenance</div>
+
+        <button class="nav-item nav-parent" :class="{active: soutenanceOpen || isSoutenancePage}" @click="soutenanceOpen=!soutenanceOpen" :title="sidebarCollapsed?'Soutenance':''">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Plan de soutenance <svg class="chevron" :class="{open:soutenanceOpen}" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </button>
+        <div v-if="(soutenanceOpen || isSoutenancePage) && !sidebarCollapsed" class="sub-nav">
+          <button class="nav-item nav-child" :class="{active:currentPage==='calendrier-soutenance'}" @click="navigate('calendrier-soutenance')">
+            <span class="nav-icon sub-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+            <span class="nav-label">Calendrier</span>
+          </button>
+          <button class="nav-item nav-child" :class="{active:currentPage==='proposer-plan'}" @click="navigate('proposer-plan')">
+            <span class="nav-icon sub-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <span class="nav-label">Proposer un plan</span>
+          </button>
+        </div>
+
+        <div class="nav-cat" v-if="!sidebarCollapsed">Évaluation</div>
+
+        <button class="nav-item nav-parent" :class="{active: evaluationOpen || isEvaluationPage}" @click="evaluationOpen=!evaluationOpen" :title="sidebarCollapsed?'Évaluation':''">
+          <span class="nav-icon" style="position:relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <span v-if="sidebarCollapsed && projetsNonEvalues>0" class="badge-dot"></span>
+          </span>
+          <span class="nav-label" v-if="!sidebarCollapsed">Évaluation PFE <span v-if="projetsNonEvalues>0" class="badge-cnt">{{ projetsNonEvalues }}</span> <svg class="chevron" :class="{open:evaluationOpen}" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </button>
+        <div v-if="(evaluationOpen || isEvaluationPage) && !sidebarCollapsed" class="sub-nav">
+          <button class="nav-item nav-child" :class="{active:currentPage==='projets-a-evaluer'}" @click="navigate('projets-a-evaluer')">
+            <span class="nav-icon sub-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></span>
+            <span class="nav-label">Projets à évaluer <span v-if="projetsNonEvalues>0" class="badge-cnt">{{ projetsNonEvalues }}</span></span>
+          </button>
+          <button class="nav-item nav-child" :class="{active:currentPage==='mes-evaluations'}" @click="navigate('mes-evaluations')">
+            <span class="nav-icon sub-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <span class="nav-label">Mes évaluations</span>
+          </button>
+        </div>
+
       </nav>
       <div class="sb-user" v-if="!sidebarCollapsed">
         <div class="u-av" style="cursor:pointer" @click="navigate('profil')" :title="'Mon profil'">{{ initiales(currentUser.prenom+' '+currentUser.nom) }}</div>
@@ -102,71 +138,15 @@
       <div class="content-area">
         <transition name="page-fade" mode="out-in">
 
-          <!-- HOME -->
-          <div v-if="currentPage==='home'" key="home">
-            <div class="ptb"><h1 class="pt">Bonjour, {{ currentUser.prenom }} 👋</h1><p class="ps">Gérez les demandes des étudiants et consultez vos affectations.</p></div>
+          <!-- ══ HOME — delegated to DashboardEncadrantHome ══ -->
+          <DashboardEncadrantHome
+            v-if="currentPage === 'home'"
+            key="home"
+            :current-user="currentUser"
+            @navigate="navigate"
+          />
 
-            <!-- ✅ NEW: voeux alert on home -->
-            <div class="alert-gold" v-if="formulaireActif && !voeuxSoumis">
-              <span class="al-icon">📋</span>
-              <div class="al-body">
-                <div class="al-t">Formulaire de vœux disponible</div>
-                <div class="al-s">Date limite : <strong>{{ formatDate(formulaireActif.date_limite) }}</strong></div>
-              </div>
-              <button class="btn-alert" @click="navigate('voeux')">Remplir maintenant →</button>
-            </div>
-
-            <div v-if="etudiantsAffectes.length" class="banner-affectation">
-              <div class="ba-icon">📋</div>
-              <div class="ba-body">
-                <div class="ba-t">Liste d'affectation publiée</div>
-                <div class="ba-s">Vous avez <strong>{{ etudiantsAffectes.length }}</strong> étudiant(s) affecté(s) officiellement.</div>
-              </div>
-              <button class="ba-btn" @click="navigate('affectes')">Voir la liste →</button>
-            </div>
-
-            <div class="alert-gold" v-if="nbEnAttente>0">
-              <span class="al-icon">📬</span>
-              <div class="al-body"><div class="al-t">{{ nbEnAttente }} demande(s) en attente de réponse</div><div class="al-s">Des étudiants attendent votre décision.</div></div>
-              <button class="btn-alert" @click="navigate('demandes')">Traiter maintenant →</button>
-            </div>
-
-            <div class="kpi-grid">
-              <div class="kpi-card kpi-gold"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="kpi-v">{{ nbEnAttente }}</div><div class="kpi-l">En attente</div></div></div>
-              <div class="kpi-card kpi-green"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="kpi-v">{{ etudiantsAffectes.length }}</div><div class="kpi-l">Acceptées</div></div></div>
-              <div class="kpi-card kpi-blue"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="kpi-v">{{ etudiantsAffectes.length }}</div><div class="kpi-l">Affectés (chef dept)</div></div></div>
-              <div class="kpi-card kpi-slate"><div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div><div><div class="kpi-v">{{ capaciteMax }}</div><div class="kpi-l">Capacité max</div></div></div>
-            </div>
-            <div class="sec-title">Actions rapides</div>
-            <div class="qa-grid">
-              <!-- ✅ NEW: voeux quick-action -->
-              <button class="qa-card" @click="navigate('voeux')">
-                <div class="qa-icon qa-teal"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                <div class="qa-txt">
-                  <div class="qa-t">{{ voeuxSoumis ? 'Consulter ma fiche de vœux' : 'Remplir le formulaire de vœux' }}</div>
-                  <div class="qa-s">{{ voeuxSoumis ? 'Voir vos préférences soumises' : 'Disponibilité, spécialités, capacité' }}</div>
-                </div>
-                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('demandes')">
-                <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-                <div class="qa-txt"><div class="qa-t">Gérer les demandes étudiants</div><div class="qa-s">Accepter ou rejeter avec motif</div></div>
-                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('affectes')">
-                <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-                <div class="qa-txt"><div class="qa-t">Consulter mes étudiants affectés</div><div class="qa-s">Liste établie par le chef de département</div></div>
-                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('suivi')">
-                <div class="qa-icon qa-teal"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-                <div class="qa-txt"><div class="qa-t">Suivi &amp; livrables</div><div class="qa-s">Valider ou rejeter les livrables</div></div>
-                <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- ✅ NEW: VOEUX PAGE (fill or read-only) -->
+          <!-- VOEUX -->
           <div v-else-if="currentPage==='voeux'" key="voeux">
             <!-- Lecture (already submitted) -->
             <div v-if="voeuxSoumis && !modeModifierVoeux" class="page-content">
@@ -352,10 +332,190 @@
           <ConsulterProfil v-else-if="currentPage==='profil'" key="profil" @modifier="currentPage='profil-edit'"/>
           <ModifierProfil  v-else-if="currentPage==='profil-edit'" key="profil-edit" @annuler="currentPage='profil'" @sauvegarde="currentPage='profil'"/>
 
+          <!-- PROPOSER UN PLAN -->
+          <div v-else-if="currentPage==='proposer-plan'" key="proposer-plan">
+            <div class="ptb"><h2 class="spt">Proposer un plan de soutenances</h2><p class="sps">Soumettez une proposition de créneaux au chef de département</p></div>
+
+            <div v-if="!etudiantsAffectes.length" class="empty-state">
+              <div class="empty-icon">📅</div>
+              <div class="empty-t">Aucun étudiant affecté</div>
+              <p class="empty-s">Vous devez avoir des étudiants affectés pour proposer un plan de soutenance.</p>
+            </div>
+
+            <div v-else class="plan-form">
+              <div class="plan-form-title">Créneaux proposés</div>
+              <div v-for="(slot, i) in planSlots" :key="i" class="plan-slot-row">
+                <div class="form-group"><label>Date</label><input type="date" v-model="slot.date" /></div>
+                <div class="form-group"><label>Heure</label><input type="time" v-model="slot.heure" /></div>
+                <div class="form-group"><label>Salle</label><input type="text" v-model="slot.salle" placeholder="ex: A101" /></div>
+                <div class="form-group">
+                  <label>Étudiant / Projet</label>
+                  <select v-model="slot.etudiant_id">
+                    <option value="">— Sélectionner —</option>
+                    <option v-for="e in etudiantsAffectes" :key="e.id" :value="e.id">
+                      {{ e.prenom }} {{ e.nom }} · {{ e.specialite || '—' }}
+                    </option>
+                  </select>
+                </div>
+                <button class="btn-del-slot" @click="planSlots.splice(i,1)" v-if="planSlots.length>1">×</button>
+              </div>
+              <button class="btn-add-slot" @click="ajouterSlotEnc">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Ajouter un créneau
+              </button>
+              <div class="plan-form-actions">
+                <button class="btn-primary-enc" @click="soumettreplanEnc" :disabled="savingPlan">
+                  <span v-if="savingPlan" class="spin-sm"></span>
+                  {{ savingPlan ? 'Envoi en cours...' : 'Soumettre le plan' }}
+                </button>
+              </div>
+
+              <div v-if="mesPlansEnc.length" style="border-top:1px solid rgba(255,255,255,0.07);padding-top:20px;margin-top:24px">
+                <div class="plan-form-title">Mes plans précédemment soumis</div>
+                <div v-for="plan in mesPlansEnc" :key="plan.id" class="plan-history">
+                  <span class="ph-date">{{ plan.date_proposition }}</span>
+                  <span class="ph-status" :class="plan.statut==='validé'||plan.statut==='approuve' ? 'ph-ok' : plan.statut==='rejeté'||plan.statut==='rejete' ? 'ph-nok' : 'ph-wait'">
+                    {{ plan.statut === 'approuve' ? 'Validé' : plan.statut === 'rejete' ? 'Rejeté' : 'En attente' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ CALENDRIER SOUTENANCE ════ -->
+          <div v-else-if="currentPage==='calendrier-soutenance'" key="calendrier-soutenance">
+            <div class="ptb"><h2 class="spt">📅 Calendrier de soutenance</h2><p class="sps">Vos sessions planifiées par le chef de département</p></div>
+            <div v-if="loadingSessions" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
+            <div v-else-if="!mesSessions.length" class="empty-state">
+              <div class="empty-icon">📅</div>
+              <div class="empty-t">Aucune session planifiée</div>
+              <p class="empty-s">Le calendrier sera affiché une fois que le chef de département aura publié les soutenances.</p>
+            </div>
+            <div v-else class="sessions-list">
+              <div v-for="s in mesSessions" :key="s.id" class="session-card">
+                <div class="session-date-block">
+                  <div class="session-jour">{{ formatJour(s.date) }}</div>
+                  <div class="session-mois">{{ formatMois(s.date) }}</div>
+                </div>
+                <div class="session-details">
+                  <div class="session-titre">{{ s.projet }}</div>
+                  <div class="session-info">🕐 {{ s.heure_debut }} – {{ s.heure_fin }} · 🏫 {{ s.salle }}</div>
+                  <div class="session-etudiant">👤 {{ s.etudiant }}</div>
+                </div>
+                <div class="session-status">
+                  <span class="badge-session" :class="s.evalue ? 'badge-done' : 'badge-todo'">{{ s.evalue ? '✓ Évalué' : '⏳ À évaluer' }}</span>
+                  <button v-if="!s.evalue" class="btn-eval-quick" @click="ouvrirEvaluation(s)">Évaluer →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ PROJETS À ÉVALUER ════ -->
+          <div v-else-if="currentPage==='projets-a-evaluer'" key="projets-a-evaluer">
+            <div class="ptb"><h2 class="spt">🗂 Projets à évaluer</h2><p class="sps">Téléchargez les livrables et remplissez la grille d'évaluation</p></div>
+            <div v-if="loadingProjets" class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
+            <div v-else-if="!mesProjets.length" class="empty-state">
+              <div class="empty-icon">📄</div>
+              <div class="empty-t">Aucun projet assigné</div>
+              <p class="empty-s">Vous n'avez pas encore de projets à évaluer en tant que membre de jury.</p>
+            </div>
+            <div v-else class="projets-grid">
+              <div v-for="p in mesProjets" :key="p.id" class="projet-card" :class="{'projet-evalue': p.evalue}">
+                <div class="pc-header">
+                  <div class="pc-titre">{{ p.titre }}</div>
+                  <span class="pc-badge" :class="p.evalue ? 'badge-evalue' : 'badge-pending'">{{ p.evalue ? '✓ Évalué' : '⏳ En attente' }}</span>
+                </div>
+                <div class="pc-etudiant">👤 {{ p.etudiant_nom }} · Encadrant : {{ p.encadrant }}</div>
+                <div class="pc-session" v-if="p.date_soutenance">📅 {{ p.date_soutenance }} · 🏫 {{ p.salle }}</div>
+                <div class="pc-actions">
+                  <a v-if="p.livrable_url" :href="p.livrable_url" target="_blank" class="btn-download">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Livrable
+                  </a>
+                  <span v-else class="no-livrable">Livrable non disponible</span>
+                  <button class="btn-evaluer" @click="ouvrirEvaluation(p)">{{ p.evalue ? '✏ Modifier' : '📝 Évaluer' }}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════ MES ÉVALUATIONS ════ -->
+          <div v-else-if="currentPage==='mes-evaluations'" key="mes-evaluations">
+            <div class="ptb"><h2 class="spt">✅ Mes évaluations</h2><p class="sps">Consultez et modifiez vos évaluations avant la délibération</p></div>
+            <div v-if="!mesEvaluations.length" class="empty-state">
+              <div class="empty-icon">📋</div>
+              <div class="empty-t">Aucune évaluation soumise</div>
+              <p class="empty-s">Vos évaluations apparaîtront ici après avoir noté vos projets assignés.</p>
+              <button class="btn-primary-enc" style="margin-top:12px" @click="navigate('projets-a-evaluer')">Voir les projets →</button>
+            </div>
+            <div v-else>
+              <div v-for="ev in mesEvaluations" :key="ev.id" class="eval-card">
+                <div class="eval-header">
+                  <div><div class="eval-titre">{{ ev.projet_titre }}</div><div class="eval-etudiant-sub">{{ ev.etudiant_nom }}</div></div>
+                  <div class="eval-meta">
+                    <span class="eval-date">{{ ev.date }}</span>
+                    <span class="badge-note">{{ ev.note_totale }}/20</span>
+                    <button class="btn-modifier" @click="ouvrirModif(ev)">✏ Modifier</button>
+                  </div>
+                </div>
+                <div class="eval-criteres" v-if="ev.criteres && ev.criteres.length">
+                  <div v-for="c in ev.criteres" :key="c.id" class="critere-row">
+                    <span class="critere-label">{{ c.nom }}</span>
+                    <div class="critere-bar-wrap"><div class="critere-bar" :style="{width: (c.bareme ? c.note/c.bareme*100 : 0)+'%'}"></div></div>
+                    <span class="critere-note">{{ c.note }}/{{ c.bareme }}</span>
+                  </div>
+                </div>
+                <div v-if="ev.commentaire" class="eval-comment">💬 {{ ev.commentaire }}</div>
+              </div>
+            </div>
+          </div>
+
         </transition>
       </div>
     </div>
   </div>
+  <!-- ════ MODAL ÉVALUATION ════ -->
+  <transition name="modal-fade">
+    <div v-if="showEvalModal" class="overlay" @click.self="showEvalModal=false">
+      <div class="modal modal-lg">
+        <button class="fiche-close" @click="showEvalModal=false">×</button>
+        <h3 class="modal-title">Évaluation — {{ evalProjet?.titre }}</h3>
+        <p class="eval-etudiant-info">👤 {{ evalProjet?.etudiant_nom }} · Encadrant : {{ evalProjet?.encadrant }}</p>
+        <div v-if="loadingGrille" class="loading-state" style="padding:20px"><div class="spinner"></div></div>
+        <div v-else-if="!evalCategories.length" class="empty-state" style="padding:20px">
+          <p>Aucune grille d'évaluation publiée. Contactez le chef de département.</p>
+        </div>
+        <div v-else class="eval-scroll">
+          <div v-for="cat in evalCategories" :key="cat.id" class="eval-category">
+            <div class="cat-header"><span class="cat-nom">{{ cat.nom }}</span><span class="cat-bareme">/ {{ cat.bareme_max }} pts</span></div>
+            <div class="grille-criteres">
+              <div v-for="c in cat.criteres" :key="c.id" class="critere-eval-row">
+                <div class="ce-info"><div class="ce-nom">{{ c.nom }}</div><div class="ce-desc">Barème : /{{ c.bareme_max }}</div></div>
+                <div class="ce-note-wrap">
+                  <input type="number" :min="0" :max="c.bareme_max" step="0.25" v-model.number="c.note"
+                    class="note-input" :class="{'note-err': c.note > c.bareme_max || c.note < 0}" />
+                  <span class="ce-max">/{{ c.bareme_max }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="eval-total"><span>Note totale :</span><span class="total-val">{{ noteTotale.toFixed(2) }}/20</span></div>
+        <div class="form-group" style="margin-top:14px">
+          <label>Commentaire (facultatif)</label>
+          <textarea v-model="evalCommentaire" rows="3" placeholder="Observations générales..."></textarea>
+        </div>
+        <div class="modal-footer-enc">
+          <button class="btn-cancel-enc" @click="showEvalModal=false">Annuler</button>
+          <button class="btn-primary-enc" @click="soumettreEvaluation" :disabled="savingEval">
+            <span v-if="savingEval" class="spin-sm"></span>
+            {{ savingEval ? 'Envoi...' : 'Soumettre l\'évaluation' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
+
 </template>
 
 <script>
@@ -368,38 +528,83 @@ import SuiviEncadrant from './Suiviencadrant.vue'
 import ReunionEncadrant from './Reunionencadrant.vue'
 import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
 import FicheVoeux from './GestionFormulaires/FicheVoeux.vue'
+import DashboardEncadrantHome from './DashboardEncadrantHome.vue'
 
 export default {
   name: 'DashboardEncadrant',
-  components: {ConsulterProfil, ModifierProfil, DemandesEncadrement, SuiviEncadrant, ReunionEncadrant, FicheVoeux, NotificationsDropdown, Messagerie },
+  components: {
+    ConsulterProfil, ModifierProfil, DemandesEncadrement,
+    SuiviEncadrant, ReunionEncadrant, FicheVoeux,
+    NotificationsDropdown, Messagerie,
+    DashboardEncadrantHome,
+  },
 
   async mounted() {
     await this.chargerDonnees()
     await this.chargerFormulaireActif()
+    this.chargerMesPlansEnc()
+    this.chargerMesSessions()
+    this.chargerMesProjetsJury()
   },
 
   data() {
     return {
       sidebarCollapsed: false,
       currentPage: 'home',
-      toast: { visible:false, type:'toast-ok', message:'' },
+      toast: { visible: false, type: 'toast-ok', message: '' },
       currentUser: JSON.parse(localStorage.getItem('user') || '{}'),
       nbEnAttente: 0,
+      nbLivrablesPending: 0,
       etudiantsAffectes: [],
       capaciteMax: 0,
       searchEtu: '',
       ficheEtudiant: null,
 
-      // ✅ NEW: voeux state (mirrors DashboardEnseignant)
+      // Voeux state
       formulaireActif: null,
       voeuxSoumis: false,
       voeuxData: null,
       dateSoumission: '',
       modeModifierVoeux: false,
+
+      // Proposer un plan
+      planSlots: [{ date: '', heure: '', salle: '', etudiant_id: '' }],
+      savingPlan: false,
+      mesPlansEnc: [],
+
+      // Soutenance
+      mesSessions: [],
+      loadingSessions: false,
+
+      // Évaluation (as jury member for encadrant role)
+      mesProjets: [],
+      mesEvaluations: [],
+      loadingProjets: false,
+      showEvalModal: false,
+      evalProjet: null,
+      evalCategories: [],
+      evalCommentaire: '',
+      loadingGrille: false,
+      savingEval: false,
+
+      // Sous-menus toggle
+      soutenanceOpen: false,
+      evaluationOpen: false,
     }
   },
 
   computed: {
+    projetsNonEvalues() { return this.mesProjets.filter(p => !p.evalue).length },
+
+    noteTotale() {
+      let total = 0
+      this.evalCategories.forEach(cat => { cat.criteres.forEach(c => { total += (c.note || 0) }) })
+      return total
+    },
+
+    isSoutenancePage() { return ['calendrier-soutenance','proposer-plan'].includes(this.currentPage) },
+    isEvaluationPage() { return ['projets-a-evaluer','mes-evaluations'].includes(this.currentPage) },
+
     etudiantsFiltres() {
       if (!this.searchEtu) return this.etudiantsAffectes
       const q = this.searchEtu.toLowerCase()
@@ -411,20 +616,23 @@ export default {
     },
     breadcrumb() {
       return {
-        voeux:        'Mes vœux d\'encadrement',
-        demandes:     'Gérer les demandes',
-        affectes:     'Étudiants affectés',
-        suivi:        'Suivi & livrables',
-        reunions:     'Réunions',
-        messagerie:   'Messagerie',
-        profil:       'Mon profil',
-        'profil-edit':'Modifier le profil',
+        voeux:           'Mes vœux d\'encadrement',
+        demandes:        'Gérer les demandes',
+        affectes:        'Étudiants affectés',
+        suivi:           'Suivi & livrables',
+        reunions:        'Réunions',
+        messagerie:      'Messagerie',
+        'proposer-plan':          'Plan de soutenance — Proposer',
+        'calendrier-soutenance':  'Plan de soutenance — Calendrier',
+        'projets-a-evaluer':      'Évaluation PFE — Projets à évaluer',
+        'mes-evaluations':        'Évaluation PFE — Mes évaluations',
+        profil:          'Mon profil',
+        'profil-edit':   'Modifier le profil',
       }[this.currentPage] || ''
     },
     dateNow() {
-      return new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+      return new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     },
-    // Allow modification only if deadline not passed and form not locked
     peutModifier() {
       if (!this.formulaireActif?.date_limite) return false
       if (this.formulaireActif.statut === 'verrouille') return false
@@ -443,7 +651,7 @@ export default {
       this.$router?.push('/login')
     },
 
-    initiales(n) { return (n||'?').split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2) },
+    initiales(n) { return (n || '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) },
 
     formatDate(d) {
       if (!d) return '—'
@@ -479,16 +687,15 @@ export default {
         const affRes = await api.get('/affectations/mes-affectations')
         const raw = affRes.data
         const affData = Array.isArray(raw) ? raw : (raw && raw.id ? [raw] : [])
-        // All results are already diffusée — no need to filter further
         this.etudiantsAffectes = affData.map(a => ({
-          id:        a.etudiant_id,
-          prenom:    a.etudiant ? a.etudiant.split(' ')[0] : '',
-          nom:       a.etudiant ? a.etudiant.split(' ').slice(1).join(' ') : '',
-          matricule: a.matricule || '',
-          specialite:a.specialite || '',
-          email:     a.email || '',
-          telephone: a.telephone || '',
-          statut:    a.statut,
+          id:         a.etudiant_id,
+          prenom:     a.etudiant ? a.etudiant.split(' ')[0] : '',
+          nom:        a.etudiant ? a.etudiant.split(' ').slice(1).join(' ') : '',
+          matricule:  a.matricule || '',
+          specialite: a.specialite || '',
+          email:      a.email || '',
+          telephone:  a.telephone || '',
+          statut:     a.statut,
         }))
 
         const demRes = await api.get('/demandes-encadrement')
@@ -510,18 +717,16 @@ export default {
     onNbEnAttente(nb) { this.nbEnAttente = nb },
 
     onVoeuxSoumis(voeux) {
-      this.voeuxSoumis      = true
-      this.voeuxData        = voeux
-      this.dateSoumission   = new Date().toLocaleDateString('fr-FR')
+      this.voeuxSoumis       = true
+      this.voeuxData         = voeux
+      this.dateSoumission    = new Date().toLocaleDateString('fr-FR')
       this.modeModifierVoeux = false
-      this.capaciteMax      = voeux?.nbre_max_pfe || this.capaciteMax
+      this.capaciteMax       = voeux?.nbre_max_pfe || this.capaciteMax
       this.afficherToast({ message: 'Vos vœux ont été soumis avec succès !', type: 'toast-ok' })
       this.navigate('voeux')
     },
 
     onRoleChanged(newRole) {
-      // encadrant role-changed event is a no-op here (they're already encadrant)
-      // but update localStorage in case the server changed something
       if (newRole) {
         this.currentUser = { ...this.currentUser, role: newRole }
         localStorage.setItem('user', JSON.stringify(this.currentUser))
@@ -538,13 +743,229 @@ export default {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `etudiants_affectes_${new Date().toISOString().slice(0,10)}.csv`
+      a.download = `etudiants_affectes_${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(url)
     },
 
-    afficherToast({message,type}) {
-      this.toast = { visible:true, type, message }
+    ajouterSlotEnc() {
+      this.planSlots.push({ date: '', heure: '', salle: '', etudiant_id: '' })
+    },
+
+    async chargerMesPlansEnc() {
+      try {
+        const res = await api.get('/plans-soutenance')
+        const userId = this.currentUser.id
+        this.mesPlansEnc = (res.data || [])
+          .filter(p => p.proposant_id === userId || p.encadrant_id === userId)
+          .map(p => ({
+            id: p.id,
+            date_proposition: p.created_at
+              ? new Date(p.created_at).toLocaleDateString('fr-FR')
+              : new Date().toLocaleDateString('fr-FR'),
+            statut: p.statut || 'En attente',
+          }))
+      } catch (e) {
+        // endpoint may not exist yet — silently ignore
+      }
+    },
+
+    async soumettreplanEnc() {
+      // Nouvelle structure : une ligne plans_soutenance = un créneau (date/heure/salle inline)
+      // On soumet un plan par slot rempli (plusieurs appels API si plusieurs slots)
+      const slots = this.planSlots.filter(s => s.date && s.heure && s.salle)
+      if (!slots.length) {
+        this.afficherToast({ message: 'Veuillez remplir au moins un créneau (date, heure, salle).', type: 'toast-err' })
+        return
+      }
+      this.savingPlan = true
+      try {
+        // Chercher si l'étudiant sélectionné a déjà une soutenance pour lier le plan
+        for (const s of slots) {
+          let soutenanceId = null
+          if (s.etudiant_id) {
+            // Trouver la soutenance de cet étudiant via les sessions déjà chargées
+            const session = (this.mesSessions || []).find(ms => ms.etudiant_id === s.etudiant_id)
+            soutenanceId = session?.id || null
+          }
+          await api.post('/plans-soutenance', {
+            proposant_id:  this.currentUser.id,
+            role:          'encadrant',
+            date:          s.date,
+            heure_debut:   s.heure,
+            salle:         s.salle,
+            soutenance_id: soutenanceId,
+          })
+        }
+        this.afficherToast({ message: '✅ Plan(s) soumis au chef de département avec succès.', type: 'toast-ok' })
+        this.mesPlansEnc.unshift({
+          id: Date.now(),
+          date_proposition: new Date().toLocaleDateString('fr-FR'),
+          statut: 'En attente',
+        })
+        this.planSlots = [{ date: '', heure: '', salle: '', etudiant_id: '' }]
+        await this.chargerMesPlansEnc()
+      } catch (e) {
+        const msg = e?.response?.data?.message || 'Erreur lors de la soumission du plan.'
+        this.afficherToast({ message: msg, type: 'toast-err' })
+      } finally {
+        this.savingPlan = false
+      }
+    },
+
+    // ── CALENDRIER SOUTENANCE ─────────────────────────────────────────
+    async chargerMesSessions() {
+      this.loadingSessions = true
+      try {
+        const res = await api.get('/jurys-pfe')
+        const userId = this.currentUser.id
+        this.mesSessions = (res.data || [])
+          .filter(j => j.date_soutenance && (j.encadrant_id === userId || (j.membres || []).some(m => m.enseignant_id === userId)))
+          .map(j => ({
+            id: j.id,
+            date: j.date_soutenance,
+            heure_debut: (j.heure_debut || '').substring(0, 5),
+            heure_fin:   (j.heure_fin   || '').substring(0, 5),
+            salle:   j.salle       || '—',
+            projet:  j.projet_titre || '—',
+            etudiant: j.etudiant_nom || '—',
+            evalue: false,
+          }))
+      } catch(e) { console.error('Erreur sessions:', e); this.mesSessions = [] }
+      finally { this.loadingSessions = false }
+    },
+
+    // ── ÉVALUATION ────────────────────────────────────────────────────
+    async chargerMesProjetsJury() {
+      this.loadingProjets = true
+      try {
+        const res = await api.get('/jurys-pfe')
+        const userId = this.currentUser.id
+        this.mesProjets = (res.data || [])
+          .filter(j => (j.membres || []).some(m => m.enseignant_id === userId))
+          .map(j => ({
+            id: j.id,
+            titre:        j.projet_titre  || ('Projet #' + j.id),
+            etudiant_nom: j.etudiant_nom  || '—',
+            encadrant:    j.encadrant_nom || '—',
+            date_soutenance: j.date_soutenance || null,
+            salle:           j.salle || null,
+            livrable_url:    null,
+            evalue:          false,
+          }))
+
+        // Mark already-evaluated projects
+        if (this.mesEvaluations.length) {
+          this.mesEvaluations.forEach(ev => {
+            const p = this.mesProjets.find(pr => pr.titre === ev.projet_titre)
+            if (p) p.evalue = true
+          })
+        }
+      } catch(e) { console.error('Erreur projets jury:', e); this.mesProjets = [] }
+      finally { this.loadingProjets = false }
+    },
+
+    async ouvrirEvaluation(projet) {
+      this.evalProjet = projet
+      this.evalCommentaire = ''
+      this.showEvalModal = true
+      this.loadingGrille = true
+      try {
+        const res = await api.get('/grilles')
+        const grilles = res.data || []
+        // Validated grille has statut 'verrouille' — that is the one to use
+        const grille = grilles.find(g => g.statut === 'verrouille')
+        if (grille) {
+          const detail = await api.get(`/grilles/${grille.id}`)
+          this.evalCategories = (detail.data.categories || []).map(cat => ({
+            id: cat.id, nom: cat.nom, bareme_max: parseFloat(cat.bareme_max),
+            criteres: (cat.criteres || []).map(cr => ({
+              id: cr.id, nom: cr.nom, bareme_max: parseFloat(cr.bareme_max), note: 0,
+            }))
+          }))
+        } else { this.evalCategories = [] }
+      } catch(e) { console.error('Erreur grille:', e); this.evalCategories = [] }
+      finally { this.loadingGrille = false }
+
+      // Pre-fill if already evaluated
+      const existing = this.mesEvaluations.find(ev => ev.projet_titre === projet.titre)
+      if (existing?.criteres?.length) {
+        this.evalCategories.forEach(cat => {
+          cat.criteres.forEach(cr => {
+            const found = existing.criteres.find(ec => ec.id === cr.id)
+            if (found) cr.note = found.note || 0
+          })
+        })
+        this.evalCommentaire = existing.commentaire || ''
+      }
+    },
+
+    ouvrirModif(ev) {
+      const projet = this.mesProjets.find(p => p.titre === ev.projet_titre) || {
+        titre: ev.projet_titre, etudiant_nom: ev.etudiant_nom, encadrant: '—'
+      }
+      this.ouvrirEvaluation(projet)
+    },
+
+    async soumettreEvaluation() {
+      for (const cat of this.evalCategories) {
+        for (const c of cat.criteres) {
+          if (c.note < 0 || c.note > c.bareme_max) {
+            this.afficherToast({ message: `Note invalide pour "${c.nom}" (max ${c.bareme_max}).`, type: 'toast-err' })
+            return
+          }
+        }
+      }
+      this.savingEval = true
+      try {
+        const juryId = this.evalProjet?.id
+        if (juryId) {
+          await api.post(`/jurys-pfe/${juryId}/notes`, {
+            enseignant_id: this.currentUser.id,
+            note: parseFloat(this.noteTotale.toFixed(2)),
+            commentaire: this.evalCommentaire,
+            finalise: true,
+          })
+        }
+        this.afficherToast({ message: 'Évaluation soumise avec succès.', type: 'toast-ok' })
+
+        // Update local state
+        const idx = this.mesProjets.findIndex(p => p.id === this.evalProjet?.id)
+        if (idx !== -1) this.mesProjets[idx].evalue = true
+
+        const allCriteres = this.evalCategories.flatMap(cat =>
+          cat.criteres.map(c => ({ id: c.id, nom: c.nom, bareme: c.bareme_max, note: c.note }))
+        )
+        const newEval = {
+          id: Date.now(),
+          projet_titre: this.evalProjet?.titre,
+          etudiant_nom: this.evalProjet?.etudiant_nom,
+          date: new Date().toLocaleDateString('fr-FR'),
+          note_totale: parseFloat(this.noteTotale.toFixed(2)),
+          criteres: allCriteres,
+          commentaire: this.evalCommentaire,
+        }
+        const existIdx = this.mesEvaluations.findIndex(e => e.projet_titre === this.evalProjet?.titre)
+        if (existIdx !== -1) this.mesEvaluations[existIdx] = newEval
+        else this.mesEvaluations.push(newEval)
+
+        this.showEvalModal = false
+      } catch(e) {
+        this.afficherToast({ message: e?.response?.data?.message || 'Erreur lors de la soumission.', type: 'toast-err' })
+      } finally { this.savingEval = false }
+    },
+
+    formatJour(d) {
+      if (!d) return '—'
+      return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric' })
+    },
+    formatMois(d) {
+      if (!d) return ''
+      return new Date(d).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }).toUpperCase()
+    },
+
+    afficherToast({ message, type }) {
+      this.toast = { visible: true, type, message }
       setTimeout(() => { this.toast.visible = false }, 3400)
     },
   },
@@ -583,28 +1004,8 @@ export default {
 .breadcrumb{display:flex;align-items:center;gap:7px;font-size:13.5px}.bc-root{color:#F5C518;font-weight:600}.bc-curr{color:#E8EDF2;font-weight:600}
 .topbar-r{display:flex;align-items:center;gap:14px}.tb-date{font-size:12.5px;color:#7A8FA6;text-transform:capitalize}
 .content-area{flex:1;padding:32px;overflow-y:auto}
-.ptb{margin-bottom:24px}.pt{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#E8EDF2;margin-bottom:5px}.ps{font-size:14px;color:#7A8FA6}
-.banner-affectation{display:flex;align-items:center;gap:14px;background:#d4edda;border:1.5px solid rgba(39,174,96,0.4);border-radius:14px;padding:18px 22px;margin-bottom:20px}
-.ba-icon{font-size:28px;flex-shrink:0}.ba-body{flex:1}.ba-t{font-size:15px;font-weight:700;color:#1e7e34;margin-bottom:3px}.ba-s{font-size:13.5px;color:#2d6a4f}
-.ba-btn{padding:9px 18px;background:#27ae60;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.ba-btn:hover{background:#1e8449}
-.ph{margin-bottom:22px}.spt{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#E8EDF2;margin-bottom:4px}.sps{font-size:13.5px;color:#7A8FA6}
-.alert-gold{display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:14px;margin-bottom:20px;background:#fff8e8;border:1.5px solid #f5a623}
-.al-icon{font-size:28px;flex-shrink:0}.al-body{flex:1}.al-t{font-size:14px;font-weight:700;color:#7d5a00;margin-bottom:3px}.al-s{font-size:13px;color:#9a7020}
-.btn-alert{padding:9px 18px;background:#f5a623;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .18s}.btn-alert:hover{background:#d98e1a}
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
-.kpi-card{background:#1A2635;border-radius:14px;padding:22px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid rgba(245,197,24,0.18)}
-.kpi-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.kpi-blue .kpi-icon{background:rgba(245,197,24,0.12);color:#F5C518}.kpi-gold .kpi-icon{background:rgba(245,166,35,0.12);color:#d98e1a}.kpi-green .kpi-icon{background:rgba(39,174,96,0.12);color:#27ae60}.kpi-slate .kpi-icon{background:rgba(74,90,106,0.1);color:#A8BDD4}
-.kpi-v{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#E8EDF2;line-height:1}.kpi-l{font-size:12px;color:#7A8FA6;margin-top:4px}
-.sec-title{font-size:12px;font-weight:700;color:#7A8FA6;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
-.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.qa-card{display:flex;align-items:center;gap:14px;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:18px 20px;cursor:pointer;text-align:left;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
-.qa-card:hover{border-color:#F5C518;box-shadow:0 4px 18px rgba(61,96,128,0.12);transform:translateY(-2px)}
-.qa-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.qa-blue{background:rgba(245,197,24,0.12);color:#F5C518}.qa-gold{background:rgba(245,166,35,0.12);color:#d98e1a}.qa-teal{background:rgba(39,174,96,0.12);color:#27ae60}
-.qa-txt{flex:1}.qa-t{font-size:14px;font-weight:600;color:#E8EDF2;margin-bottom:2px}.qa-s{font-size:12.5px;color:#7A8FA6}
-.qa-arr{color:#c8c4bc;flex-shrink:0;transition:transform .18s,color .18s}.qa-card:hover .qa-arr{transform:translateX(3px);color:#F5C518}
-/* Voeux read-only fiche (encadrant theme) */
+.ptb{margin-bottom:24px}.spt{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#E8EDF2;margin-bottom:4px}.sps{font-size:13.5px;color:#7A8FA6}
+/* Voeux read-only fiche */
 .page-content{padding:0}
 .page-header-block{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:16px;flex-wrap:wrap}
 .page-title{font-family:'Syne',sans-serif;font-size:20px;color:#E8EDF2;margin-bottom:4px}
@@ -682,6 +1083,114 @@ export default {
 .modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .25s}.modal-fade-enter-from,.modal-fade-leave-to{opacity:0}
 .page-fade-enter-active{transition:opacity .25s,transform .25s cubic-bezier(.22,1,.36,1)}.page-fade-leave-active{transition:opacity .15s}
 .page-fade-enter-from{opacity:0;transform:translateY(8px)}.page-fade-leave-to{opacity:0}
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}.qa-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.content-area{padding:20px}.topbar{padding:0 16px}}
+/* Plan */
+.plan-form{background:#1A2635;border:1px solid rgba(245,197,24,0.15);border-radius:14px;padding:24px}
+.plan-form-title{font-weight:700;font-size:14.5px;color:#E8EDF2;margin-bottom:16px}
+.plan-slot-row{display:grid;grid-template-columns:1fr 1fr 1fr 2fr auto;gap:12px;align-items:end;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12.5px;font-weight:600;color:#F5C518}
+.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid rgba(245,197,24,0.18);border-radius:8px;background:#243347;font-size:13.5px;color:#E8EDF2;font-family:'DM Sans',sans-serif}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#F5C518}
+.btn-del-slot{width:32px;height:32px;border:none;border-radius:8px;background:rgba(231,76,60,.1);color:#e74c3c;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.btn-del-slot:hover{background:#e74c3c;color:#fff}
+.btn-add-slot{display:flex;align-items:center;gap:7px;padding:9px 16px;background:#243347;border:1.5px dashed rgba(245,197,24,0.3);border-radius:9px;font-size:13px;font-weight:600;color:#7A8FA6;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s;margin-bottom:20px}
+.btn-add-slot:hover{border-color:#F5C518;color:#F5C518}
+.plan-form-actions{display:flex;justify-content:flex-end}
+.plan-history{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.ph-date{font-size:13px;color:#A8BDD4;flex:1}
+.ph-status{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.ph-ok{background:#d4edda;color:#155724}.ph-nok{background:#f8d7da;color:#721c24}.ph-wait{background:#fff3cd;color:#856404}
+.spin-sm{width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Submenu ── */
+.nav-parent{justify-content:space-between}
+.sub-nav{padding-left:14px;margin-bottom:4px}
+.nav-child{font-size:13px;padding:8px 10px;color:rgba(255,255,255,0.55)}
+.nav-child.active{color:#F5C518;background:rgba(245,166,35,0.15)}
+.sub-icon{opacity:.7}
+.chevron{margin-left:auto;transition:transform .2s;flex-shrink:0}
+.chevron.open{transform:rotate(180deg)}
+
+/* ── Sessions calendar ── */
+.sessions-list{display:flex;flex-direction:column;gap:12px}
+.session-card{display:flex;align-items:center;gap:16px;background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:16px 20px;transition:background .15s}
+.session-card:hover{background:#243347}
+.session-date-block{display:flex;flex-direction:column;align-items:center;min-width:52px}
+.session-jour{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#F5C518;line-height:1}
+.session-mois{font-size:11px;color:#7A8FA6;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.session-details{flex:1}
+.session-titre{font-weight:700;font-size:14.5px;color:#E8EDF2;margin-bottom:4px}
+.session-info{font-size:13px;color:#A8BDD4;margin-bottom:3px}
+.session-etudiant{font-size:13px;color:#7A8FA6}
+.session-status{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:110px}
+.badge-session{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.badge-done{background:rgba(39,174,96,0.15);color:#27ae60}
+.badge-todo{background:rgba(245,197,24,0.1);color:#F5C518}
+.btn-eval-quick{padding:6px 12px;background:#F5C518;color:#0F1923;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-eval-quick:hover{background:#d9ae10}
+
+/* ── Projets grid ── */
+.projets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.projet-card{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:20px;transition:border-color .15s}
+.projet-card:hover{border-color:rgba(245,197,24,0.4)}
+.projet-evalue{border-color:rgba(39,174,96,0.3)}
+.pc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.pc-titre{font-weight:700;font-size:14.5px;color:#E8EDF2;line-height:1.3}
+.pc-badge{padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.badge-evalue{background:rgba(39,174,96,0.15);color:#27ae60}
+.badge-pending{background:rgba(245,197,24,0.1);color:#F5C518}
+.pc-etudiant{font-size:13px;color:#A8BDD4;margin-bottom:6px}
+.pc-session{font-size:12.5px;color:#7A8FA6;margin-bottom:14px}
+.pc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-download{display:flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:13px;color:#A8BDD4;text-decoration:none;transition:all .15s}
+.btn-download:hover{border-color:#F5C518;color:#F5C518}
+.no-livrable{font-size:12.5px;color:#7A8FA6;font-style:italic}
+.btn-evaluer{padding:8px 16px;background:#F5C518;color:#0F1923;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-evaluer:hover{background:#d9ae10}
+
+/* ── Evaluation cards ── */
+.eval-card{background:#1A2635;border:1px solid rgba(245,197,24,0.18);border-radius:14px;padding:20px;margin-bottom:14px}
+.eval-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.eval-titre{font-weight:700;font-size:14.5px;color:#E8EDF2;margin-bottom:4px}
+.eval-etudiant-sub{font-size:13px;color:#7A8FA6}
+.eval-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eval-date{font-size:12.5px;color:#7A8FA6}
+.badge-note{padding:4px 12px;background:rgba(245,197,24,0.15);color:#F5C518;border-radius:20px;font-size:13px;font-weight:700}
+.btn-modifier{padding:6px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;font-size:12.5px;color:#A8BDD4;cursor:pointer;transition:all .15s}
+.btn-modifier:hover{border-color:#F5C518;color:#F5C518}
+.eval-criteres{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.critere-row{display:flex;align-items:center;gap:10px}
+.critere-label{font-size:12.5px;color:#A8BDD4;min-width:160px;flex-shrink:0}
+.critere-bar-wrap{flex:1;height:6px;background:#0F1923;border-radius:99px;overflow:hidden}
+.critere-bar{height:100%;background:linear-gradient(90deg,#3d6080,#F5C518);border-radius:99px;transition:width .4s ease}
+.critere-note{font-size:12px;color:#7A8FA6;min-width:50px;text-align:right}
+.eval-comment{padding:10px 14px;background:#0F1923;border-radius:8px;font-size:13px;color:#A8BDD4;border-left:3px solid rgba(245,197,24,0.4)}
+
+/* ── Eval Modal ── */
+.modal-lg{max-width:640px;width:95%}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;color:#E8EDF2;margin-bottom:6px}
+.eval-etudiant-info{font-size:13px;color:#7A8FA6;margin-bottom:18px}
+.eval-scroll{max-height:52vh;overflow-y:auto;padding-right:4px}
+.eval-category{margin-bottom:20px}
+.cat-header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0F1923;border-radius:8px;margin-bottom:10px}
+.cat-nom{font-weight:700;font-size:13.5px;color:#F5C518}
+.cat-bareme{font-size:12.5px;color:#7A8FA6}
+.grille-criteres{display:flex;flex-direction:column;gap:8px;padding:0 4px}
+.critere-eval-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;background:#243347;border-radius:8px}
+.ce-info{flex:1}
+.ce-nom{font-size:13.5px;color:#E8EDF2;font-weight:600}
+.ce-desc{font-size:11.5px;color:#7A8FA6;margin-top:2px}
+.ce-note-wrap{display:flex;align-items:center;gap:6px}
+.note-input{width:72px;padding:6px 8px;border:1.5px solid rgba(245,197,24,0.25);border-radius:7px;background:#1A2635;color:#E8EDF2;font-size:14px;font-family:'DM Sans',sans-serif;text-align:center}
+.note-input:focus{outline:none;border-color:#F5C518}
+.note-err{border-color:#e74c3c!important}
+.ce-max{font-size:12.5px;color:#7A8FA6;min-width:24px}
+.eval-total{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0F1923;border-radius:10px;margin:16px 0 4px;font-size:14px;color:#A8BDD4;font-weight:600}
+.total-val{font-size:20px;font-weight:800;color:#F5C518;font-family:'Syne',sans-serif}
+.modal-footer-enc{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.btn-cancel-enc{padding:10px 18px;background:transparent;border:1px solid rgba(245,197,24,0.18);border-radius:9px;font-size:13px;font-weight:600;color:#A8BDD4;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+.btn-cancel-enc:hover{border-color:#F5C518;color:#F5C518}
+
 </style>

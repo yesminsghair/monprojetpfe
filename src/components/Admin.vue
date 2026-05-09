@@ -51,11 +51,11 @@
             <div v-if="openGroup === 'comptes' && !sidebarCollapsed" class="sub-menu">
               <!-- Nouvelle étiquette : Gérer les demandes de création -->
               <button class="sub-item" :class="{ active: currentPage === 'comptes-demandes' }" @click="navigate('comptes-demandes')">
-                <span class="sub-dot"></span>Gérer les demandes de création
+                <span class="sub-dot"></span>Demandes de création
               </button>
-              <!-- Nouvelle étiquette : Consulter les comptes utilisateurs -->
+              <!-- Nouvelle étiquette : Comptes utilisateurs -->
               <button class="sub-item" :class="{ active: currentPage === 'comptes-liste' }" @click="navigate('comptes-liste')">
-                <span class="sub-dot"></span>Consulter les comptes utilisateurs
+                <span class="sub-dot"></span>Comptes utilisateurs
               </button>
             </div>
           </transition>
@@ -162,7 +162,7 @@
               <button class="qa-card" @click="navigate('comptes-demandes')">
                 <div class="qa-icon qa-gold">📋</div>
                 <div class="qa-text">
-                  <div class="qa-title">Gérer les demandes de création</div>
+                  <div class="qa-title">Demandes de création</div>
                   <div class="qa-sub">Vérifier et accepter les demandes en attente</div>
                 </div>
                 <span class="qa-arrow">›</span>
@@ -170,7 +170,7 @@
               <button class="qa-card" @click="navigate('comptes-liste')">
                 <div class="qa-icon qa-blue">👁</div>
                 <div class="qa-text">
-                  <div class="qa-title">Consulter les comptes utilisateurs</div>
+                  <div class="qa-title">Comptes utilisateurs</div>
                   <div class="qa-sub">Activer, désactiver ou supprimer des comptes</div>
                 </div>
                 <span class="qa-arrow">›</span>
@@ -182,7 +182,6 @@
           <div v-else-if="currentPage === 'comptes-demandes'" key="demandes">
             <GererDemandesCreation
               :users="users"
-              :bdEtablissement="BD_ETABLISSEMENT"
               @update:users="users = $event"
             />
           </div>
@@ -277,8 +276,8 @@ const onProfilSauvegarde = (updated) => {
 const breadcrumb = computed(() => {
   const map = {
     home:              [],
-    'comptes-demandes':['Gestion des comptes utilisateur', 'Gérer les demandes de création'],
-    'comptes-liste':   ['Gestion des comptes utilisateur', 'Consulter les comptes utilisateurs'],
+    'comptes-demandes':['Gestion des comptes utilisateur', 'Demandes de création'],
+    'comptes-liste':   ['Gestion des comptes utilisateur', 'Comptes utilisateurs'],
     'profil':          ['Mon profil', 'Consultation'],
     'profil-edit':     ['Mon profil', 'Modifier'],
   }

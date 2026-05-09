@@ -314,8 +314,10 @@
                 <div class="form-group">
                   <label>Projet</label>
                   <select v-model="slot.projet_id">
-                    <option value="">— Projet —</option>
-                    <option v-for="p in mesProjets" :key="p.id" :value="p.id">{{ p.titre }}</option>
+                    <option value="">— Sélectionner un projet —</option>
+                    <option v-for="p in mesProjets" :key="p.id" :value="p.id">
+                      {{ p.titre }} · {{ p.etudiant_nom }}
+                    </option>
                   </select>
                 </div>
                 <button class="btn-del-slot" @click="planSlots.splice(i,1)" v-if="planSlots.length>1">×</button>
@@ -568,9 +570,10 @@ export default {
         this.loadingProjets = false
       }
 
-      // Suivi et réunions en parallèle
+      // Suivi, réunions et plans en parallèle
       this.chargerSuivi()
       this.chargerReunions()
+      this.chargerMesPlans()
     },
 
     async chargerSuivi() {
@@ -726,26 +729,64 @@ export default {
 
     ajouterSlot() { this.planSlots.push({ date: '', heure: '', salle: '', projet_id: '' }) },
 
+    async chargerMesPlans() {
+      try {
+        const res = await api.get('/plans-soutenance')
+        const userId = this.currentUser.id
+        this.mesPlans = (res.data || [])
+          .filter(p => p.proposant_id === userId || p.jury_membre_id === userId)
+          .map(p => ({
+            id: p.id,
+            date_proposition: p.created_at
+              ? new Date(p.created_at).toLocaleDateString('fr-FR')
+              : new Date().toLocaleDateString('fr-FR'),
+            statut: p.statut || 'En attente',
+          }))
+      } catch(e) {
+        // endpoint may not exist yet — silently ignore
+      }
+    },
+
     async soumettreplan() {
+      // Validate: every slot must have date, heure, salle
       const valid = this.planSlots.every(s => s.date && s.heure && s.salle)
-      if (!valid) { this.afficherToast({ message: 'Remplissez tous les champs.', type: 'toast-err' }); return }
+      if (!valid) {
+        this.afficherToast({ message: 'Veuillez remplir la date, l\'heure et la salle pour chaque créneau.', type: 'toast-err' })
+        return
+      }
+      // At least one slot must have a project selected
+      const hasProjet = this.planSlots.some(s => s.projet_id)
+      if (!hasProjet) {
+        this.afficherToast({ message: 'Veuillez sélectionner au moins un projet.', type: 'toast-err' })
+        return
+      }
+
       this.savingPlan = true
       try {
-        // Créer des séances de soutenance
-        for (const slot of this.planSlots) {
-          if (slot.projet_id) {
-            await api.post('/soutenances', {
-              jury_id: slot.projet_id,
-              date_seance: `${slot.date} ${slot.heure}:00`,
-              salle: slot.salle,
-            })
-          }
-        }
-        this.afficherToast({ message: 'Plan soumis au chef de département.', type: 'toast-ok' })
-        this.mesPlans.push({ id: Date.now(), date_proposition: new Date().toLocaleDateString('fr-FR'), statut: 'En attente' })
+        // Send the full plan as a single request to the chef endpoint
+        await api.post('/plans-soutenance', {
+          proposant_id: this.currentUser.id,
+          role: 'jury',
+          creneaux: this.planSlots
+            .filter(s => s.projet_id)
+            .map(s => ({
+              jury_id:      s.projet_id,
+              date:         s.date,
+              heure_debut:  s.heure,
+              salle:        s.salle,
+            })),
+        })
+
+        this.afficherToast({ message: '✅ Plan soumis au chef de département avec succès.', type: 'toast-ok' })
+        this.mesPlans.unshift({
+          id: Date.now(),
+          date_proposition: new Date().toLocaleDateString('fr-FR'),
+          statut: 'En attente',
+        })
         this.planSlots = [{ date: '', heure: '', salle: '', projet_id: '' }]
       } catch(e) {
-        this.afficherToast({ message: 'Erreur lors de la soumission du plan.', type: 'toast-err' })
+        const msg = e?.response?.data?.message || 'Erreur lors de la soumission du plan.'
+        this.afficherToast({ message: msg, type: 'toast-err' })
       } finally {
         this.savingPlan = false
       }

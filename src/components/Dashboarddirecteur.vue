@@ -152,91 +152,20 @@
         <transition name="page-fade" mode="out-in">
 
           <!-- HOME -->
-          <div v-if="currentPage === 'home'" key="home" class="page-home">
-            <div class="page-title-block">
-              <h1 class="page-title">Bonjour, {{ currentUser.prenom }} 👋</h1>
-              <p class="page-subtitle">Voici un aperçu de votre espace de gestion des PFE.</p>
-            </div>
+          <DashboardDirecteurHome
+            v-if="currentPage === 'home'"
+            key="home"
+            :current-user="currentUser"
+            :grilles-en-attente="grillesEnAttente"
+            @navigate="navigate"
+          />
 
-            <!-- Alerte grilles en attente -->
-            <div v-if="grillesEnAttente > 0" class="alert-validation">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <div class="alert-body">
-                <div class="alert-title">{{ grillesEnAttente }} grille(s) en attente de validation</div>
-                <div class="alert-sub">Des chefs de département ont soumis des grilles pour votre approbation.</div>
-              </div>
-              <button class="btn-alert" @click="navigate('grilles-validation')">Valider maintenant →</button>
-            </div>
-
-            <div class="kpi-grid">
-              <div class="kpi-card kpi-blue">
-                <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
-                <div class="kpi-body"><div class="kpi-value">{{ specialites.length }}</div><div class="kpi-label">Total spécialités</div></div>
-              </div>
-              <div class="kpi-card kpi-gold">
-                <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                <div class="kpi-body"><div class="kpi-value">{{ chefs.length }}</div><div class="kpi-label">Chefs de département</div></div>
-              </div>
-              <div class="kpi-card kpi-green">
-                <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-                <div class="kpi-body"><div class="kpi-value">{{ grillesValidees }}</div><div class="kpi-label">Grilles validées</div></div>
-              </div>
-              <div class="kpi-card kpi-slate">
-                <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-                <div class="kpi-body"><div class="kpi-value">{{ grillesEnAttente }}</div><div class="kpi-label">Grilles en attente</div></div>
-              </div>
-            </div>
-
-            <div class="section-title">Actions rapides</div>
-            <div class="quick-actions">
-              <button class="qa-card" @click="navigate('spec-create')">
-                <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-                <div class="qa-text"><div class="qa-title">Nouvelle spécialité</div><div class="qa-sub">Créer une spécialité académique</div></div>
-                <svg class="qa-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('chef-create')">
-                <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
-                <div class="qa-text"><div class="qa-title">Ajouter un chef</div><div class="qa-sub">Nouveau chef de département</div></div>
-                <svg class="qa-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('grilles-validation')">
-                <div class="qa-icon" :class="grillesEnAttente > 0 ? 'qa-orange' : 'qa-green'">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </div>
-                <div class="qa-text">
-                  <div class="qa-title">Grilles d'évaluation</div>
-                  <div class="qa-sub">{{ grillesEnAttente > 0 ? grillesEnAttente + ' grille(s) à valider' : 'Toutes les grilles sont validées' }}</div>
-                </div>
-                <svg class="qa-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-              <button class="qa-card" @click="navigate('spec-list')">
-                <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
-                <div class="qa-text"><div class="qa-title">Liste des spécialités</div><div class="qa-sub">Consulter, modifier, supprimer</div></div>
-                <svg class="qa-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- CRÉER SPÉCIALITÉ -->
-          <Creerspecialite v-else-if="currentPage === 'spec-create'" key="spec-create" :specialitesExistantes="specialites" @created="onSpecialiteCreee"/>
-
-          <!-- LISTE SPÉCIALITÉS -->
-          <Listespecialites v-else-if="currentPage === 'spec-list'" key="spec-list" :specialites="specialites" @go-create="navigate('spec-create')" @update-specialite="onSpecialiteModifiee" @delete-specialite="onSpecialiteSupprimee"/>
-
-          <!-- AJOUTER CHEF -->
-          <AjouterChef v-else-if="currentPage === 'chef-create'" key="chef-create" :specialites="specialites" :chefs="chefs" @chef-ajoute="onChefAjoute" @toast="afficherToast" @navigate="navigate"/>
-
-          <!-- LISTE CHEFS -->
-          <ConsulterChefs v-else-if="currentPage === 'chef-list'" key="chef-list" :chefs="chefs" :specialites="specialites" @chefs-maj="onChefsMaj" @toast="afficherToast" @navigate="navigate"/>
-
-          <!-- ✅ VALIDATION GRILLES -->
           <div v-else-if="currentPage === 'grilles-validation'" key="grilles-validation">
             <div class="page-title-block">
-              <h2 class="page-title" style="font-size:20px">Validation des grilles</h2>
-              <p class="page-subtitle">Grilles soumises par les chefs de département en attente de votre approbation</p>
+              <h2 class="page-title" style="font-size:20px">Grilles en attente</h2>
+              <p class="page-subtitle">Grilles soumises par les chefs de spécialité</p>
             </div>
-            <div v-if="loadingGrilles" class="loading-center"><div class="spinner-dir"></div></div>
-            <div v-else-if="!grillesAttente.length" class="empty-dir">
+            <div v-if="!grillesAttente.length" class="empty-dir">
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polyline points="20 6 9 17 4 12"/></svg>
               <p>Aucune grille en attente de validation.</p>
             </div>
@@ -307,6 +236,8 @@
               </div>
             </div>
           </div>
+          
+        
 
           <!-- PROFIL -->
           <div v-else-if="currentPage==='messagerie'" key="messagerie">
@@ -315,7 +246,6 @@
 
           <ConsulterProfil v-else-if="currentPage === 'profil'" key="profil" :user="currentUser" @modifier="currentPage = 'profil-edit'"/>
           <ModifierProfil v-else-if="currentPage === 'profil-edit'" key="profil-edit" :user="currentUser" @annuler="currentPage = 'profil'" @sauvegarde="onProfilSauvegarde"/>
-
         </transition>
       </main>
     </div>
@@ -366,6 +296,7 @@
 
 <script>
 import api from '@/services/api.js'
+import DashboardDirecteurHome from './DashboardDirecteurHome.vue'
 import Messagerie from './GestionArchivageCommunication/Messagerie.vue'
 import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 import Creerspecialite  from './gestionSpecialite/Creerspecialite.vue'
@@ -377,7 +308,7 @@ import ModifierProfil   from './ModifierProfil.vue'
 
 export default {
   name: 'DashboardDirecteur',
-  components: {Creerspecialite, Listespecialites, AjouterChef, ConsulterChefs, ConsulterProfil, ModifierProfil, NotificationsDropdown, NotificationsDropdown, Messagerie },
+  components: { Creerspecialite, Listespecialites, AjouterChef, ConsulterChefs, ConsulterProfil, ModifierProfil, NotificationsDropdown, Messagerie, DashboardDirecteurHome },
 
   data() {
     return {
@@ -396,6 +327,7 @@ export default {
       loadingGrilles: false,
       showGrilleModal: false,
       grilleDetail: null,
+
     }
   },
 
@@ -429,6 +361,7 @@ export default {
     },
     grillesEnAttente() { return this.grillesAttente.length },
     grillesValidees() { return this.grillesValidesList.length },
+
   },
 
   methods: {
@@ -589,6 +522,7 @@ export default {
       this.toast = { visible: true, type, message }
       setTimeout(() => { this.toast.visible = false }, 3500)
     },
+
   },
 
   mounted() {
@@ -708,4 +642,6 @@ export default {
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; transform: scale(0.97); }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .quick-actions { grid-template-columns: 1fr; } .content-area { padding: 20px; } .topbar { padding: 0 20px; } .topbar-date { display: none; } }
+
+/* Home page styles moved to DashboardDirecteurHome.vue */
 </style>

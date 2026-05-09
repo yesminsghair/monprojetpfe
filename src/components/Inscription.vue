@@ -78,10 +78,10 @@
               <p class="err" v-if="errors.email">{{ errors.email }}</p>
             </div>
 
-            <!-- Numéro d'inscription -->
+            <!-- Numéro d'inscription / Matricule -->
             <div class="field-block">
-              <label class="lbl">Numéro d'inscription</label>
-              <input v-model="form.numero" type="text" placeholder="Ex : 20231234"
+              <label class="lbl">Numéro d'inscription / Matricule</label>
+              <input v-model="form.numero" type="text" placeholder="Ex : AD-597624"
                 :class="{ 'input-err': errors.numero }"/>
               <p class="err" v-if="errors.numero">{{ errors.numero }}</p>
             </div>
@@ -256,23 +256,22 @@ export default {
         { value: 'enseignant', label: 'Enseignant' },
         { value: 'encadrant',  label: 'Encadrant' },
       ],
-      specialitesDisponibles: [
-        { value: 'GL',   label: 'Génie Logiciel' },
-        { value: 'IA',   label: 'Intelligence Artificielle' },
-        { value: 'SI',   label: 'Systèmes d\'Information' },
-        { value: 'SEC',  label: 'Sécurité Informatique' },
-        { value: 'RES',  label: 'Réseaux & Télécommunications' },
-        { value: 'BD',   label: 'Bases de Données' },
-        { value: 'SYS',  label: 'Systèmes Embarqués' },
-        { value: 'WEB',  label: 'Développement Web & Mobile' },
-        { value: 'AUTRE',label: 'Autre' },
-      ],
+      specialitesDisponibles: [],
       form: {
         nom: '', prenom: '', email: '',
         password: '', confirmPassword: '',
         role: '', numero: '', specialite: '', conditions: false,
       },
       errors: {},
+    }
+  },
+
+  async mounted() {
+    try {
+      const { data } = await api.get('/specialites')
+      this.specialitesDisponibles = data.map(sp => ({ value: sp.id, label: sp.nom }))
+    } catch {
+      // fallback silencieux — la liste restera vide
     }
   },
 
@@ -310,7 +309,11 @@ export default {
       if (!this.form.password)        this.errors.password = 'Le mot de passe est obligatoire.'
       if (!this.form.confirmPassword) this.errors.confirmPassword = 'La confirmation est obligatoire.'
       if (!this.form.role)            this.errors.role   = 'Veuillez sélectionner votre rôle.'
-      if (!this.form.numero)          this.errors.numero = "Le numéro d'inscription est obligatoire."
+      if (!this.form.numero) {
+        this.errors.numero = "Le numéro d'inscription est obligatoire."
+      } else if (!/^[A-Z]{2}-[0-9]{6}$/.test(this.form.numero.trim())) {
+        this.errors.numero = "Format invalide. Utilisez le format XX-000000 (ex: AD-597624)."
+      }
       if (!this.form.specialite)      this.errors.specialite = 'Veuillez sélectionner votre spécialité.'
 
       const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -333,13 +336,13 @@ export default {
       this.loading = true
       try {
         await api.post('/inscription', {
-          nom:        this.form.nom,
-          prenom:     this.form.prenom,
-          email:      this.form.email,
-          password:   this.form.password,
-          role:       this.form.role,
-          matricule:  this.form.numero,
-          specialite: this.form.specialite,
+          nom:           this.form.nom,
+          prenom:        this.form.prenom,
+          email:         this.form.email,
+          password:      this.form.password,
+          role:          this.form.role,
+          matricule:     this.form.numero,
+          specialite_id: this.form.specialite,
         })
         this.etape = 'attente'
       } catch (error) {
@@ -348,6 +351,7 @@ export default {
           if (errs?.email)     this.errors.email    = errs.email[0]
           if (errs?.password)  this.errors.password = errs.password[0]
           if (errs?.matricule) this.errors.numero   = errs.matricule[0]
+          if (errs?.specialite_id) this.errors.specialite = errs.specialite_id[0]
         } else {
           this.errors.email = 'Erreur de connexion. Réessayez plus tard.'
         }
