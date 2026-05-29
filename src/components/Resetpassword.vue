@@ -68,15 +68,10 @@
               <div class="s-icon s-blue">📩</div>
               <h3>Email envoyé !</h3>
               <p>Un lien de réinitialisation a été envoyé à<br><strong>{{ email }}</strong></p>
-              <p class="note">Vérifiez votre boîte de réception et les spams.</p>
-
-              <!-- Simulation clic lien (étape 8-9) -->
-              <button class="btn-submit" @click="simulerLienValide" type="button">
-                🔗 Simuler le clic sur le lien reçu
-              </button>
-              <button class="btn-outline" @click="simulerLienExpire" type="button">
-                ⏰ Simuler un lien expiré (test)
-              </button>
+              <div class="note">
+                <span class="note-icon">📬</span>
+                <span>Vérifiez votre boîte de réception et les spams.</span>
+              </div>
 
               <div class="resend-row">
                 <button class="btn-text" @click="resendEmail" :disabled="resendTimer > 0">
@@ -315,7 +310,9 @@ const startResendTimer = () => {
   padding:32px 16px; font-family:'Source Sans 3',sans-serif;
 }
 .card {
-  display:flex; width:100%; max-width:980px; min-height:580px;
+  display:flex !important;
+  flex-direction:row !important;
+  width:100%; max-width:980px; min-height:580px;
   border-radius:18px; overflow:hidden;
   box-shadow:0 20px 60px rgba(0,0,0,0.25);
   animation:cardIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
@@ -324,7 +321,8 @@ const startResendTimer = () => {
 
 /* LEFT */
 .panel-left {
-  width:40%;
+  width:40% !important;
+  flex-shrink:0 !important;
   background:linear-gradient(160deg,#4a7090 0%,#3d6080 30%,#2f4f6a 65%,#243d52 100%);
   padding:48px 40px; display:flex; flex-direction:column; position:relative; overflow:hidden;
 }
@@ -346,7 +344,7 @@ const startResendTimer = () => {
 .left-foot { font-size:11.5px;color:rgba(255,255,255,0.3);margin-top:16px;position:relative;z-index:1; }
 
 /* RIGHT */
-.panel-right { flex:1;background:#ddd9d1;overflow-y:auto; }
+.panel-right { flex:1 !important;min-width:0;background:#ddd9d1;overflow-y:auto; }
 .right-inner { padding:44px 40px; }
 .right-header { margin-bottom:26px; }
 .right-header h2 { font-family:'Merriweather',serif;font-size:24px;font-weight:700;color:#1e2a35;margin-bottom:5px; }
@@ -412,7 +410,17 @@ input:focus { outline:none;border-color:#3d6080;background:#fff;box-shadow:0 0 0
 .status-box h3 { font-family:'Merriweather',serif;font-size:22px;color:#1e2a35;margin-bottom:10px; }
 .status-box p  { font-size:14px;color:#8a9aaa;line-height:1.6;margin-bottom:8px;font-weight:300; }
 .status-box p strong { color:#3d6080;font-weight:600; }
-.note { background:#e8e4dc;border-radius:8px;padding:10px;font-size:13px;margin-bottom:18px; }
+.note {
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.08));
+  border:1.5px solid rgba(245,166,35,0.45);
+  border-radius:10px; padding:12px 16px;
+  font-size:13.5px; font-weight:500;
+  color:#7a5200;
+  margin-bottom:18px;
+  box-shadow:0 2px 8px rgba(245,166,35,0.12);
+}
+.note-icon { font-size:18px; flex-shrink:0; }
 
 .footer-link { margin-top:24px;text-align:center; }
 .footer-link a { font-size:13px;color:#8a9aaa;text-decoration:none;transition:color 0.2s; }
@@ -427,9 +435,9 @@ input:focus { outline:none;border-color:#3d6080;background:#fff;box-shadow:0 0 0
 .fade-slide-enter-from   { opacity:0;transform:translateY(12px); }
 .fade-slide-leave-to     { opacity:0; }
 
-@media (max-width:700px) {
-  .card { flex-direction:column;max-width:440px; }
-  .panel-left { width:100%;min-height:160px;padding:28px 24px 20px; }
+@media (max-width:600px) {
+  .card { flex-direction:column !important;max-width:440px; }
+  .panel-left { width:100% !important;min-height:160px;padding:28px 24px 20px; }
   .hero { font-size:18px;flex:none;margin-bottom:8px; }
   .hero-sub { display:none; }
   .right-inner { padding:28px 22px; }

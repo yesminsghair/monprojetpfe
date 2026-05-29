@@ -1,13 +1,19 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!doctype html> <!--déclaration du html5 (ils'agit d'une page web moderne)-->
+<html lang="en"><!--l'anglais est le langage racine de notre page utilisé pour lecteur écran et moteur recherche-->
+  <head><!--entete de la page-->
+    <meta charset="UTF-8" /><!--UTF-8 permet d'afficher correctement tous les caractères (accents, symboles, emojis)-->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" /><!--img lorsque on lance une app vite -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><!--pour que le nv s'adapte à l'écran du machine telephone/pc..-->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
     <title>projetpfe</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
+  </head><!---->
+  <body><!--corps de la page-->
+    <div id="app"></div><!--le conteneur vide avec l'id app ou vue vas injecter toute l'app-->
+    <script type="module" src="/src/main.js"></script><!--le chargeur de l'app  qui va executer main.js / module est important pour utiliser les imports-->
   </body>
 </html>
+
+
+<!--  le fichier index.html est le pnt d'entré initial de l'app, vue l'utilise pour injecter l'interface en utilisant main.js -->

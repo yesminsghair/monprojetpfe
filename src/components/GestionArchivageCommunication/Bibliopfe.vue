@@ -1,168 +1,252 @@
 <template>
-  <div class="page-content">
+  <div class="pfe-page">
 
-    <!-- HEADER -->
-    <div class="ptb">
-      <div class="page-header-block">
+    <!-- ══ HEADER ══ -->
+    <div class="pfe-header pfe-header--gold">
+      <div class="pfe-header__left">
+        <div class="pfe-header__icon pfe-header__icon--gold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
         <div>
-          <p class="pt">Bibliothèque des PFE</p>
-          <p class="ps">Projets de fin d'études — Mention Très Bien</p>
-        </div>
-        <div class="header-stats">
-          <span class="count-badge">{{ filteredPFE.length }} projets</span>
+          <h1 class="pfe-header__title">Bibliothèque PFE</h1>
+          <p class="pfe-header__sub pfe-header__sub--gold">
+            {{ resultats.length }} meilleur(s) projet(s) · mention ≥ Très Bien (16/20)
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- EMPTY STATE -->
-    <div v-if="filteredPFE.length === 0" class="empty-state">
-      <div class="empty-icon">📚</div>
-      <p>Aucun projet disponible</p>
+    <!-- ══ TOOLBAR ══ -->
+    <div class="pfe-toolbar">
+      <div class="pfe-search">
+        <svg class="pfe-search__icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input v-model="search" class="pfe-search__input"
+               placeholder="Nom, matricule, sujet, encadrant…" />
+        <button v-if="search" class="pfe-search__clear" @click="search = ''">✕</button>
+      </div>
+      <div class="bib-years">
+        <button
+          v-for="y in annees" :key="y"
+          class="bib-year-pill"
+          :class="{ 'bib-year-pill--active': anneeFilter === y }"
+          @click="anneeFilter = anneeFilter === y ? '' : y"
+        >{{ y }}</button>
+      </div>
     </div>
 
-    <!-- GRID -->
-    <div class="pfe-grid">
-      <div v-for="(pfe, index) in filteredPFE" :key="index" class="pfe-card">
+    <!-- ══ LOADING ══ -->
+    <div v-if="loading" class="pfe-state">
+      <div class="pfe-spinner pfe-spinner--lg"></div>
+      <p class="pfe-state__sub">Chargement de la bibliothèque…</p>
+    </div>
 
-        <!-- TOP: year + mention -->
-        <div class="card-top">
-          <span class="year-tag">{{ pfe.annee }}</span>
-          <span :class="['mention-badge', getMentionClass(pfe.note)]">{{ getMention(pfe.note) }}</span>
-        </div>
+    <!-- ══ EMPTY ══ -->
+    <div v-else-if="!filtered.length" class="pfe-state">
+      <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24"
+           fill="none" stroke="var(--vld-text-faint)" stroke-width="1.3">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      <p class="pfe-state__title">
+        {{ search || anneeFilter ? 'Aucun résultat correspondant' : 'Bibliothèque vide' }}
+      </p>
+      <p class="pfe-state__sub">Les projets distingués apparaissent ici après publication.</p>
+    </div>
 
-        <!-- AVATAR + name -->
-        <div class="card-identity">
-          <div class="student-avatar">{{ pfe.nom.split(' ').map(w => w[0]).join('').slice(0,2) }}</div>
-          <div class="student-info">
-            <span class="student-name">{{ pfe.nom }}</span>
+    <!-- ══ CARD GRID ══ -->
+    <div v-else class="pfe-grid">
+      <div
+        v-for="(r, i) in filtered"
+        :key="r.id"
+        class="pfe-card-wrap"
+        :style="{ animationDelay: (i * 0.04) + 's' }"
+      >
+        <div
+          class="pfe-card pfe-card--biblio"
+          :class="{ 'pfe-card--open': openId === r.id }"
+          @click="toggle(r.id)"
+        >
+          <div class="pfe-card__body">
+            <div class="pfe-card__top">
+              <!-- Always gold avatar for biblio -->
+              <div class="pfe-av pfe-av--gold">{{ initiales(r.nom) }}</div>
+
+              <div class="pfe-card__info">
+                <div class="pfe-card__name">{{ r.nom }}</div>
+                <div class="pfe-card__mat">{{ r.matricule }}</div>
+                <div class="pfe-card__sujet" :title="r.sujet">{{ r.sujet || '—' }}</div>
+              </div>
+
+              <div class="pfe-card__score">
+                <div class="pfe-score-pill pfe-score-pill--pass">
+                  <span class="pfe-score-num">{{ r.note }}</span>
+                  <span class="pfe-score-denom">/20</span>
+                </div>
+                <span class="pfe-mention pfe-mention--tb">Très bien</span>
+              </div>
+            </div>
+
+            <div class="pfe-card__meta">
+              <span class="pfe-card__enc">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                {{ r.encadrant_nom || '—' }}
+              </span>
+              <span class="pfe-year-tag">{{ r.annee }}</span>
+            </div>
+          </div>
+
+          <div class="pfe-card__footer" @click.stop>
+            <div class="pfe-card__badges">
+              <span class="pfe-tag pfe-tag--biblio">⭐ En bibliothèque</span>
+            </div>
+          </div>
+
+          <div class="pfe-chevron" :class="{ 'pfe-chevron--open': openId === r.id }">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
         </div>
 
-        <!-- Subject -->
-        <p class="pfe-subject">{{ pfe.sujet }}</p>
+        <!-- Detail panel -->
+        <transition name="pfe-detail-expand">
+          <div v-if="openId === r.id" class="pfe-detail" @click.stop>
 
-        <!-- Footer -->
-        <div class="card-footer">
-          <div class="note-display">
-            <span class="note-num">{{ pfe.note }}</span>
-            <span class="note-denom">/20</span>
+            <!-- Encadrant & Promotion -->
+            <div class="pfe-section">
+              <div class="pfe-section__title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Encadrant &amp; Promotion
+              </div>
+              <div class="pfe-detail-grid">
+                <div class="pfe-detail-block">
+                  <div class="pfe-detail-label">Nom complet</div>
+                  <div class="pfe-detail-val">{{ r.nom }}</div>
+                </div>
+                <div class="pfe-detail-block">
+                  <div class="pfe-detail-label">Matricule</div>
+                  <div class="pfe-detail-val pfe-detail-val--code">{{ r.matricule }}</div>
+                </div>
+                <div class="pfe-detail-block">
+                  <div class="pfe-detail-label">Encadrant</div>
+                  <div class="pfe-detail-val">{{ r.encadrant_nom || '—' }}</div>
+                </div>
+                <div class="pfe-detail-block">
+                  <div class="pfe-detail-label">Année universitaire</div>
+                  <div class="pfe-detail-val">
+                    <span class="pfe-year-tag">{{ r.annee }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sujet -->
+            <div class="pfe-section">
+              <div class="pfe-section__title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Sujet du projet
+              </div>
+              <div class="pfe-detail-val pfe-detail-val--sujet">{{ r.sujet || '—' }}</div>
+            </div>
+
+            <!-- Résultat -->
+            <div class="pfe-section">
+              <div class="pfe-section__title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                Résultat &amp; Mention
+              </div>
+              <div class="pfe-result-row">
+                <div class="pfe-result-score pfe-result-score--pass">
+                  <span class="pfe-result-num">{{ r.note }}</span>
+                  <span class="pfe-result-denom">/20</span>
+                </div>
+                <div class="pfe-result-badges">
+                  <span class="pfe-mention pfe-mention--tb" style="font-size:.82rem;padding:.3rem 1rem">
+                    ⭐ Très bien
+                  </span>
+                  <span class="pfe-decision pfe-decision--admis" style="font-size:.82rem;padding:.3rem 1rem">
+                    ✓ Admis
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <a :href="pfe.rapport" target="_blank" class="btn-report">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Voir rapport
-          </a>
-        </div>
-
+        </transition>
       </div>
+    </div>
+
+    <div v-if="!loading && filtered.length" class="bib-footer">
+      {{ filtered.length }} projet(s) affiché(s) sur {{ resultats.length }}
     </div>
 
   </div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
-  data() {
-    return {
-      archives: [
-        { nom: "Ali Ben Salah",     annee: "2023/2024", sujet: "IA appliquée au diagnostic médical et analyse des données patients", note: 17, rapport: "/rapports/ali.pdf" },
-        { nom: "Yassine Amri",      annee: "2023/2024", sujet: "IoT pour smart city et gestion intelligente du trafic urbain", note: 18, rapport: "/rapports/yassine.pdf" },
-        { nom: "Sara Ben Youssef",  annee: "2022/2023", sujet: "Blockchain pour sécurisation des transactions bancaires", note: 16, rapport: "/rapports/sara.pdf" },
-        { nom: "Mohamed Ali",       annee: "2022/2023", sujet: "Détection d'intrusion réseau basée sur Machine Learning", note: 17, rapport: "/rapports/mohamed.pdf" },
-        { nom: "Nour Jabeur",       annee: "2023/2024", sujet: "Application mobile de gestion de stage universitaire", note: 15, rapport: "/rapports/nour.pdf" },
-        { nom: "Omar Trabelsi",     annee: "2021/2022", sujet: "Reconnaissance faciale pour contrôle d'accès sécurisé", note: 19, rapport: "/rapports/omar.pdf" }
-      ]
-    }
+  name: 'BiblioPfe',
+  emits: ['toast'],
+  data () {
+    return { resultats: [], loading: false, search: '', anneeFilter: '', openId: null }
   },
   computed: {
-    filteredPFE() { return this.archives.filter(p => this.getMention(p.note) === "Très Bien") }
-  },
-  methods: {
-    getMention(note) {
-      if (note >= 16) return "Très Bien"
-      if (note >= 14) return "Bien"
-      if (note >= 12) return "Assez Bien"
-      if (note >= 10) return "Passable"
-      return "Ajourné"
+    annees () {
+      return [...new Set(this.resultats.map(r => r.annee).filter(Boolean))].sort().reverse()
     },
-    getMentionClass(note) {
-      if (note >= 16) return "mention-tb"
-      if (note >= 14) return "mention-b"
-      if (note >= 12) return "mention-ab"
-      if (note >= 10) return "mention-p"
-      return "mention-aj"
-    }
-  }
+    filtered () {
+      let list = this.resultats
+      if (this.anneeFilter) list = list.filter(r => r.annee === this.anneeFilter)
+      if (this.search.trim()) {
+        const q = this.search.toLowerCase()
+        list = list.filter(r =>
+          (r.nom           || '').toLowerCase().includes(q) ||
+          (r.matricule     || '').toLowerCase().includes(q) ||
+          (r.sujet         || '').toLowerCase().includes(q) ||
+          (r.encadrant_nom || '').toLowerCase().includes(q) ||
+          (r.annee         || '').toLowerCase().includes(q)
+        )
+      }
+      return list
+    },
+  },
+  mounted () { this.charger() },
+  methods: {
+    async charger () {
+      this.loading = true
+      try { const { data } = await api.get('/resultats-pfe/bibliotheque'); this.resultats = Array.isArray(data) ? data : [] }
+      catch { this.$emit('toast', { type: 'error', message: 'Erreur lors du chargement.' }) }
+      finally { this.loading = false }
+    },
+    toggle (id) { this.openId = this.openId === id ? null : id },
+    initiales (nom) { return (nom || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() },
+  },
 }
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;600;700&display=swap');
-* { font-family: 'Source Sans 3', sans-serif; box-sizing: border-box; }
-
-.page-content { padding: 0; }
-
-/* Header */
-.ptb { margin-bottom: 28px; }
-.pt { font-family: 'Merriweather', serif; font-size: 24px; font-weight: 700; color: #1e2a35; margin: 0 0 5px; }
-.ps { font-size: 14px; color: #7A8FA6; margin: 0; }
-.page-header-block { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
-.count-badge { background: rgba(245,197,24,0.15); color: #b8880e; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; border: 1.5px solid rgba(245,197,24,0.3); }
-
-/* Empty */
-.empty-state { text-align: center; padding: 60px; color: #8a9aaa; }
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state p { font-size: 16px; font-weight: 600; color: #4a5a6a; margin: 0; }
-
-/* Grid */
-.pfe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-
-.pfe-card {
-  background: #ddd9d1;
-  border: 1.5px solid #c8c4bc;
-  border-radius: 16px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: all 0.25s ease;
-  position: relative;
-  overflow: hidden;
-}
-.pfe-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4a7090, #f5a623);
-  opacity: 0;
-  transition: opacity 0.25s;
-}
-.pfe-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.1); border-color: #3d6080; }
-.pfe-card:hover::before { opacity: 1; }
-
-.card-top { display: flex; justify-content: space-between; align-items: center; }
-.year-tag { font-size: 11.5px; font-weight: 700; color: #7A8FA6; background: rgba(61,96,128,0.08); padding: 3px 9px; border-radius: 20px; }
-
-.mention-badge { padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; }
-.mention-tb  { background: rgba(39,174,96,0.12);  color: #27ae60; }
-.mention-b   { background: rgba(61,96,128,0.12);  color: #3d6080; }
-.mention-ab  { background: rgba(245,197,24,0.15); color: #b8880e; }
-.mention-p   { background: rgba(245,166,35,0.12); color: #d98e1a; }
-.mention-aj  { background: rgba(217,83,79,0.12);  color: #c0392b; }
-
-.card-identity { display: flex; align-items: center; gap: 10px; }
-.student-avatar { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #4a7090, #f5a623); color: white; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.student-name { font-weight: 700; font-size: 14.5px; color: #1e2a35; }
-
-.pfe-subject { font-size: 13px; color: #4a5a6a; line-height: 1.55; margin: 0; flex: 1; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
-
-.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 12px; border-top: 1px solid #c8c4bc; }
-.note-display { display: flex; align-items: baseline; gap: 1px; }
-.note-num { font-family: 'Merriweather', serif; font-size: 22px; font-weight: 700; color: #1e2a35; }
-.note-denom { font-size: 13px; color: #8a9aaa; }
-
-.btn-report { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #f5a623; text-decoration: none; transition: color 0.2s; }
-.btn-report:hover { color: #d98e1a; }
-
-@media (max-width: 768px) { .pfe-grid { grid-template-columns: 1fr; } }
-</style>

@@ -36,7 +36,8 @@
 
     <template v-else>
 
-      <!-- Alerte grilles en attente (kept from original) -->
+      <!-- ══ HOME MODE: KPI + Quick Actions ══ -->
+      <template v-if="isHome">
       <div v-if="grillesEnAttente > 0" class="alert-warning">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div class="aw-body">
@@ -75,69 +76,6 @@
         </div>
       </div>
 
-      <!-- ══ ROW 1 : Soutenances + Encadrants par spécialité ══ -->
-      <div class="section-label">Répartition par spécialité</div>
-      <div class="chart-row three-cols">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Soutenances par spécialité</div>
-            <div class="chart-badge">Histogramme</div>
-          </div>
-          <div class="chart-area"><canvas ref="soutSpecCanvas"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Encadrants par spécialité</div>
-            <div class="chart-badge">Histogramme</div>
-          </div>
-          <div class="chart-area"><canvas ref="encSpecCanvas"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Étudiants par spécialité</div>
-            <div class="chart-badge chart-badge-purple">Histogramme</div>
-          </div>
-          <div class="chart-area"><canvas ref="etuSpecCanvas"></canvas></div>
-        </div>
-      </div>
-
-      <!-- ══ ROW 2 : Réussite (Jauge) + Soutenances réalisées (Camembert) ══ -->
-      <div class="section-label">Performance et réalisation</div>
-      <div class="chart-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Taux global de réussite PFE</div>
-            <div class="chart-badge chart-badge-green">Jauge</div>
-          </div>
-          <div class="gauge-wrap">
-            <canvas ref="reussiteGaugeCanvas" height="180"></canvas>
-            <div class="gauge-center">
-              <div class="gauge-pct">{{ kpi.tauxReussite }}%</div>
-              <div class="gauge-lbl">Admis</div>
-            </div>
-          </div>
-          <div class="planif-details">
-            <span class="pd-item"><span class="dot dot-green"></span>{{ charts.reussite?.admis || 0 }} admis</span>
-            <span class="pd-item"><span class="dot dot-red"></span>{{ charts.reussite?.ajournes || 0 }} ajournés</span>
-          </div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Soutenances réalisées</div>
-            <div class="chart-badge chart-badge-blue">Camembert</div>
-          </div>
-          <div class="chart-area"><canvas ref="soutRealisCanvas"></canvas></div>
-          <div class="chart-footer">{{ charts.soutRealis?.taux || 0 }}% de soutenances réalisées</div>
-        </div>
-        <div class="chart-card chart-wide">
-          <div class="chart-header">
-            <div class="chart-title">PFE finalisés dans les délais — évolution mensuelle</div>
-            <div class="chart-badge chart-badge-blue">Courbe</div>
-          </div>
-          <div class="chart-area"><canvas ref="delaisCanvas"></canvas></div>
-        </div>
-      </div>
-
       <!-- Quick actions -->
       <div class="section-label">Actions rapides</div>
       <div class="qa-grid">
@@ -161,7 +99,66 @@
           <div class="qa-txt"><div class="qa-t">Liste des spécialités</div><div class="qa-s">Consulter, modifier, supprimer</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <button class="qa-card" @click="$emit('navigate','archives')">
+          <div class="qa-icon qa-slate"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
+          <div class="qa-txt"><div class="qa-t">Archives PFE</div><div class="qa-s">Consulter les PFE archivés</div></div>
+          <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button class="qa-card" @click="$emit('navigate','tableau-de-bord')">
+          <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+          <div class="qa-txt"><div class="qa-t">Tableau de bord</div><div class="qa-s">Graphiques et statistiques</div></div>
+          <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
+
+      </template><!-- end !chartsOnly -->
+
+      <!-- ══ CHARTS MODE: all Chart.js visuals ══ -->
+      <template v-if="!isHome">
+
+        <!-- ── ROW 1 : Soutenances + Encadrants + Étudiants par spécialité ── -->
+        <div class="section-label">Répartition par spécialité</div>
+        <div class="chart-row three-cols">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Soutenances par spécialité</div><div class="chart-badge">Histogramme</div></div>
+            <div class="chart-area"><canvas ref="soutSpecCanvas"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Encadrants par spécialité</div><div class="chart-badge">Histogramme</div></div>
+            <div class="chart-area"><canvas ref="encSpecCanvas"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Étudiants par spécialité</div><div class="chart-badge chart-badge-purple">Histogramme</div></div>
+            <div class="chart-area"><canvas ref="etuSpecCanvas"></canvas></div>
+          </div>
+        </div>
+
+        <!-- ── ROW 2 : Réussite + Camembert + Courbe ── -->
+        <div class="section-label">Performance et réalisation</div>
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Taux global de réussite PFE</div><div class="chart-badge chart-badge-green">Jauge</div></div>
+            <div class="gauge-wrap">
+              <canvas ref="reussiteGaugeCanvas" height="180"></canvas>
+              <div class="gauge-center"><div class="gauge-pct">{{ kpi.tauxReussite }}%</div><div class="gauge-lbl">Admis</div></div>
+            </div>
+            <div class="planif-details">
+              <span class="pd-item"><span class="dot dot-green"></span>{{ charts.reussite?.admis || 0 }} admis</span>
+              <span class="pd-item"><span class="dot dot-red"></span>{{ charts.reussite?.ajournes || 0 }} ajournés</span>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Soutenances réalisées</div><div class="chart-badge chart-badge-blue">Camembert</div></div>
+            <div class="chart-area"><canvas ref="soutRealisCanvas"></canvas></div>
+            <div class="chart-footer">{{ charts.soutRealis?.taux || 0 }}% de soutenances réalisées</div>
+          </div>
+          <div class="chart-card chart-wide">
+            <div class="chart-header"><div class="chart-title">PFE finalisés dans les délais — évolution mensuelle</div><div class="chart-badge chart-badge-blue">Courbe</div></div>
+            <div class="chart-area"><canvas ref="delaisCanvas"></canvas></div>
+          </div>
+        </div>
+
+      </template><!-- end chartsOnly -->
 
     </template>
   </div>
@@ -189,15 +186,21 @@ export default {
   props: {
     currentUser:      { type: Object, default: () => ({}) },
     grillesEnAttente: { type: Number, default: 0 },
+    // 'home'      → KPIs + raccourcis (sans graphiques)
+    // 'dashboard' → graphiques & analyses complètes
+    pageMode:         { type: String, default: 'dashboard' },
   },
   emits: ['navigate'],
+
+  computed: {
+    isHome() { return this.pageMode === 'home' },
+  },
 
   data() {
     return {
       loading: true,
-      downloading: false,
       heureActualisation: '--:--',
-      kpi: { totalSpecialites: 0, totalEtudiants: 0, totalEncadrants: 0, totalSoutenances: 0, soutenancesTerminees: 0, tauxReussite: 0 },
+      kpi:    { totalSpecialites: 0, totalEtudiants: 0, totalEncadrants: 0, totalSoutenances: 0, soutenancesTerminees: 0, tauxReussite: 0 },
       charts: {},
       instances: {},
     }
@@ -207,40 +210,9 @@ export default {
   beforeUnmount() { Object.values(this.instances).forEach(c => c?.destroy()) },
 
   methods: {
-    async telechargerPDF() {
-      this.downloading = true
-      try {
-        await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'html2canvas')
-        await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf')
-        const el = this.$refs.dashboardRoot
-        const canvas = await window.html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: '#c8c4bc', logging: false })
-        const imgData = canvas.toDataURL('image/png')
-        const { jsPDF } = window.jspdf
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' })
-        const pdfW = pdf.internal.pageSize.getWidth()
-        const ratio = canvas.width / canvas.height
-        const imgH = pdfW / ratio
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfW, imgH)
-        const date = new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')
-        pdf.save(`Dashboard_Directeur_${date}.pdf`)
-      } catch (e) {
-        console.error('Erreur export PDF:', e)
-        alert('Erreur lors de la génération du PDF.')
-      } finally {
-        this.downloading = false
-      }
-    },
-
-    loadScript(src, globalKey) {
-      if (window[globalKey]) return Promise.resolve()
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = src; s.onload = resolve; s.onerror = reject
-        document.head.appendChild(s)
-      })
-    },
-
     async charger() {
+      Object.values(this.instances).forEach(c => c?.destroy())
+      this.instances = {}
       this.loading = true
       try {
         const res = await api.get('/dashboard/directeur')
@@ -256,7 +228,6 @@ export default {
         this.heureActualisation = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
       } catch(e) {
         console.error(e)
-        // fallback demo
         this.kpi = { totalSpecialites: 5, totalEtudiants: 220, totalEncadrants: 32, totalSoutenances: 198, soutenancesTerminees: 142, tauxReussite: 84 }
         this.charts = {
           soutSpec:   { labels: ['GL','IA','RT','SIQ','SI'], values: [58,42,38,36,24] },
@@ -268,7 +239,9 @@ export default {
         }
       } finally {
         this.loading = false
-        this.$nextTick(() => this.buildCharts())
+        if (!this.isHome) {
+          this.$nextTick(() => this.$nextTick(() => this.buildCharts()))
+        }
       }
     },
 
@@ -362,7 +335,7 @@ export default {
         data: {
           labels: this.charts.delais.labels,
           datasets: [
-            { label: 'Prévus', data: this.charts.delais.prevus, borderColor: '#3d6080', backgroundColor: hex('#3d6080',0.08), tension: 0.4, fill: true, pointRadius: 4 },
+            { label: 'Prévus',   data: this.charts.delais.prevus,   borderColor: '#3d6080', backgroundColor: hex('#3d6080',0.08), tension: 0.4, fill: true, pointRadius: 4 },
             { label: 'Réalisés', data: this.charts.delais.realises, borderColor: '#27ae60', backgroundColor: hex('#27ae60',0.08), tension: 0.4, fill: true, pointRadius: 4 },
           ],
         },

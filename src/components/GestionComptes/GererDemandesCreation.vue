@@ -43,13 +43,14 @@
               <th>Rôle</th>
               <th>Matricule</th>
               <th>Date inscription</th>
+              <th>Statut email</th>
               <th>Vérification BD</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="pendingFiltered.length === 0">
-              <td colspan="7" class="empty-row">Aucune demande en attente 🎉</td>
+              <td colspan="8" class="empty-row">Aucune demande en attente 🎉</td>
             </tr>
             <tr v-for="u in pendingFiltered" :key="u.id" class="pending-row">
               <td>
@@ -66,12 +67,22 @@
               <td class="u-matricule">{{ u.matricule || '—' }}</td>
               <td class="u-date">{{ formatDate(u.created_at) }}</td>
               <td>
+                <div v-if="u.email_verified_at" class="email-status email-verified">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Email confirmé
+                </div>
+                <div v-else class="email-status email-pending">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Email non confirmé
+                </div>
+              </td>
+              <td>
                 <!-- Résultat VALIDÉ / NON VALIDÉ après vérification -->
                 <div v-if="u.inBD === true" class="bd-result bd-valid">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   Validé
                 </div>
-                <button v-else class="btn-verify-bd" @click="verifierBD(u)">
+                <button v-else class="btn-verify-bd" :disabled="!u.email_verified_at" :title="!u.email_verified_at ? 'L\'utilisateur n\'a pas encore confirmé son email' : ''" @click="u.email_verified_at && verifierBD(u)">
                   🔍 Vérifier dans BD
                 </button>
               </td>
@@ -79,12 +90,17 @@
                 <div class="action-btns">
                   <button
                     class="btn-action btn-accept"
-                    :title="'Accepter cette demande'"
-                    @click="accepterCompte(u)">
+                    :disabled="!u.email_verified_at"
+                    :title="!u.email_verified_at ? 'En attente de confirmation email de l\'utilisateur' : 'Accepter cette demande'"
+                    @click="u.email_verified_at && accepterCompte(u)">
                     ✓ Accepter
                   </button>
-                  <button class="btn-action btn-reject" @click="rejeterCompte(u)" title="Rejeter">
-                    ✗ Rejeter
+                  <button
+                    class="btn-action btn-reject"
+                    :disabled="!u.email_verified_at"
+                    :title="!u.email_verified_at ? 'En attente de confirmation email de l\'utilisateur' : 'Rejeter'"
+                    @click="u.email_verified_at && rejeterCompte(u)">
+                    ✗ Refuser
                   </button>
                 </div>
               </td>
@@ -129,19 +145,13 @@ api.interceptors.request.use(config => {
   return config
 })
 
-const props = defineProps({
-  users: { type: Array, required: true },
-})
-const emit = defineEmits(['update:users'])
+// État local — indépendant du parent pour éviter les écrasements
+const pendingUsers = ref([])
 
-// Charger les demandes pending depuis l'API
 const loadPending = async () => {
   try {
     const res = await api.get('/utilisateurs/pending')
-    emit('update:users', [
-      ...props.users.filter(u => u.status !== 'pending'),
-      ...res.data
-    ])
+    pendingUsers.value = res.data
   } catch (e) {
     console.error('Erreur chargement demandes:', e)
   }
@@ -168,9 +178,7 @@ const applySearch = (list) => {
   )
 }
 
-const pendingFiltered = computed(() =>
-  applySearch(props.users.filter(u => u.status === 'pending'))
-)
+const pendingFiltered = computed(() => applySearch(pendingUsers.value))
 
 const getRoleLabel = (r) => ({
   etudiant:'Étudiant', enseignant:'Enseignant', encadrant:'Encadrant',
@@ -192,8 +200,7 @@ const showModal = (opts) => { Object.assign(modal.value, opts, { visible:true })
 
 // Vérification BD — affiche toujours Validé
 const verifierBD = (u) => {
-  const updated = props.users.map(x => x.id === u.id ? { ...x, inBD: true } : x)
-  emit('update:users', updated)
+  pendingUsers.value = pendingUsers.value.map(x => x.id === u.id ? { ...x, inBD: true } : x)
   showToast(`✓ ${u.prenom} ${u.nom} — Validé dans la base de données.`, 'toast-ok')
 }
 
@@ -207,11 +214,7 @@ const accepterCompte = (u) => {
     onConfirm: async () => {
       try {
         await api.post(`/utilisateurs/${u.id}/valider`)
-        const today   = new Date().toISOString().split('T')[0]
-        const updated = props.users.map(x =>
-          x.id === u.id ? { ...x, status: 'active', activatedAt: today } : x
-        )
-        emit('update:users', updated)
+        pendingUsers.value = pendingUsers.value.filter(x => x.id !== u.id)
         modal.value.visible = false
         showToast(`Demande de ${u.prenom} ${u.nom} acceptée avec succès.`)
       } catch (e) {
@@ -231,7 +234,7 @@ const rejeterCompte = (u) => {
     onConfirm: async () => {
       try {
         await api.post(`/utilisateurs/${u.id}/rejeter`)
-        emit('update:users', props.users.filter(x => x.id !== u.id))
+        pendingUsers.value = pendingUsers.value.filter(x => x.id !== u.id)
         modal.value.visible = false
         showToast(`Demande de ${u.prenom} ${u.nom} rejetée.`, 'toast-err')
       } catch (e) {
@@ -243,41 +246,31 @@ const rejeterCompte = (u) => {
 </script>
 
 <style scoped>
-.table-wrap-scroll { overflow-x: auto; }
-
-table { width: 100%; border-collapse: collapse; }
-th {
-  text-align: left; padding: 14px 16px;
-  color: #3d6080; font-weight: 600; font-size: 13px;
-  border-bottom: 1.5px solid #c8c4bc; background: #e8e4dc; white-space: nowrap;
+/* ── Email verification status badges ── */
+.email-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
-td { padding: 14px 16px; border-bottom: 1px solid #c8c4bc; color: #4a5a6a; font-size: 13.5px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(61,96,128,0.04); }
-tr.pending-row td { background: rgba(245,166,35,0.05); }
-.empty-row { text-align: center; color: #8a9aaa; padding: 40px; font-size: 14px; }
-
-/* BD result badges */
-.bd-result {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12.5px; font-weight: 700; padding: 4px 10px;
-  border-radius: 6px;
+.email-verified {
+  background: #d1fae5;
+  color: #065f46;
 }
-.bd-valid   { background: #d4edda; color: #155724; border: 1px solid rgba(40,167,69,0.3); }
-.bd-invalid { background: #f8d7da; color: #721c24; border: 1px solid rgba(220,53,69,0.3); }
-
-/* Action buttons */
-.action-btns { display: flex; gap: 7px; flex-wrap: nowrap; }
-.btn-action {
-  padding: 6px 13px; border: none; border-radius: 8px;
-  font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.18s;
-  font-family: 'Source Sans 3', sans-serif; white-space: nowrap;
+.email-pending {
+  background: #fef3c7;
+  color: #92400e;
 }
-/* Accepter (remplace Activer) */
-.btn-accept { background: rgba(39,174,96,0.15); color: #27ae60; }
-.btn-accept:hover:not(:disabled) { background: #27ae60; color: #fff; }
-.btn-accept:disabled { opacity: 0.4; cursor: not-allowed; }
-/* Rejeter */
-.btn-reject { background: rgba(231,76,60,0.12); color: #e74c3c; }
-.btn-reject:hover { background: #e74c3c; color: #fff; }
+
+/* ── Disabled button states ── */
+.btn-action:disabled,
+.btn-verify-bd:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 </style>

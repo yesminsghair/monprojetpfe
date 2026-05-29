@@ -6,34 +6,44 @@
       <div class="modal-header">
         <div class="modal-title-group">
           <div class="modal-icon icon-red">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
           </div>
           <h3>Retirer du poste</h3>
         </div>
         <button class="modal-close" @click="$emit('fermer')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
       <div class="modal-body" v-if="chef">
-
         <div class="confirm-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24"
+            fill="none" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
         </div>
         <p class="confirm-text">
           Retirer <strong>{{ chef.prenom }} {{ chef.nom }}</strong> de la spécialité
-          <strong>{{ chef.specialiteNom }}</strong> ?
+          <!-- specialiteNom comes from ChefController::format() -->
+          <strong>{{ chef.specialiteNom || '—' }}</strong> ?
         </p>
         <p class="confirm-sub">Le compte utilisateur restera actif mais sans rôle de chef.</p>
 
-        <!-- US 16 - étape 5 : Motif (optionnel) -->
         <div class="field-block">
           <label class="lbl">Motif du retrait <span class="opt">(optionnel)</span></label>
           <textarea v-model="motif" rows="2"
             placeholder="Ex : Fin de mandat, mutation, démission..."></textarea>
         </div>
 
-        <!-- US 16 - 6.b : Supprimer le compte -->
         <label class="check-row">
           <input type="checkbox" v-model="supprimerCompte" class="native-check"/>
           <span :class="{ 'lbl-danger': supprimerCompte }">
@@ -42,17 +52,21 @@
         </label>
 
         <div class="alert-danger" v-if="supprimerCompte">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
           Cette action supprimera également le compte utilisateur. Action irréversible.
         </div>
-
       </div>
 
       <div class="modal-footer">
-        <button class="btn-danger" @click="confirmer">
+        <button class="btn-danger" :disabled="saving" @click="confirmer">
+          <span v-if="saving" class="vld-spinner-sm" style="width:13px;height:13px;margin-right:6px"></span>
           {{ supprimerCompte ? 'Retirer et supprimer' : 'Confirmer le retrait' }}
         </button>
-        <!-- US 16 - 6.a : Annuler -->
         <button class="btn-outline" @click="$emit('fermer')">Annuler</button>
       </div>
 
@@ -62,30 +76,51 @@
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
   name: 'RetirerChef',
   props: {
     chef: { type: Object, default: null },
   },
   emits: ['fermer', 'retire'],
+
   data() {
     return {
       motif:           '',
       supprimerCompte: false,
+      saving:          false,
     }
   },
+
   watch: {
-    chef() { this.motif = ''; this.supprimerCompte = false }
+    chef() { this.motif = ''; this.supprimerCompte = false },
   },
+
   methods: {
-    confirmer() {
-      this.$emit('retire', {
-        chefId:          this.chef.id,
-        motif:           this.motif.trim(),
-        supprimerCompte: this.supprimerCompte,
-        dateRetrait:     new Date().toLocaleDateString('fr-FR'),
-      })
-      this.$emit('fermer')
+    async confirmer() {
+      this.saving = true
+      try {
+        // POST /api/chefs/{id}/retirer  (ChefController::retirer)
+        // Controller reads: $request->supprimerCompte
+        // On supprimerCompte=true it returns { deleted: true } and does NOT delete the row
+        // (actual account deletion should be handled separately if needed)
+        await api.post(`/chefs/${this.chef.id}/retirer`, {
+          supprimerCompte: this.supprimerCompte,
+          motif:           this.motif.trim(),
+        })
+        this.$emit('retire', {
+          chefId:          this.chef.id,
+          motif:           this.motif.trim(),
+          supprimerCompte: this.supprimerCompte,
+          dateRetrait:     new Date().toLocaleDateString('fr-FR'),
+        })
+        this.$emit('fermer')
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.saving = false
+      }
     },
   },
 }
@@ -129,8 +164,9 @@ textarea::placeholder { color: #aaa49c; }
 .alert-danger { display: flex; align-items: flex-start; gap: 8px; background: #f8d7da; border: 1px solid rgba(220,53,69,0.35); border-radius: 9px; padding: 11px 14px; font-size: 12.5px; color: #721c24; margin-top: 4px; }
 .alert-danger svg { flex-shrink: 0; margin-top: 1px; }
 
-.btn-danger { padding: 11px 22px; border: none; border-radius: 10px; background: #c0392b; color: #fff; font-size: 14px; font-weight: 600; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: background 0.18s, transform 0.15s; }
-.btn-danger:hover { background: #a93226; transform: translateY(-1px); }
+.btn-danger { padding: 11px 22px; border: none; border-radius: 10px; background: #c0392b; color: #fff; font-size: 14px; font-weight: 600; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: background 0.18s, transform 0.15s; display: inline-flex; align-items: center; }
+.btn-danger:hover:not(:disabled) { background: #a93226; transform: translateY(-1px); }
+.btn-danger:disabled { opacity: .65; cursor: not-allowed; }
 .btn-outline { padding: 11px 20px; border: 1.5px solid #c8c4bc; border-radius: 10px; background: transparent; color: #4a5a6a; font-size: 14px; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: background 0.18s; }
 .btn-outline:hover { background: rgba(0,0,0,0.05); }
 

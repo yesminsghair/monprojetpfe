@@ -1,131 +1,278 @@
 <template>
-  <div class="page-wrapper">
-    <div class="form-card">
-      <div class="form-card-header">
-        <div class="header-icon" style="background:rgba(61,96,128,0.12);color:#3d6080;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </div>
-        <div>
-          <h2 class="card-title">Modifier la spécialité</h2>
-          <p class="card-sub">Modifiez les informations de <strong style="color:#3d6080;">{{ specialite?.nom }}</strong></p>
-        </div>
-      </div>
+  <div class="modal-overlay" @click.self="$emit('fermer')">
+    <div class="modal-box" role="dialog" aria-modal="true">
 
-      <div v-if="!specialite" class="empty-state">
-        <p>Aucune spécialité sélectionnée pour modification.</p>
-      </div>
-
-      <form v-else @submit.prevent="valider" @reset.prevent="annuler" novalidate>
-
-        <transition name="toast-slide">
-          <div v-if="erreurServeur" class="inline-error">
-            Impossible de modifier la spécialité. Veuillez réessayer.
+      <div class="modal-hd">
+        <div class="modal-hd__left">
+          <div class="modal-hd-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
           </div>
-        </transition>
+          <span class="modal-title">{{ editing ? 'Modifier la spécialité' : 'Nouvelle spécialité' }}</span>
+        </div>
+        <button class="modal-close" @click="$emit('fermer')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
 
-        <div class="field-block">
-          <label class="lbl">Nom de la spécialité <span class="req">*</span></label>
-          <input v-model="form.nom" type="text" placeholder="Ex : Génie Logiciel" :class="{ 'input-err': errors.nom }"/>
-          <p class="err" v-if="errors.nom">{{ errors.nom }}</p>
+      <div class="modal-bd">
+        <div class="grid-2">
+          <div class="field">
+            <label class="lbl">Nom <span class="req">*</span></label>
+            <input v-model="f.nom" class="inp" :class="{ 'inp--err': errs.nom }"
+              placeholder="Ex : Génie Logiciel" />
+            <p class="err" v-if="errs.nom">{{ errs.nom }}</p>
+          </div>
+          <div class="field">
+            <label class="lbl">Code <span class="req">*</span></label>
+            <input v-model="f.code" class="inp" :class="{ 'inp--err': errs.code }"
+              placeholder="Ex : GL" style="font-family:'DM Mono',monospace;text-transform:uppercase" />
+            <p class="err" v-if="errs.code">{{ errs.code }}</p>
+          </div>
         </div>
 
-        <div class="field-block">
-          <label class="lbl">Code de la spécialité <span class="req">*</span></label>
-          <input v-model="form.code" type="text" placeholder="Ex : GL2024" :class="{ 'input-err': errors.code }" @input="form.code = form.code.toUpperCase()"/>
-          <p class="field-hint" v-if="!errors.code">Lettres majuscules et chiffres uniquement</p>
-          <p class="err" v-if="errors.code">{{ errors.code }}</p>
+        <div class="field">
+          <label class="lbl">Description</label>
+          <textarea v-model="f.description" class="textarea" rows="3"
+            placeholder="Description de la spécialité…"></textarea>
         </div>
 
-        <div class="field-block">
-          <label class="lbl">Description <span class="req">*</span></label>
-          <textarea v-model="form.description" rows="4" placeholder="Décrivez brièvement cette spécialité..." :class="{ 'input-err': errors.description }"></textarea>
-          <p class="err" v-if="errors.description">{{ errors.description }}</p>
+        <div class="grid-2">
+          <div class="field">
+            <label class="lbl">Date de création</label>
+            <input v-model="f.date_creation" class="inp" type="text"
+              placeholder="JJ/MM/AAAA" />
+            <p class="hint">Format : JJ/MM/AAAA</p>
+          </div>
+          <!-- FIXED: was f.capacite (wrong name) → now f.capacite_max -->
+          <div class="field">
+            <label class="lbl">Capacité max étudiants</label>
+            <input
+              v-model.number="f.capacite_max"
+              class="inp"
+              :class="{ 'inp--err': errs.capacite_max }"
+              type="number"
+              min="1"
+              max="9999"
+              placeholder="30"
+            />
+            <p class="err" v-if="errs.capacite_max">{{ errs.capacite_max }}</p>
+          </div>
         </div>
+      </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn-blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Enregistrer les modifications
-          </button>
-          <button type="reset" class="btn-outline">Annuler</button>
-        </div>
+      <!-- Erreur API globale (inline dans le formulaire) -->
+      <div v-if="errs._global" class="err-global">{{ errs._global }}</div>
 
-      </form>
+      <div class="modal-ft">
+        <button class="btn-primary" :disabled="saving" @click="save">
+          <div v-if="saving" class="spin-sm"></div>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {{ editing ? 'Enregistrer les modifications' : 'Créer la spécialité' }}
+        </button>
+        <button class="btn-ghost" @click="$emit('fermer')">Annuler</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
   name: 'ModifierSpecialite',
-  props: {
-    specialite:            { type: Object, default: null },
-    specialitesExistantes: { type: Array,  default: () => [] },
-  },
-  emits: ['updated', 'cancelled'],
+  props: { specialite: { type: Object, default: null } },
+  emits: ['creee', 'modifiee', 'fermer', 'annuler'],
+
   data() {
     return {
-      form: { nom: '', code: '', description: '' },
-      errors: {},
-      erreurServeur: false,
+      // FIXED: field is now capacite_max everywhere (was 'capacite' before)
+      f: { nom: '', code: '', description: '', date_creation: '', capacite_max: null },
+      errs: {},
+      saving: false,
     }
   },
+
+  computed: {
+    editing() { return !!this.specialite }
+  },
+
   watch: {
     specialite: {
       immediate: true,
-      handler(val) {
-        if (val) {
-          this.form = { nom: val.nom, code: val.code, description: val.description }
-          this.errors = {}
-          this.erreurServeur = false
+      handler(s) {
+        if (s) {
+          console.log('[ModifierSpecialite] specialite prop:', JSON.stringify(s))
+          let dc = ''
+          if (s.date_creation) {
+            const parts = s.date_creation.split('-') // "YYYY-MM-DD" → ['YYYY','MM','DD']
+            if (parts.length === 3) {
+              dc = `${parts[2]}/${parts[1]}/${parts[0]}` // → "DD/MM/YYYY"
+            } else {
+              dc = s.date_creation // fallback if already in another format
+            }
+          }
+          this.f = {
+            nom:          s.nom          || '',
+            code:         s.code         || '',
+            description:  s.description  || '',
+            date_creation: dc,
+            capacite_max: s.capacite_max != null ? Number(s.capacite_max) : null,
+          }
         }
-      },
+      }
     },
   },
+
   methods: {
-    valider() {
-      this.form.nom         = this.form.nom.trim()
-      this.form.code        = this.form.code.trim().toUpperCase()
-      this.form.description = this.form.description.trim()
-      this.errors = {}
-      this.erreurServeur = false
-
-      if (!this.form.nom)         this.errors.nom         = 'Le nom est obligatoire.'
-      if (!this.form.code)        this.errors.code        = 'Le code est obligatoire.'
-      if (!this.form.description) this.errors.description = 'La description est obligatoire.'
-
-      if (this.form.code && !/^[A-Z0-9]+$/.test(this.form.code))
-        this.errors.code = 'Le code doit contenir uniquement des lettres majuscules et des chiffres.'
-
-      if (this.form.code && !this.errors.code) {
-        const doublon = this.specialitesExistantes.some(s => s.id !== this.specialite.id && s.code.toUpperCase() === this.form.code)
-        if (doublon) this.errors.code = 'Ce code est déjà utilisé par une autre spécialité.'
-      }
-      if (this.form.nom && !this.errors.nom) {
-        const doublon = this.specialitesExistantes.some(s => s.id !== this.specialite.id && s.nom.toLowerCase() === this.form.nom.toLowerCase())
-        if (doublon) this.errors.nom = 'Ce nom est déjà utilisé par une autre spécialité.'
-      }
-
-      if (Object.keys(this.errors).length > 0) return
-      this.$emit('updated', { ...this.specialite, ...this.form })
+    validate() {
+      this.errs = {}
+      if (!this.f.nom.trim())  this.errs.nom  = 'Le nom est obligatoire.'
+      if (!this.f.code.trim()) this.errs.code = 'Le code est obligatoire.'
+      if (this.f.capacite_max != null && this.f.capacite_max < 1)
+        this.errs.capacite_max = 'Capacité invalide (min. 1).'
+      return !Object.keys(this.errs).length
     },
-    annuler() {
-      if (this.specialite) {
-        this.form = { nom: this.specialite.nom, code: this.specialite.code, description: this.specialite.description }
+
+    async save() {
+      if (!this.validate()) return
+      this.saving = true
+
+      // FIXED: added capacite_max to the payload (was missing before)
+      const payload = {
+        nom:           this.f.nom.trim(),
+        code:          this.f.code.trim().toUpperCase(),
+        description:   this.f.description || null,
+        date_creation: this.f.date_creation || null,
+        capacite_max:  this.f.capacite_max,
       }
-      this.errors = {}
-      this.erreurServeur = false
-      this.$emit('cancelled')
+
+      try {
+        if (this.editing) {
+          const r = await api.put(`/specialites/${this.specialite.id}`, payload)
+          this.$emit('modifiee', r.data)
+          this.$emit('fermer')
+        } else {
+          const r = await api.post('/specialites', payload)
+          this.$emit('creee', r.data)
+          this.$emit('fermer')
+        }
+      } catch (e) {
+        const v = e.response?.data?.errors || {}
+        if (v.nom)          this.errs.nom          = v.nom[0]
+        if (v.code)         this.errs.code         = v.code[0]
+        if (v.capacite_max) this.errs.capacite_max = v.capacite_max[0]
+        if (!Object.keys(v).length)
+          this.errs._global = e.response?.data?.message || 'Une erreur est survenue.'
+      } finally {
+        this.saving = false
+      }
     },
+
   },
 }
 </script>
 
 <style scoped>
-.page-wrapper { min-height: 100%; display: flex; justify-content: center; align-items: flex-start; padding: 32px 16px; }
-.form-card    { max-width: 620px; animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both; }
-@keyframes cardIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,20,35,.52);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  padding: 24px; backdrop-filter: blur(4px);
+}
+.modal-box {
+  background: #f5f7fa; border-radius: 18px; width: 100%; max-width: 520px;
+  box-shadow: 0 32px 80px rgba(0,0,0,.22); overflow: hidden;
+  animation: modalIn .28s cubic-bezier(.22,1,.36,1) both;
+  font-family: 'Sora', sans-serif;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(.94) translateY(14px); } to { opacity:1; transform:none; } }
+
+.modal-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; background: #edf0f5; border-bottom: 1px solid #dde3ec;
+}
+.modal-hd__left { display: flex; align-items: center; gap: 10px; }
+.modal-hd-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: rgba(46,125,107,.12); color: #2e7d6b;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: #1a2332; }
+.modal-close {
+  background: none; border: none; color: #8a9ab0; cursor: pointer;
+  display: flex; padding: 4px; border-radius: 6px; transition: color .15s;
+}
+.modal-close:hover { color: #1a2332; }
+
+.modal-bd { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.modal-ft { display: flex; gap: 10px; padding: 16px 22px 20px; border-top: 1px solid #dde3ec; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.lbl { font-size: 12.5px; font-weight: 600; color: #3a4a5a; }
+.req { color: #e0882a; }
+.inp {
+  width: 100%; padding: 10px 13px;
+  background: #fff; border: 1.5px solid #d8e0ec; border-radius: 9px;
+  font-size: 13.5px; font-family: 'Sora', sans-serif; color: #1a2332;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.inp:focus { border-color: #2e7d6b; box-shadow: 0 0 0 3px rgba(46,125,107,.12); }
+.inp--err { border-color: #c0392b; }
+.inp::placeholder { color: #b0bcc8; }
+/* remove number spinners */
+.inp[type=number]::-webkit-inner-spin-button,
+.inp[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.inp[type=number] { -moz-appearance: textfield; }
+.textarea {
+  width: 100%; padding: 10px 13px;
+  background: #fff; border: 1.5px solid #d8e0ec; border-radius: 9px;
+  font-size: 13.5px; font-family: 'Sora', sans-serif; color: #1a2332;
+  outline: none; resize: vertical; transition: border-color .2s, box-shadow .2s;
+}
+.textarea:focus { border-color: #2e7d6b; box-shadow: 0 0 0 3px rgba(46,125,107,.12); }
+.textarea::placeholder { color: #b0bcc8; }
+.err  { font-size: 12px; color: #c0392b; }
+.hint { font-size: 11.5px; color: #9aabb8; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 20px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #2e7d6b, #3aaa8e);
+  color: #fff; font-size: 13.5px; font-weight: 600;
+  font-family: 'Sora', sans-serif; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(46,125,107,.3); transition: all .18s;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(46,125,107,.4); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.btn-ghost {
+  padding: 10px 18px; border: 1.5px solid #d0dae6; border-radius: 10px;
+  background: transparent; color: #5a6a7a; font-size: 13.5px;
+  font-family: 'Sora', sans-serif; cursor: pointer; transition: background .18s;
+}
+.btn-ghost:hover { background: #edf1f7; }
+.spin-sm {
+  width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Erreur API globale */
+.err-global {
+  margin: 0 22px 0; padding: 9px 13px;
+  background: #fdf0ef; color: #c0392b; border: 1px solid #f0c0bb;
+  border-radius: 8px; font-size: 12.5px; font-weight: 500;
+}
 </style>

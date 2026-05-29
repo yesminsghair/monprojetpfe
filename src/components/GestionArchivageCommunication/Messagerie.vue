@@ -1,139 +1,275 @@
 <template>
-  <div class="page-content">
+  <div class="messagerie-wrap">
 
-    <!-- LAYOUT: sidebar de conversations + zone de chat -->
-    <div class="msg-layout">
-
-      <!-- ── SIDEBAR CONVERSATIONS ─────────────────────── -->
-      <div class="conv-sidebar">
-        <div class="conv-header">
-          <h2 class="conv-title">Messagerie</h2>
-          <button class="btn-new-conv" @click="showNewConv = true" title="Nouvelle conversation">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-        </div>
-
-        <div class="conv-search">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a9aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input v-model="searchConv" class="conv-search-input" placeholder="Rechercher..." />
-        </div>
-
-        <div v-if="loadingConvs" class="conv-loading">Chargement...</div>
-        <div v-else-if="!convsFiltrees.length" class="conv-empty">Aucune conversation</div>
-        <div v-else class="conv-list">
-          <button
-            v-for="conv in convsFiltrees"
-            :key="conv.id"
-            class="conv-item"
-            :class="{ active: selectedConv?.id === conv.id, unread: conv.non_lu > 0 }"
-            @click="selectConv(conv)"
-          >
-            <div class="conv-av">{{ initiales(conv.interlocuteur_nom) }}</div>
-            <div class="conv-info">
-              <div class="conv-nom">{{ conv.interlocuteur_nom }}</div>
-              <div class="conv-last">{{ conv.dernier_message || 'Aucun message' }}</div>
-            </div>
-            <div class="conv-meta">
-              <div class="conv-time">{{ formatTime(conv.updated_at) }}</div>
-              <span v-if="conv.non_lu > 0" class="conv-badge">{{ conv.non_lu }}</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- ── ZONE DE CHAT ───────────────────────────────── -->
-      <div class="chat-zone">
-
-        <!-- No conversation selected -->
-        <div v-if="!selectedConv" class="chat-empty">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c8c4bc" stroke-width="1"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p>Sélectionnez une conversation ou démarrez-en une nouvelle</p>
-          <button class="btn-new-msg" @click="showNewConv = true">Nouvelle conversation</button>
-        </div>
-
-        <template v-else>
-          <!-- Chat header -->
-          <div class="chat-header">
-            <div class="chat-av">{{ initiales(selectedConv.interlocuteur_nom) }}</div>
-            <div class="chat-header-info">
-              <div class="chat-nom">{{ selectedConv.interlocuteur_nom }}</div>
-              <div class="chat-role">{{ selectedConv.interlocuteur_role || '' }}</div>
-            </div>
-          </div>
-
-          <!-- Messages -->
-          <div class="chat-messages" ref="messagesContainer">
-            <div v-if="loadingMessages" class="msg-loading">Chargement des messages...</div>
-            <div v-else-if="!messages.length" class="msg-empty">Démarrez la conversation</div>
-            <template v-else>
-              <div
-                v-for="msg in messages"
-                :key="msg.id"
-                class="msg-row"
-                :class="msg.expediteur_id === currentUserId ? 'msg-mine' : 'msg-other'"
-              >
-                <div class="msg-bubble">
-                  <div class="msg-text">{{ msg.contenu }}</div>
-                  <div class="msg-time">{{ formatTime(msg.created_at) }}</div>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Input -->
-          <div class="chat-input-wrap">
-            <textarea
-              v-model="newMessage"
-              class="chat-input"
-              placeholder="Écrivez votre message..."
-              rows="1"
-              @keydown.enter.prevent="envoyerMessage"
-              @input="autoResize"
-              ref="inputRef"
-            ></textarea>
-            <button class="btn-send" @click="envoyerMessage" :disabled="!newMessage.trim() || sending">
-              <svg v-if="!sending" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              <span v-else class="msg-spinner"></span>
-            </button>
-          </div>
-        </template>
+    <div class="vld-page-header">
+      <div>
+        <h2 class="vld-page-title">Messagerie</h2>
+        <p class="vld-page-sub">Vos conversations en temps réel</p>
       </div>
     </div>
 
-    <!-- MODAL nouvelle conversation -->
-    <transition name="modal-fade">
-      <div v-if="showNewConv" class="modal-ov" @click.self="showNewConv = false">
-        <div class="modal">
-          <div class="modal-hdr">
-            <h3>Nouvelle conversation</h3>
-            <button class="mclose" @click="showNewConv = false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+    <div class="messagerie-card">
+
+      <!-- ════════════════════════════════════════════════════
+           LEFT — Conversation sidebar
+           ════════════════════════════════════════════════════ -->
+      <div class="conv-sidebar">
+
+        <div class="conv-sidebar__header">
+          <svg class="conv-sidebar__header-icon" xmlns="http://www.w3.org/2000/svg"
+            width="15" height="15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="conv-sidebar__header-title">Conversations</span>
+          <span v-if="totalNonLus" class="conv-badge" style="margin-left:auto">{{ totalNonLus }}</span>
+        </div>
+
+        <div class="conv-search-wrap">
+          <svg class="conv-search-icon" xmlns="http://www.w3.org/2000/svg"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input v-model="searchConv" class="conv-search" placeholder="Rechercher…"/>
+        </div>
+
+        <div class="conv-list">
+          <div v-if="loadingConvs" class="chat-state">
+            <div class="vld-spinner" style="width:22px;height:22px;margin:0 auto"></div>
           </div>
-          <div class="modal-body">
-            <div class="fg">
-              <label>Rechercher un utilisateur</label>
-              <input v-model="searchUser" class="fi" placeholder="Nom, prénom..." @input="rechercherUtilisateurs" />
+          <div v-else-if="!convsFiltrees.length" class="chat-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--vld-text-faint)">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Aucune conversation</span>
+          </div>
+          <div
+            v-for="c in convsFiltrees" :key="c.id"
+            class="conv-item"
+            :class="{ 'conv-item--active': selectedConvId === c.id }"
+            @click="ouvrirConversation(c)"
+          >
+            <div class="vld-av vld-av--sm vld-av--blue flex-shrink-0">{{ initiales(c.interlocuteur_nom) }}</div>
+            <div class="conv-item__body">
+              <div class="conv-item__name">{{ c.interlocuteur_nom }}</div>
+              <div class="conv-item__preview">{{ c.dernier_message || 'Aucun message' }}</div>
             </div>
-            <div v-if="usersRecherche.length" class="user-results">
-              <button
-                v-for="u in usersRecherche"
-                :key="u.id"
-                class="user-result-item"
-                @click="demarrerConversation(u)"
-              >
-                <div class="ur-av">{{ initiales(u.prenom + ' ' + u.nom) }}</div>
-                <div>
-                  <div class="ur-nom">{{ u.prenom }} {{ u.nom }}</div>
-                  <div class="ur-role">{{ labelRole(u.role) }}</div>
-                </div>
-              </button>
+            <div class="conv-item__right">
+              <span v-if="c.non_lu > 0" class="conv-badge">{{ c.non_lu }}</span>
+              <span class="conv-item__time">{{ relativeTime(c.updated_at) }}</span>
             </div>
-            <div v-else-if="searchUser.length > 1" class="user-empty">Aucun utilisateur trouvé</div>
           </div>
         </div>
+
+        <div class="conv-sidebar__footer">
+          <button class="btn-new-msg" @click="showModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Nouveau message
+          </button>
+        </div>
+
       </div>
-    </transition>
+
+      <!-- ════════════════════════════════════════════════════
+           RIGHT — Chat area
+           ════════════════════════════════════════════════════ -->
+      <div class="chat-area">
+
+        <!-- Empty state -->
+        <div v-if="!selectedConvId" class="chat-state chat-state--center">
+          <div class="chat-empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <p class="chat-state__title">Sélectionnez une conversation</p>
+          <p class="chat-state__sub">Choisissez un contact pour commencer à échanger</p>
+        </div>
+
+        <template v-else>
+
+          <!-- Chat header -->
+          <div class="chat-header">
+            <div class="vld-av vld-av--sm vld-av--gold flex-shrink-0">
+              {{ initiales(selectedConv?.interlocuteur_nom) }}
+            </div>
+            <div class="chat-header__info">
+              <div class="chat-header__name">{{ selectedConv?.interlocuteur_nom }}</div>
+              <div class="chat-header__role" v-if="selectedConv?.interlocuteur_role">
+                {{ selectedConv.interlocuteur_role }}
+              </div>
+            </div>
+          </div>
+
+          <div ref="msgArea" class="chat-messages" @scroll="onScroll">
+
+            <!-- Loading state (first open) -->
+            <div v-if="loadingMessages" class="chat-messages__loader">
+              <div class="vld-spinner" style="width:22px;height:22px"></div>
+            </div>
+
+            <template v-else>
+
+              <!-- Load-older spinner at the very top -->
+              <div v-if="loadingMore" class="chat-load-more-spinner">
+                <div class="vld-spinner" style="width:14px;height:14px"></div>
+                <span>Chargement…</span>
+              </div>
+              <div v-else-if="!hasMore && messages.length" class="chat-history-end">
+                Début de la conversation
+              </div>
+
+              <!-- Normal ascending order: oldest at top, newest at bottom -->
+              <div
+                v-for="m in messages"
+                :key="m.id"
+                class="msg-row"
+                :class="m.moi ? 'msg-row--mine' : 'msg-row--theirs'"
+              >
+                <div v-if="!m.moi" class="vld-av vld-av--xs vld-av--blue flex-shrink-0">
+                  {{ initiales(selectedConv?.interlocuteur_nom) }}
+                </div>
+                <div class="msg-bubble" :class="m.moi ? 'msg-bubble--mine' : 'msg-bubble--theirs'">
+                  <div class="msg-text">{{ m.contenu }}</div>
+                  <div class="msg-time">
+                    {{ m.heure }}
+                    <svg v-if="m.moi && m.lu" xmlns="http://www.w3.org/2000/svg"
+                      width="10" height="10" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:3px">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+            </template>
+          </div>
+
+          <!-- FAB: scroll back to bottom (newest messages) -->
+          <Transition name="fab-pop">
+            <button v-if="showScrollBtn" class="chat-scroll-fab" @click="goToBottom">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+              <span v-if="newWhileScrolled > 0" class="chat-scroll-fab__badge">
+                {{ newWhileScrolled }}
+              </span>
+            </button>
+          </Transition>
+
+          <!-- Input bar -->
+          <div class="chat-input-bar">
+            <textarea
+              ref="inputArea"
+              v-model="newMsg"
+              class="chat-input"
+              placeholder="Écrire un message…"
+              rows="1"
+              @keydown.enter.exact.prevent="envoyerMessage"
+              @input="autoGrow"
+            ></textarea>
+            <button class="chat-send-btn" :disabled="!newMsg.trim()" @click="envoyerMessage">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="22 2 11 13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+
+        </template>
+      </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         New conversation modal
+         ════════════════════════════════════════════════════════ -->
+    <Transition name="modal-fade">
+      <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-card">
+
+          <div class="modal-card__header">
+            <span class="modal-card__title">Nouveau message</span>
+            <button class="modal-card__close" @click="closeModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-card__body">
+            <div>
+              <span class="modal-label">Destinataire</span>
+              <div class="modal-search-wrap">
+                <svg class="conv-search-icon" xmlns="http://www.w3.org/2000/svg"
+                  width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input v-model="searchDest" class="conv-search" placeholder="Rechercher un contact…"/>
+              </div>
+              <div class="dest-list">
+                <div
+                  v-for="u in destFiltres" :key="u.id"
+                  class="dest-item"
+                  :class="{ 'dest-item--selected': newDest?.id === u.id }"
+                  @click="newDest = u"
+                >
+                  <div class="vld-av vld-av--sm vld-av--blue flex-shrink-0">{{ initiales(u.nom) }}</div>
+                  <div class="dest-item__info">
+                    <div class="dest-item__name">{{ u.nom }}</div>
+                    <div class="dest-item__role">{{ u.role }}</div>
+                  </div>
+                  <span v-if="newDest?.id === u.id" class="dest-check">✓</span>
+                </div>
+                <div v-if="!destFiltres.length"
+                  style="padding:12px;text-align:center;font-size:13px;color:var(--vld-text-muted)">
+                  Aucun contact trouvé
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span class="modal-label">Message</span>
+              <div class="modal-composer">
+                <textarea
+                  v-model="newMsgModal"
+                  class="modal-composer__textarea"
+                  placeholder="Rédigez votre message ici…"
+                  rows="4"
+                ></textarea>
+                <div class="modal-composer__footer">
+                  <span class="modal-composer__hint">{{ newMsgModal.length }}/2000 caractères</span>
+                  <span v-if="newDest" style="font-size:11px;color:var(--vld-gold-dark);font-weight:600">
+                    → {{ newDest.nom }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-card__footer">
+            <button class="btn-cancel" @click="closeModal">Annuler</button>
+            <button class="btn-send" :disabled="!newDest || !newMsgModal.trim()" @click="creerConversation">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="22 2 11 13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              Envoyer
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
 
   </div>
 </template>
@@ -141,24 +277,36 @@
 <script>
 import api from '@/services/api.js'
 
+// Distance from bottom (px) — within this = considered "at bottom"
+const BOTTOM_THRESHOLD = 80
+// Distance from top (px) — triggers loading older messages
+const TOP_THRESHOLD    = 80
+
 export default {
   name: 'Messagerie',
 
   data() {
     return {
-      conversations: [],
-      selectedConv: null,
-      messages: [],
-      newMessage: '',
-      searchConv: '',
-      searchUser: '',
-      usersRecherche: [],
-      showNewConv: false,
-      loadingConvs: false,
+      conversations:   [],
+      messages:        [],        // ascending: oldest → newest
+      utilisateurs:    [],
+      selectedConvId:  null,
+      hasMore:         false,
+      oldestMsgId:     null,
+      loadingMore:     false,
+      userScrolledUp:  false,     // true when user manually scrolled up (pauses auto-scroll)
+      showScrollBtn:   false,
+      newWhileScrolled: 0,
+      newMsg:          '',
+      searchConv:      '',
+      searchDest:      '',
+      showModal:       false,
+      newDest:         null,
+      newMsgModal:     '',
+      loadingConvs:    false,
       loadingMessages: false,
-      sending: false,
-      currentUserId: JSON.parse(localStorage.getItem('user') || '{}').id,
-      _pollMessages: null,
+      echoChannel:     null,
+      _programmaticScroll: false,
     }
   },
 
@@ -167,221 +315,335 @@ export default {
       if (!this.searchConv) return this.conversations
       const q = this.searchConv.toLowerCase()
       return this.conversations.filter(c =>
-        c.interlocuteur_nom.toLowerCase().includes(q)
+        (c.interlocuteur_nom || '').toLowerCase().includes(q)
       )
-    }
+    },
+    selectedConv() {
+      return this.conversations.find(c => c.id === this.selectedConvId) || null
+    },
+    destFiltres() {
+      const q = this.searchDest.toLowerCase()
+      return q ? this.utilisateurs.filter(u => (u.nom || '').toLowerCase().includes(q))
+               : this.utilisateurs
+    },
+    totalNonLus() {
+      return this.conversations.reduce((s, c) => s + (c.non_lu || 0), 0)
+    },
   },
 
-  async mounted() {
-    await this.chargerConversations()
+  mounted() {
+    this.chargerConversations()
+    this.chargerUtilisateurs()
+    this.initWebSocket()
   },
 
   beforeUnmount() {
-    clearInterval(this._pollMessages)
+    this.leaveChannel()
   },
 
   methods: {
-    initiales(nom) {
-      if (!nom) return '?'
-      return nom.split(' ').map(p => p[0] || '').join('').toUpperCase().slice(0, 2)
-    },
 
-    labelRole(role) {
-      return { chef: 'Chef de département', encadrant: 'Encadrant', etudiant: 'Étudiant', jury: 'Jury', directeur: 'Directeur' }[role] || role
+    // ── Tiny helpers ──────────────────────────────────────────
+    initiales(n) {
+      return (n || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     },
-
-    formatTime(date) {
-      if (!date) return ''
-      const d = new Date(date), now = new Date()
-      const diffMin = Math.floor((now - d) / 60000)
-      if (diffMin < 1) return "À l'instant"
-      if (diffMin < 60) return `${diffMin} min`
-      if (diffMin < 1440) return `${Math.floor(diffMin / 60)}h`
-      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+    relativeTime(d) {
+      if (!d) return ''
+      const diff = Date.now() - new Date(d).getTime()
+      const min  = Math.floor(diff / 60000)
+      if (min < 1)  return "À l'instant"
+      if (min < 60) return `${min}m`
+      const h = Math.floor(min / 60)
+      if (h < 24)   return `${h}h`
+      return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
     },
-
-    async chargerConversations() {
-      this.loadingConvs = true
-      try {
-        const res = await api.get('/conversations')
-        this.conversations = res.data || []
-      } catch (e) {
-        console.error('Erreur chargement conversations:', e)
-      } finally {
-        this.loadingConvs = false
+    myId() {
+      try { return JSON.parse(localStorage.getItem('user') || '{}').id } catch { return null }
+    },
+    mapMsg(m) {
+      return {
+        id:      m.id,
+        contenu: m.contenu,
+        moi:     m.expediteur_id === this.myId(),
+        lu:      !!m.lu,
+        heure:   m.created_at
+          ? new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          : '',
       }
     },
-
-    async selectConv(conv) {
-      this.selectedConv = conv
-      clearInterval(this._pollMessages)
-      await this.chargerMessages(conv.id)
-      // Poll for new messages every 5s
-      this._pollMessages = setInterval(() => this.chargerMessages(conv.id), 5000)
-    },
-
-    async chargerMessages(convId) {
-      this.loadingMessages = !this.messages.length
-      try {
-        const res = await api.get(`/conversations/${convId}/messages`)
-        const newMsgs = res.data || []
-        if (newMsgs.length !== this.messages.length) {
-          this.messages = newMsgs
-          this.$nextTick(() => this.scrollBottom())
-        }
-        // Mark as read
-        await api.put(`/conversations/${convId}/lire`).catch(() => {})
-        // Update unread count in sidebar
-        const conv = this.conversations.find(c => c.id === convId)
-        if (conv) conv.non_lu = 0
-      } catch (e) {
-        console.error('Erreur chargement messages:', e)
-      } finally {
-        this.loadingMessages = false
-      }
-    },
-
-    async envoyerMessage() {
-      const contenu = this.newMessage.trim()
-      if (!contenu || !this.selectedConv) return
-      this.sending = true
-      try {
-        const res = await api.post(`/conversations/${this.selectedConv.id}/messages`, { contenu })
-        this.messages.push(res.data)
-        this.newMessage = ''
-        this.$nextTick(() => {
-          this.scrollBottom()
-          if (this.$refs.inputRef) this.$refs.inputRef.style.height = 'auto'
-        })
-        // Update last message in sidebar
-        const conv = this.conversations.find(c => c.id === this.selectedConv.id)
-        if (conv) { conv.dernier_message = contenu; conv.updated_at = new Date().toISOString() }
-      } catch (e) {
-        console.error('Erreur envoi:', e)
-      } finally {
-        this.sending = false
-      }
-    },
-
-    scrollBottom() {
-      const el = this.$refs.messagesContainer
-      if (el) el.scrollTop = el.scrollHeight
-    },
-
-    autoResize(e) {
+    autoGrow(e) {
       const el = e.target
       el.style.height = 'auto'
       el.style.height = Math.min(el.scrollHeight, 120) + 'px'
     },
 
-    async rechercherUtilisateurs() {
-      if (this.searchUser.length < 2) { this.usersRecherche = []; return }
-      try {
-        const res = await api.get('/utilisateurs?search=' + encodeURIComponent(this.searchUser))
-        this.usersRecherche = (res.data || []).filter(u => u.id !== this.currentUserId).slice(0, 8)
-      } catch (e) { this.usersRecherche = [] }
+    // ── Scroll helpers ────────────────────────────────────────
+    //
+    // Standard chat scroll (no column-reverse):
+    //   scrollTop = 0                        → top of history (oldest)
+    //   scrollTop = scrollHeight-clientHeight → bottom (newest messages)
+    //
+    // "At bottom" = scrolled within BOTTOM_THRESHOLD px of the very bottom.
+    // When at bottom, auto-scroll is active. When the user scrolls up,
+    // auto-scroll pauses until they return to the bottom or click the FAB.
+    //
+    //
+    // Standard chat scroll:
+    //   scrollTop = 0                          → top (oldest messages)
+    //   scrollTop = scrollHeight - clientHeight → bottom (newest messages)
+    //
+    isAtBottom() {
+      const el = this.$refs.msgArea
+      if (!el) return true
+      return el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD
     },
 
-    async demarrerConversation(user) {
-      try {
-        const res = await api.post('/conversations', { destinataire_id: user.id })
-        const conv = res.data
-        const exists = this.conversations.find(c => c.id === conv.id)
-        if (!exists) this.conversations.unshift(conv)
-        this.showNewConv = false
-        this.searchUser = ''
-        this.usersRecherche = []
-        await this.selectConv(conv)
-      } catch (e) {
-        console.error('Erreur création conversation:', e)
+    // Programmatic scroll to bottom — sets a guard so onScroll
+    // doesn't mistake it for a user scroll-up action
+    scrollToBottom(smooth = false) {
+      this._programmaticScroll = true
+      this.$nextTick(() => {
+        const el = this.$refs.msgArea
+        if (!el) { this._programmaticScroll = false; return }
+        el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'instant' })
+        // Clear guard after scroll settles
+        setTimeout(() => { this._programmaticScroll = false }, 100)
+      })
+    },
+
+    // FAB click — smooth scroll back to newest, resume auto-scroll
+    goToBottom() {
+      this.userScrolledUp   = false
+      this.showScrollBtn    = false
+      this.newWhileScrolled = 0
+      this.scrollToBottom(true)
+    },
+
+    onScroll() {
+      // Ignore scroll events triggered by our own programmatic scrolls
+      if (this._programmaticScroll) return
+
+      const el = this.$refs.msgArea
+      if (!el) return
+
+      if (this.isAtBottom()) {
+        // User scrolled back to the bottom → resume auto-scroll
+        this.userScrolledUp   = false
+        this.showScrollBtn    = false
+        this.newWhileScrolled = 0
+      } else {
+        // User scrolled up → pause auto-scroll, show FAB
+        this.userScrolledUp = true
+        this.showScrollBtn  = true
+      }
+
+      // Near the top → load older messages
+      if (
+        el.scrollTop < TOP_THRESHOLD &&
+        this.hasMore &&
+        !this.loadingMore &&
+        !this.loadingMessages
+      ) {
+        this.chargerPlus()
       }
     },
-  }
+
+    // ── API calls ─────────────────────────────────────────────
+    async chargerConversations() {
+      this.loadingConvs = true
+      try {
+        const { data } = await api.get('/conversations')
+        this.conversations = data || []
+      } catch (e) { console.error('[Msg] conversations:', e) }
+      finally     { this.loadingConvs = false }
+    },
+
+    async chargerUtilisateurs() {
+      try {
+        const { data } = await api.get('/utilisateurs')
+        this.utilisateurs = (data || []).map(u => ({
+          id:   u.id,
+          nom:  `${u.prenom || ''} ${u.nom || ''}`.trim(),
+          role: u.role,
+        }))
+      } catch (e) { console.error('[Msg] utilisateurs:', e) }
+    },
+
+    async ouvrirConversation(c) {
+      this.selectedConvId   = c.id
+      this.messages         = []
+      this.hasMore          = false
+      this.oldestMsgId      = null
+      this.loadingMessages  = true
+      this.userScrolledUp   = false
+      this.showScrollBtn    = false
+      this.newWhileScrolled = 0
+
+      try {
+        const { data } = await api.get(`/conversations/${c.id}/messages`, { params: { limit: 50 } })
+        const list       = data.data ?? data
+        this.messages    = list.map(m => this.mapMsg(m))
+        this.hasMore     = !!data.has_more
+        this.oldestMsgId = data.oldest_id ?? null
+
+        await api.put(`/conversations/${c.id}/lire`).catch(() => {})
+        c.non_lu = 0
+      } catch (e) { console.error('[Msg] messages:', e) }
+      finally {
+        this.loadingMessages = false
+        // Wait for Vue to render the messages into the DOM, then jump to bottom
+        await this.$nextTick()
+        const el = this.$refs.msgArea
+        if (el) el.scrollTop = el.scrollHeight
+      }
+    },
+
+    async chargerPlus() {
+      if (!this.selectedConvId || !this.oldestMsgId || this.loadingMore) return
+      this.loadingMore = true
+
+      // Save scroll position before DOM changes so viewport doesn't jump
+      const el = this.$refs.msgArea
+      const scrollBottom = el ? el.scrollHeight - el.scrollTop : 0
+
+      try {
+        const { data } = await api.get(`/conversations/${this.selectedConvId}/messages`, {
+          params: { limit: 50, before_id: this.oldestMsgId },
+        })
+        const list       = data.data ?? data
+        this.messages    = [...list.map(m => this.mapMsg(m)), ...this.messages]
+        this.hasMore     = !!data.has_more
+        this.oldestMsgId = data.oldest_id ?? null
+
+        // Restore scroll position: keep the user at the same message after prepend
+        await this.$nextTick()
+        if (el) el.scrollTop = el.scrollHeight - scrollBottom
+      } catch (e) { console.error('[Msg] chargerPlus:', e) }
+      finally     { this.loadingMore = false }
+    },
+
+    async envoyerMessage() {
+      const txt = this.newMsg.trim()
+      if (!txt || !this.selectedConvId) return
+      this.newMsg = ''
+      if (this.$refs.inputArea) this.$refs.inputArea.style.height = 'auto'
+      try {
+        const { data } = await api.post(`/conversations/${this.selectedConvId}/messages`, { contenu: txt })
+        this.messages.push(this.mapMsg(data))
+        const conv = this.conversations.find(c => c.id === this.selectedConvId)
+        if (conv) { conv.dernier_message = txt; conv.updated_at = new Date().toISOString() }
+        // Always snap to bottom when YOU send a message
+        this.userScrolledUp   = false
+        this.showScrollBtn    = false
+        this.newWhileScrolled = 0
+        this.scrollToBottom(false)
+      } catch (e) { this.newMsg = txt; console.error('[Msg] envoyerMessage:', e) }
+    },
+
+    async creerConversation() {
+      if (!this.newDest || !this.newMsgModal.trim()) return
+      const dest = this.newDest, msg = this.newMsgModal
+      try {
+        const { data } = await api.post('/conversations', { destinataire_id: dest.id })
+        await api.post(`/conversations/${data.id}/messages`, { contenu: msg })
+        if (!this.conversations.find(c => c.id === data.id)) {
+          this.conversations.unshift({
+            id: data.id, interlocuteur_id: dest.id,
+            interlocuteur_nom: dest.nom, interlocuteur_role: dest.role,
+            dernier_message: msg, non_lu: 0, updated_at: new Date().toISOString(),
+          })
+        }
+        this.closeModal()
+        await this.ouvrirConversation({ id: data.id })
+      } catch (e) { console.error('[Msg] creerConversation:', e) }
+    },
+
+    closeModal() {
+      this.showModal = false; this.newDest = null
+      this.newMsgModal = ''; this.searchDest = ''
+    },
+
+    // ── WebSocket — raw window.Echo, no composable wrapper ───
+    //
+    // Your MessageController does:
+    //   broadcast(new MessageSent($msg))->toOthers();
+    //   broadcast(new NotificationCreated($notif));
+    //
+    // MessageSent must implement ShouldBroadcast and define:
+    //   public function broadcastOn() {
+    //     return new PrivateChannel('conversation.' . $this->message->conversation_id);
+    //   }
+    //   public function broadcastAs() { return 'MessageSent'; }   // optional
+    //
+    // routes/channels.php must have:
+    //   Broadcast::channel('conversation.{id}', function ($user, $id) {
+    //     return \App\Models\Conversation::where('id', $id)
+    //       ->where(fn($q) => $q->where('user1_id', $user->id)->orWhere('user2_id', $user->id))
+    //       ->exists();
+    //   });
+    //
+    // config/broadcasting.php → default: 'reverb'
+    // .env → BROADCAST_DRIVER=reverb (or BROADCAST_CONNECTION=reverb in newer Laravel)
+    //
+    initWebSocket() {
+      if (typeof window.Echo === 'undefined') {
+        console.warn('[Msg] window.Echo not found — check bootstrap.js / echo setup')
+        return
+      }
+      const userId = this.myId()
+      if (!userId) return
+
+      // Subscribe to the user's private channel for incoming notifications
+      // (NotificationCreated is also broadcast here)
+      try {
+        this.echoChannel = window.Echo
+          .private(`App.Models.Utilisateur.${userId}`)
+          .listen('MessageSent', payload => {
+            // Laravel strips the namespace: event class = 'MessageSent'
+            this.onIncomingMessage(payload)
+          })
+          .listen('NotificationCreated', () => {
+            // Optionally emit an event so the Notifications component refreshes
+            this.$emit('notification-received')
+          })
+      } catch (e) {
+        console.error('[Msg] Echo channel error:', e)
+      }
+    },
+
+    leaveChannel() {
+      if (typeof window.Echo !== 'undefined' && this.echoChannel) {
+        window.Echo.leave(`App.Models.Utilisateur.${this.myId()}`)
+        this.echoChannel = null
+      }
+    },
+
+    onIncomingMessage(payload) {
+      const msg = payload.message ?? payload
+
+      if (msg.conversation_id === this.selectedConvId) {
+        if (!this.messages.find(m => m.id === msg.id)) {
+          this.messages.push(this.mapMsg(msg))
+
+          if (!this.userScrolledUp) {
+            // User is at the bottom — auto-scroll to reveal the new message
+            this.scrollToBottom(true)
+          } else {
+            // User is reading history — don't interrupt, just count the new message
+            this.newWhileScrolled++
+          }
+        }
+      }
+
+      // Update sidebar for other conversations
+      const conv = this.conversations.find(c => c.id === msg.conversation_id)
+      if (conv && msg.conversation_id !== this.selectedConvId) {
+        conv.non_lu          = (conv.non_lu || 0) + 1
+        conv.dernier_message = msg.contenu
+        conv.updated_at      = msg.created_at || new Date().toISOString()
+      }
+    },
+  },
 }
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-.page-content{font-family:'Source Sans 3',sans-serif;height:calc(100vh - 60px);display:flex;flex-direction:column}
-
-/* LAYOUT */
-.msg-layout{display:flex;flex:1;overflow:hidden;border-radius:14px;border:1.5px solid #c8c4bc;background:#e8e4dc;margin:0}
-
-/* SIDEBAR */
-.conv-sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;border-right:1.5px solid #c8c4bc;background:#ddd9d1}
-.conv-header{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px;border-bottom:1.5px solid #c8c4bc}
-.conv-title{font-family:'Merriweather',serif;font-size:16px;color:#1e2a35}
-.btn-new-conv{width:30px;height:30px;border-radius:8px;border:1.5px solid #c8c4bc;background:#e8e4dc;color:#4a5a6a;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s}
-.btn-new-conv:hover{border-color:#3d6080;color:#3d6080;background:#ddd9d1}
-.conv-search{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #c8c4bc;background:#e8e4dc}
-.conv-search-input{flex:1;border:none;background:transparent;font-size:13px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;outline:none}
-.conv-loading,.conv-empty{padding:24px;text-align:center;font-size:13px;color:#8a9aaa}
-.conv-list{flex:1;overflow-y:auto}
-.conv-item{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:none;border-bottom:1px solid #c8c4bc;background:transparent;cursor:pointer;text-align:left;transition:background .15s}
-.conv-item:hover{background:rgba(61,96,128,0.05)}
-.conv-item.active{background:rgba(61,96,128,0.1)}
-.conv-item.unread .conv-nom{font-weight:700;color:#1e2a35}
-.conv-av{width:38px;height:38px;border-radius:10px;background:rgba(61,96,128,0.15);color:#3d6080;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.conv-info{flex:1;min-width:0}
-.conv-nom{font-size:13.5px;font-weight:600;color:#1e2a35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.conv-last{font-size:12px;color:#8a9aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
-.conv-time{font-size:11px;color:#8a9aaa}
-.conv-badge{background:#e74c3c;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;min-width:16px;text-align:center}
-
-/* CHAT ZONE */
-.chat-zone{flex:1;display:flex;flex-direction:column;min-width:0}
-.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#8a9aaa;padding:40px}
-.chat-empty p{font-size:14px;text-align:center}
-.btn-new-msg{padding:10px 20px;background:rgba(61,96,128,0.1);border:1.5px solid rgba(61,96,128,0.2);border-radius:9px;font-size:13.5px;font-weight:600;color:#3d6080;cursor:pointer;font-family:'Source Sans 3',sans-serif;transition:all .18s}
-.btn-new-msg:hover{background:rgba(61,96,128,0.2)}
-.chat-header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1.5px solid #c8c4bc;background:#ddd9d1;flex-shrink:0}
-.chat-av{width:40px;height:40px;border-radius:10px;background:rgba(61,96,128,0.15);color:#3d6080;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.chat-header-info{flex:1}
-.chat-nom{font-size:15px;font-weight:700;color:#1e2a35}
-.chat-role{font-size:12px;color:#8a9aaa;margin-top:1px}
-.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
-.chat-messages::-webkit-scrollbar{width:4px}
-.chat-messages::-webkit-scrollbar-thumb{background:#c8c4bc;border-radius:4px}
-.msg-loading,.msg-empty{text-align:center;font-size:13px;color:#8a9aaa;padding:20px}
-.msg-row{display:flex}
-.msg-mine{justify-content:flex-end}
-.msg-other{justify-content:flex-start}
-.msg-bubble{max-width:70%;padding:10px 14px;border-radius:14px;position:relative}
-.msg-mine .msg-bubble{background:rgba(61,96,128,0.85);color:#fff;border-bottom-right-radius:4px}
-.msg-other .msg-bubble{background:#ddd9d1;color:#1e2a35;border:1.5px solid #c8c4bc;border-bottom-left-radius:4px}
-.msg-text{font-size:13.5px;line-height:1.5;word-break:break-word}
-.msg-time{font-size:10.5px;margin-top:4px;opacity:.65;text-align:right}
-.chat-input-wrap{display:flex;align-items:flex-end;gap:10px;padding:14px 20px;border-top:1.5px solid #c8c4bc;background:#ddd9d1;flex-shrink:0}
-.chat-input{flex:1;padding:10px 14px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:12px;font-size:13.5px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;resize:none;outline:none;transition:border-color .18s;min-height:42px;max-height:120px;line-height:1.5}
-.chat-input:focus{border-color:#3d6080}
-.btn-send{width:42px;height:42px;border-radius:10px;background:rgba(61,96,128,0.85);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s}
-.btn-send:hover:not(:disabled){background:#2f4f6a}
-.btn-send:disabled{opacity:.4;cursor:not-allowed}
-.msg-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* MODAL */
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:#ddd9d1;border-radius:16px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0}
-.modal-hdr h3{font-family:'Merriweather',serif;font-size:1rem;color:#1e2a35}
-.mclose{background:none;border:none;cursor:pointer;color:#8a9aaa;display:flex;align-items:center;transition:color .15s}
-.mclose:hover{color:#1e2a35}
-.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px}
-.fg{display:flex;flex-direction:column;gap:6px}
-.fg label{font-size:13px;font-weight:600;color:#2f4f6a}
-.fi{padding:10px 12px;border:1.5px solid #c8c4bc;border-radius:9px;background:#e8e4dc;font-size:13.5px;color:#1e2a35;font-family:'Source Sans 3',sans-serif;outline:none;transition:border-color .18s}
-.fi:focus{border-color:#3d6080}
-.user-results{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto}
-.user-result-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1.5px solid #c8c4bc;border-radius:10px;background:#e8e4dc;cursor:pointer;text-align:left;transition:all .15s}
-.user-result-item:hover{border-color:#3d6080;background:#ddd9d1}
-.ur-av{width:36px;height:36px;border-radius:9px;background:rgba(61,96,128,0.15);color:#3d6080;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ur-nom{font-size:13.5px;font-weight:600;color:#1e2a35}
-.ur-role{font-size:12px;color:#8a9aaa;margin-top:1px}
-.user-empty{text-align:center;font-size:13px;color:#8a9aaa;padding:12px}
-.modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .2s,transform .2s}
-.modal-fade-enter-from,.modal-fade-leave-to{opacity:0;transform:scale(.97)}
-@media(max-width:768px){.conv-sidebar{width:100%;border-right:none;border-bottom:1.5px solid #c8c4bc}.msg-layout{flex-direction:column}}
-</style>
+<!-- All styles live in design-tokens.css → "MESSAGERIE COMPONENT" section -->

@@ -110,6 +110,8 @@ export default {
   gap: 10px; flex-wrap: wrap;
   margin-bottom: 18px;
   font-family: 'Source Sans 3', sans-serif;
+  max-width: 860px; margin-left: auto; margin-right: auto;
+  justify-content: center;
 }
 
 /* Search */

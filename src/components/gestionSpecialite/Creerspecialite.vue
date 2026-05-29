@@ -1,101 +1,379 @@
 <template>
-  <div class="page-content">
-    <div class="page-header-block">
-      <div>
-        <h2 class="page-title">Créer une spécialité</h2>
-        <p class="page-sub">Ajoutez une nouvelle spécialité au département</p>
+  <div class="page-wrap">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
       </div>
+      <h1 class="page-title">{{ editing ? 'Modifier la spécialité' : 'Créer une spécialité' }}</h1>
+      <p class="page-sub">{{ editing ? 'Modifiez les informations de la spécialité' : 'Renseignez les informations de la nouvelle spécialité' }}</p>
     </div>
 
+    <!-- Toast -->
+    <transition name="toast-pop">
+      <div v-if="toast.visible" class="toast" :class="toast.type">
+        <svg v-if="toast.type === 'toast-ok'" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ toast.message }}
+      </div>
+    </transition>
+
+    <!-- Form card -->
     <div class="form-card">
-      <div class="field-block">
-        <label class="field-label">Nom de la spécialité <span class="req">*</span></label>
-        <input v-model="form.nom" class="field-input" :class="{'field-error': errors.nom}"
-          type="text" placeholder="Ex : Génie Logiciel"/>
-        <p class="err-msg" v-if="errors.nom">{{ errors.nom }}</p>
+
+      <!-- Nom -->
+      <div class="section-label">
+        <span class="section-num">1</span>
+        Informations générales
       </div>
 
-      <div class="field-block">
-        <label class="field-label">Code <span class="req">*</span></label>
-        <input v-model="form.code" class="field-input" :class="{'field-error': errors.code}"
-          type="text" placeholder="Ex : GL2025"/>
-        <p class="err-msg" v-if="errors.code">{{ errors.code }}</p>
+      <div class="field">
+        <label class="lbl">Nom <span class="req">*</span></label>
+        <div class="inp-wrap" :class="{ 'inp-wrap--err': errs.nom }">
+          <svg class="inp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          </svg>
+          <input v-model="f.nom" class="inp" placeholder="Ex : Génie Logiciel" />
+        </div>
+        <p class="err-msg" v-if="errs.nom">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ errs.nom }}
+        </p>
       </div>
 
-      <div class="field-block">
-        <label class="field-label">Description</label>
-        <textarea v-model="form.description" class="field-input field-textarea" rows="3"
-          placeholder="Description de la spécialité..."/>
+      <!-- Code -->
+      <div class="field">
+        <label class="lbl">Code <span class="req">*</span></label>
+        <div class="inp-wrap" :class="{ 'inp-wrap--err': errs.code }">
+          <svg class="inp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+          <input v-model="f.code" class="inp" placeholder="Ex : GL" />
+        </div>
+        <p class="err-msg" v-if="errs.code">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ errs.code }}
+        </p>
       </div>
 
-      <div class="field-block">
-        <label class="field-label">Date de création</label>
-        <input v-model="form.dateCreation" class="field-input" type="date"/>
+      <!-- Description -->
+      <div class="field">
+        <label class="lbl">Description <span class="opt">(optionnel)</span></label>
+        <textarea v-model="f.description" class="text-area" rows="3"
+          placeholder="Décrivez brièvement la spécialité…"></textarea>
       </div>
 
-      <div class="form-footer">
-        <button class="btn-outline" @click="$emit('navigate','spec-list')">Annuler</button>
-        <button class="btn-primary" @click="soumettre" :disabled="saving">
-          <span v-if="saving" class="spinner"></span>
-          {{ saving ? 'Création...' : 'Créer la spécialité' }}
+      <!-- Date création -->
+      <div class="field">
+        <label class="lbl">Date de création <span class="opt">(optionnel)</span></label>
+        <div class="inp-wrap">
+          <svg class="inp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <input v-model="f.date_creation" class="inp" placeholder="JJ/MM/AAAA" />
+        </div>
+      </div>
+
+      <!-- Capacité max -->
+      <div class="divider">
+        <span class="divider-text">Paramètres de capacité</span>
+      </div>
+
+      <div class="section-label">
+        <span class="section-num">2</span>
+        Capacité d'accueil
+      </div>
+
+      <div class="field">
+        <label class="lbl">Capacité max étudiants <span class="req">*</span></label>
+        <div class="inp-wrap" :class="{ 'inp-wrap--err': errs.capacite_max }">
+          <svg class="inp-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <input
+            v-model.number="f.capacite_max"
+            type="number"
+            min="1"
+            max="9999"
+            class="inp"
+            placeholder="Ex : 30"
+          />
+        </div>
+        <p class="err-msg" v-if="errs.capacite_max">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ errs.capacite_max }}
+        </p>
+        <p class="hint">Nombre maximal d'étudiants pouvant être affectés à cette spécialité.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-row">
+        <button class="btn-cancel" @click="$emit('annuler')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Annuler
+        </button>
+        <button class="btn-confirm" @click="save" :disabled="saving">
+          <div v-if="saving" class="spin-sm"></div>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          {{ editing ? 'Enregistrer les modifications' : 'Créer la spécialité' }}
         </button>
       </div>
+
     </div>
   </div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
-  name: 'Creerspecialite',
-  // FIX: was emitting 'specialite-creee' but parent (Dashboarddirecteur) listens for 'created'
-  // Keep both for compatibility, but the parent handler is called @created → onSpecialiteCreee
-  emits: ['created', 'navigate'],
+  name: 'CreerSpecialite',
+  props: { specialite: { type: Object, default: null } },
+  emits: ['creee', 'modifiee', 'annuler'],
+
   data() {
     return {
+      f: { nom: '', code: '', description: '', date_creation: '', capacite_max: 30 },
+      errs: {},
       saving: false,
-      form: { nom: '', code: '', description: '', dateCreation: '' },
-      errors: {}
+      toast: { visible: false, message: '', type: 'toast-ok', _timer: null },
     }
   },
+
+  computed: {
+    editing() { return !!this.specialite },
+  },
+
+  watch: {
+    specialite: {
+      immediate: true,
+      handler(s) {
+        if (s) this.f = {
+          nom: s.nom || '',
+          code: s.code || '',
+          description: s.description || '',
+          date_creation: s.date_creation || '',
+          capacite_max: s.capacite_max ?? 30,
+        }
+      },
+    },
+  },
+
   methods: {
-    soumettre() {
-      // FIX: removed debug console.log("CLICK OK")
-      this.errors = {}
-      if (!this.form.nom.trim())  this.errors.nom  = 'Le nom est obligatoire'
-      if (!this.form.code.trim()) this.errors.code = 'Le code est obligatoire'
-      if (Object.keys(this.errors).length) return
+    validate() {
+      this.errs = {}
+      if (!this.f.nom.trim())  this.errs.nom  = 'Ce champ est obligatoire.'
+      if (!this.f.code.trim()) this.errs.code = 'Ce champ est obligatoire.'
+      if (!this.f.capacite_max || this.f.capacite_max < 1)
+        this.errs.capacite_max = 'Veuillez saisir une capacité valide (≥ 1).'
+      return !Object.keys(this.errs).length
+    },
+
+    showToast(message, type = 'toast-ok') {
+      clearTimeout(this.toast._timer)
+      this.toast = { visible: true, message, type, _timer: null }
+      this.toast._timer = setTimeout(() => { this.toast.visible = false }, 3500)
+    },
+
+    async save() {
+      if (!this.validate()) return
       this.saving = true
-      // FIX: emit 'created' to match what Dashboarddirecteur.vue listens for (@created="onSpecialiteCreee")
-      this.$emit('created', { ...this.form })
-      // The parent handles the API call and navigation
-      setTimeout(() => { this.saving = false }, 1500)
-    }
-  }
+      try {
+        if (this.editing) {
+          const r = await api.put(`/specialites/${this.specialite.id}`, this.f)
+          this.$emit('modifiee', r.data)
+          this.showToast(`Spécialité « ${r.data.nom} » modifiée avec succès.`, 'toast-ok')
+        } else {
+          const r = await api.post('/specialites', this.f)
+          const msg = `Spécialité « ${r.data.nom} » créée avec succès.`
+          this.showToast(msg, 'toast-ok')
+          setTimeout(() => {
+            this.$emit('creee', { data: r.data, toastMessage: msg })
+          }, 900)
+        }
+      } catch (e) {
+        const v = e.response?.data?.errors || {}
+        if (v.nom)          this.errs.nom          = v.nom[0]
+        if (v.code)         this.errs.code         = v.code[0]
+        if (v.capacite_max) this.errs.capacite_max = v.capacite_max[0]
+        this.showToast(e.response?.data?.message || 'Une erreur est survenue.', 'toast-err')
+      } finally {
+        this.saving = false
+      }
+    },
+  },
 }
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600&family=Merriweather:wght@700&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-.page-content{padding:32px;font-family:'Source Sans 3',sans-serif;max-width:640px}
-.page-header-block{margin-bottom:24px}
-.page-title{font-family:'Merriweather',serif;font-size:20px;color:#1e2a35;margin-bottom:4px}
-.page-sub{font-size:13.5px;color:#8a9aaa}
-.form-card{background:#ddd9d1;border:1.5px solid #c8c4bc;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
-.field-block{margin-bottom:20px}
-.field-label{display:block;font-size:13px;font-weight:600;color:#1e2a35;margin-bottom:6px}
-.req{color:#c0392b}
-.field-input{width:100%;padding:10px 13px;background:#e8e4dc;border:1.5px solid #c8c4bc;border-radius:9px;font-size:13.5px;color:#1e2a35;font-family:inherit;transition:border-color 0.18s}
-.field-input:focus{outline:none;border-color:#3d6080}
-.field-textarea{resize:vertical;min-height:80px}
-.field-error{border-color:#c0392b}
-.err-msg{font-size:12px;color:#c0392b;margin-top:4px}
-.form-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1.5px solid #c8c4bc}
-.btn-primary{display:flex;align-items:center;gap:8px;padding:10px 22px;background:#3d6080;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.18s}
-.btn-primary:hover{background:#2f4f6a}
-.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
-.btn-outline{padding:10px 18px;background:transparent;border:1.5px solid #c8c4bc;border-radius:10px;font-size:14px;color:#4a5a6a;cursor:pointer;font-family:inherit;transition:all 0.18s}
-.btn-outline:hover{border-color:#3d6080;color:#3d6080}
-.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.page-wrap { font-family: 'Sora', sans-serif; color: #1a2332; position: relative; max-width: 620px; margin: 0 auto; }
+
+/* Header */
+.page-header {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; margin-bottom: 28px;
+}
+.page-header__icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, #f5a623, #3d7aba);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; box-shadow: 0 4px 14px rgba(44,95,138,.28);
+}
+.page-title  { font-size: 20px; font-weight: 700; letter-spacing: -.4px; }
+.page-sub    { font-size: 13px; color: #6b7a8d; margin-top: 3px; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 22px; right: 22px; z-index: 9999;
+  display: flex; align-items: center; gap: 9px;
+  padding: 12px 18px; border-radius: 11px;
+  font-size: 13.5px; font-weight: 600; font-family: 'Sora', sans-serif;
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+}
+.toast-ok  { background: #e6f5ee; color: #1e7a4e; border: 1px solid #b8dcc8; }
+.toast-err { background: #fdf0ef; color: #c0392b; border: 1px solid #f0c0bb; }
+.toast-pop-enter-active, .toast-pop-leave-active { transition: all .28s ease; }
+.toast-pop-enter-from, .toast-pop-leave-to { opacity: 0; transform: translateY(-10px) scale(.96); }
+
+/* Form card */
+.form-card {
+  background: #fff; border-radius: 16px; border: 1px solid #e5eaf0;
+  box-shadow: 0 2px 16px rgba(0,0,0,.06);
+  padding: 24px; max-width: 560px;
+  margin: 0 auto;
+}
+
+/* Section label */
+.section-label {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600; color: #3a4a5a;
+  margin-bottom: 14px;
+}
+.section-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: #2c5f8a; color: #fff; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Divider */
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 22px 0 18px;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e5eaf0; }
+.divider-text { font-size: 11.5px; color: #f5a623; font-weight: 600; white-space: nowrap; }
+
+/* Fields */
+.field { margin-bottom: 16px; }
+.lbl   { display: block; font-size: 12.5px; font-weight: 600; color: #3a4a5a; margin-bottom: 7px; }
+.req   { color: #c0392b; margin-left: 2px; }
+.opt   { font-weight: 400; color: #9aabb8; font-size: 12px; margin-left: 4px; }
+.hint  { font-size: 11.5px; color: #9aabb8; margin-top: 5px; }
+
+.inp-wrap {
+  display: flex; align-items: center; position: relative;
+  background: #f4f7fb; border: 1.5px solid #d8e2ee; border-radius: 10px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.inp-wrap:focus-within { border-color: #f5a623; box-shadow: 0 0 0 3px rgba(44,95,138,.1); background: #fff; }
+.inp-wrap--err { border-color: #c0392b; }
+.inp-icon { position: absolute; left: 13px; color: #8a9ab0; pointer-events: none; flex-shrink: 0; }
+.inp {
+  width: 100%; padding: 11px 14px 11px 36px;
+  background: transparent; border: none; outline: none;
+  font-size: 13.5px; font-family: 'Sora', sans-serif; color: #1a2332;
+}
+.inp::placeholder { color: #b0bcc8; }
+/* remove number spinners */
+.inp[type=number]::-webkit-inner-spin-button,
+.inp[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.inp[type=number] { -moz-appearance: textfield; }
+
+.text-area {
+  width: 100%; padding: 10px 13px; resize: vertical;
+  background: #f4f7fb; border: 1.5px solid #d8e2ee; border-radius: 10px;
+  font-size: 13.5px; font-family: 'Sora', sans-serif; color: #1a2332;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.text-area:focus { border-color: #f5a623; box-shadow: 0 0 0 3px rgba(44,95,138,.1); background: #fff; }
+.text-area::placeholder { color: #b0bcc8; }
+
+.err-msg {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #c0392b; margin-top: 6px;
+}
+
+/* Actions */
+.actions-row {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5eaf0;
+}
+.btn-cancel {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 18px; border-radius: 10px;
+  border: 1.5px solid #d8e2ee; background: #fff;
+  color: #5a6a7a; font-size: 13.5px; font-weight: 600;
+  font-family: 'Sora', sans-serif; cursor: pointer; transition: all .18s;
+}
+.btn-cancel:hover { border-color: #c0392b; color: #c0392b; }
+
+.btn-confirm {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px; border: none; border-radius: 11px;
+  background: linear-gradient(135deg, #f5a623, #3d7aba);
+  color: #fff; font-size: 13.5px; font-weight: 700;
+  font-family: 'Sora', sans-serif; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(44,95,138,.28); transition: all .18s;
+}
+.btn-confirm:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(44,95,138,.38); }
+.btn-confirm:disabled { opacity: .6; cursor: not-allowed; }
+
+.spin-sm {
+  width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

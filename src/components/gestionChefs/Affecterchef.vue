@@ -1,76 +1,183 @@
 <template>
-  <transition name="modal-fade">
-  <div class="modal-overlay" @click.self="$emit('fermer')">
-    <div class="modal-box">
+  <div v-if="chef" class="modal-overlay" @click.self="$emit('fermer')">
+    <div class="modal-box" role="dialog" aria-modal="true">
 
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <div class="modal-icon icon-gold">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      <!-- Header -->
+      <div class="modal-hd">
+        <div class="modal-hd__left">
+          <div class="modal-hd-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
           </div>
-          <h3>Affecter à une spécialité</h3>
+          <span class="modal-title">Affecter à une spécialité</span>
         </div>
         <button class="modal-close" @click="$emit('fermer')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
-      <div class="modal-body" v-if="chef">
+      <!-- Body -->
+      <div class="modal-bd">
 
-        <!-- Chef info -->
-        <div class="chef-card">
-          <div class="chef-avatar">{{ initiales }}</div>
+        <!-- Chef info card -->
+        <div class="chef-info-card">
+          <div class="chef-av" :style="{ background: avatarColor }">{{ initiales }}</div>
           <div>
-            <p class="chef-name">{{ chef.prenom }} {{ chef.nom }}</p>
-            <p class="chef-email">{{ chef.email }}</p>
+            <div class="chef-full-name">{{ chef.prenom }} {{ chef.nom }}</div>
+            <div class="chef-email">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              {{ chef.email }}
+            </div>
+            <div class="chef-current-spec" v-if="chef.specialiteNom">
+              Actuellement affecté à : <strong>{{ chef.specialiteNom }}</strong>
+            </div>
+            <div class="chef-current-spec chef-current-spec--vacant" v-else>
+              Aucune spécialité affectée
+            </div>
           </div>
         </div>
 
-        <!-- US 14 - 2.a : Déjà affecté -->
-        <div class="alert-info" v-if="chef.specialiteId">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Ce chef est déjà affecté à <strong>{{ chef.specialiteNom }}</strong>. Choisir une nouvelle spécialité remplacera l'affectation actuelle.
-        </div>
-
-        <!-- US 14 - étape 5 : Sélectionner spécialité -->
-        <div class="field-block">
-          <label class="lbl">Spécialité <span class="req">*</span></label>
-          <div class="select-wrap">
-            <select v-model="specialiteChoisie" :class="{ 'input-err': errSpec }">
-              <option value="">-- Sélectionner une spécialité --</option>
-              <option v-for="sp in specialites" :key="sp.id" :value="sp.id">
-                {{ sp.code }} — {{ sp.nom }}
-                {{ sp.id === chef.specialiteId ? '(actuelle)' : '' }}
-              </option>
-            </select>
-            <svg class="select-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        <!-- Step indicator -->
+        <div class="steps">
+          <div class="step" :class="{ 'step--active': !confirmStep, 'step--done': confirmStep }">
+            <div class="step-num">{{ confirmStep ? '✓' : '1' }}</div>
+            <span>Choisir la spécialité</span>
           </div>
-          <p class="err" v-if="errSpec">{{ errSpec }}</p>
+          <div class="step-line" :class="{ 'step-line--done': confirmStep }"></div>
+          <div class="step" :class="{ 'step--active': confirmStep }">
+            <div class="step-num">2</div>
+            <span>Confirmer</span>
+          </div>
         </div>
 
-        <!-- US 14 - 7.a : Conflit de chef -->
-        <div class="alert-warn" v-if="conflitChef">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>Cette spécialité a déjà un chef affecté (<strong>{{ conflitChef.prenom }} {{ conflitChef.nom }}</strong>). Confirmer remplacera son affectation.</span>
+        <!-- Step 1: Choisir spécialité -->
+        <div v-if="!confirmStep">
+          <div class="field">
+            <label class="lbl">Spécialité <span class="req">*</span></label>
+            <div class="select-wrap">
+              <select v-model="specialiteChoisie" class="sel" :class="{ 'sel--err': errSpec }">
+                <option value="">— Choisir une spécialité —</option>
+                <option v-for="s in specialites" :key="s.id" :value="s.id">
+                  {{ s.nom }} ({{ s.code }})
+                </option>
+              </select>
+              <svg class="sel-arrow" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <p class="err" v-if="errSpec">{{ errSpec }}</p>
+          </div>
+
+          <!-- Conflict warning (step 1 preview) -->
+          <div v-if="conflitChef && specialiteChoisie" class="conflict-banner">
+            <div class="conflict-banner__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div>
+              <div class="conflict-banner__title">Spécialité déjà encadrée</div>
+              <div class="conflict-banner__body">
+                <strong>{{ conflitChef.prenom }} {{ conflitChef.nom }}</strong>
+                est actuellement chef de cette spécialité. Voulez-vous le remplacer ?
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected spec preview -->
+          <div v-else-if="specialiteSelectionnee && specialiteChoisie" class="spec-preview">
+            <div class="spec-preview__dot" :style="{ background: '#2c5f8a' }"></div>
+            <div>
+              <div class="spec-preview__name">{{ specialiteSelectionnee.nom }}</div>
+              <div class="spec-preview__code">{{ specialiteSelectionnee.code }}</div>
+            </div>
+            <div class="spec-preview__free">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Poste libre
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Confirmation (after conflict) -->
+        <div v-else>
+          <div class="confirm-card">
+            <div class="confirm-card__section">
+              <div class="confirm-card__label">Nouveau chef</div>
+              <div class="confirm-card__value">{{ chef.prenom }} {{ chef.nom }}</div>
+            </div>
+            <div class="confirm-card__arrow">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </div>
+            <div class="confirm-card__section">
+              <div class="confirm-card__label">Spécialité</div>
+              <div class="confirm-card__value">{{ specialiteSelectionnee?.nom }}</div>
+            </div>
+          </div>
+          <div class="confirm-replace-note" v-if="conflitChef">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <strong>{{ conflitChef.prenom }} {{ conflitChef.nom }}</strong>
+            sera retiré de cette spécialité et restera encadrant.
+          </div>
         </div>
 
       </div>
 
-      <div class="modal-footer">
-        <button class="btn-gold" @click="confirmer">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Confirmer l'affectation
-        </button>
-        <!-- US 14 - 6.a : Annuler -->
-        <button class="btn-outline" @click="$emit('fermer')">Annuler</button>
+      <!-- Footer -->
+      <div class="modal-ft">
+        <template v-if="!confirmStep">
+          <button class="btn-primary" :disabled="!specialiteChoisie || saving" @click="passer">
+            {{ conflitChef ? 'Continuer →' : 'Affecter' }}
+            <div v-if="saving && !conflitChef" class="spin-sm"></div>
+          </button>
+          <button class="btn-ghost" @click="$emit('fermer')">Annuler</button>
+        </template>
+        <template v-else>
+          <button class="btn-primary btn-primary--orange" :disabled="saving" @click="confirmer">
+            <div v-if="saving" class="spin-sm"></div>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Confirmer le remplacement
+          </button>
+          <button class="btn-ghost" @click="confirmStep = false">← Retour</button>
+        </template>
       </div>
-
     </div>
   </div>
-  </transition>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
+const COLORS = ['#3d6080','#5b8db0','#2e7d6b','#7c5cbf','#c07b2c','#b03d5b','#3d7a80']
+
 export default {
   name: 'AffecterChef',
   props: {
@@ -79,95 +186,246 @@ export default {
     chefs:       { type: Array,  default: () => [] },
   },
   emits: ['fermer', 'affecte'],
+
   data() {
     return {
       specialiteChoisie: '',
-      errSpec: '',
+      errSpec:           '',
+      saving:            false,
+      confirmStep:       false,   // true when we show the replace-confirmation step
     }
   },
+
   computed: {
     initiales() {
       if (!this.chef) return ''
       return ((this.chef.prenom || '')[0] + (this.chef.nom || '')[0]).toUpperCase()
     },
-    // US 14 - 7.a
+    avatarColor() {
+      return COLORS[(this.chef?.id || 0) % COLORS.length]
+    },
     conflitChef() {
       if (!this.specialiteChoisie) return null
-      return this.chefs.find(c => c.specialiteId === this.specialiteChoisie && c.id !== this.chef?.id) || null
+      return this.chefs.find(
+        c => c.specialiteId === this.specialiteChoisie && c.id !== this.chef?.id
+      ) || null
+    },
+    specialiteSelectionnee() {
+      return this.specialites.find(s => s.id === this.specialiteChoisie) || null
     },
   },
+
   watch: {
-    chef() { this.specialiteChoisie = ''; this.errSpec = '' },
+    chef() { this.specialiteChoisie = ''; this.errSpec = ''; this.confirmStep = false },
+    specialiteChoisie() { this.errSpec = ''; this.confirmStep = false },
   },
+
   methods: {
-    confirmer() {
-      // US 14 - 5.a
-      if (!this.specialiteChoisie) { this.errSpec = 'Veuillez sélectionner une spécialité.'; return }
+    passer() {
       this.errSpec = ''
-      const sp = this.specialites.find(s => s.id === this.specialiteChoisie)
-      this.$emit('affecte', {
-        chefId:        this.chef.id,
-        specialiteId:  this.specialiteChoisie,
-        specialiteNom: sp ? sp.nom  : '',
-        specialiteCode:sp ? sp.code : '',
-        conflitChefId: this.conflitChef ? this.conflitChef.id : null,
-      })
+      if (!this.specialiteChoisie) {
+        this.errSpec = 'Veuillez choisir une spécialité.'
+        return
+      }
+      // If there's a conflict, go to confirmation step (per spec 5.a)
+      if (this.conflitChef) {
+        this.confirmStep = true
+        return
+      }
+      // No conflict → affecter directly
+      this.confirmer()
+    },
+
+    async confirmer() {
+      this.saving = true
+      try {
+        const r = await api.post(`/chefs/${this.chef.id}/affecter`, {
+          specialiteId: this.specialiteChoisie,
+        })
+        this.$emit('affecte', r.data)
+        this.$emit('fermer')
+      } catch (e) {
+        this.errSpec = e.response?.data?.message || "Erreur lors de l'affectation."
+        this.confirmStep = false
+      } finally {
+        this.saving = false
+      }
     },
   },
 }
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(13,31,53,0.52); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; backdrop-filter: blur(3px); }
-.modal-box { background: #ddd9d1; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 24px 60px rgba(0,0,0,0.28); animation: modalIn 0.28s cubic-bezier(0.22,1,0.36,1) both; font-family: 'Source Sans 3', sans-serif; overflow: hidden; }
-@keyframes modalIn { from { opacity:0; transform: scale(0.94) translateY(14px); } to { opacity:1; transform: none; } }
-
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid #c8c4bc; background: #d5d1c9; }
-.modal-title-group { display: flex; align-items: center; gap: 12px; }
-.modal-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-.icon-gold { background: rgba(245,166,35,0.15); color: #d98e1a; }
-.modal-header h3 { font-family: 'Merriweather', serif; font-size: 16px; font-weight: 700; color: #1e2a35; }
-.modal-close { background: none; border: none; color: #8a9aaa; cursor: pointer; display: flex; padding: 4px; border-radius: 6px; transition: color 0.15s, background 0.15s; width: auto; box-shadow: none; }
-.modal-close:hover { color: #1e2a35; background: rgba(0,0,0,0.07); box-shadow: none; transform: none; }
-
-.modal-body { padding: 22px 24px; }
-.modal-footer { display: flex; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid #c8c4bc; }
-
-.chef-card { display: flex; align-items: center; gap: 14px; padding: 14px; background: rgba(61,96,128,0.08); border-radius: 10px; margin-bottom: 18px; border: 1px solid rgba(61,96,128,0.12); }
-.chef-avatar { width: 44px; height: 44px; border-radius: 50%; background: #3d6080; color: #fff; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.chef-name  { font-weight: 700; color: #1e2a35; font-size: 14.5px; }
-.chef-email { font-size: 12.5px; color: #8a9aaa; margin-top: 2px; }
-
-.alert-info, .alert-warn {
-  display: flex; align-items: flex-start; gap: 9px;
-  border-radius: 9px; padding: 11px 14px;
-  font-size: 13px; margin-bottom: 16px;
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,20,35,.52);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  padding: 24px; backdrop-filter: blur(4px);
 }
-.alert-info { background: rgba(61,96,128,0.08); border: 1px solid rgba(61,96,128,0.18); color: #2f4f6a; }
-.alert-warn { background: #fff3cd; border: 1px solid rgba(255,193,7,0.5); color: #856404; }
-.alert-info svg, .alert-warn svg { flex-shrink: 0; margin-top: 1px; }
+.modal-box {
+  background: #f5f7fa; border-radius: 18px; width: 100%; max-width: 500px;
+  box-shadow: 0 32px 80px rgba(0,0,0,.22); overflow: hidden;
+  animation: modalIn .28s cubic-bezier(.22,1,.36,1) both;
+  font-family: 'Sora', sans-serif;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(.94) translateY(14px); } to { opacity:1; transform:none; } }
 
-.field-block { margin-bottom: 8px; }
-.lbl { display: block; font-size: 13.5px; font-weight: 600; color: #1e2a35; margin-bottom: 7px; }
-.req { color: #f5a623; }
+.modal-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; background: #edf0f5; border-bottom: 1px solid #dde3ec;
+}
+.modal-hd__left { display: flex; align-items: center; gap: 10px; }
+.modal-hd-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: rgba(44,95,138,.12); color: #2c5f8a;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: #1a2332; }
+.modal-close {
+  background: none; border: none; color: #8a9ab0; cursor: pointer;
+  display: flex; padding: 4px; border-radius: 6px; transition: color .15s;
+}
+.modal-close:hover { color: #1a2332; }
 
+.modal-bd { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.modal-ft { display: flex; gap: 10px; padding: 16px 22px 20px; border-top: 1px solid #dde3ec; }
+
+/* Chef card */
+.chef-info-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; background: #fff;
+  border: 1px solid #e5eaf0; border-radius: 12px;
+}
+.chef-av {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: .5px;
+}
+.chef-full-name { font-size: 14.5px; font-weight: 700; color: #1a2332; }
+.chef-email {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: #7a8a9a; margin-top: 3px;
+}
+.chef-current-spec { font-size: 12px; color: #9aabb8; margin-top: 4px; }
+.chef-current-spec--vacant { font-style: italic; }
+
+/* Steps */
+.steps {
+  display: flex; align-items: center; gap: 0;
+}
+.step {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 500; color: #9aabb8;
+}
+.step--active { color: #2c5f8a; }
+.step--done   { color: #1e7a4e; }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid currentColor;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+  transition: all .2s;
+}
+.step--active .step-num { background: #2c5f8a; color: #fff; border-color: #2c5f8a; }
+.step--done   .step-num { background: #1e7a4e; color: #fff; border-color: #1e7a4e; }
+.step-line {
+  flex: 1; height: 2px; background: #dde3ec;
+  margin: 0 8px; transition: background .3s;
+}
+.step-line--done { background: #1e7a4e; }
+
+/* Field */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.lbl { font-size: 12.5px; font-weight: 600; color: #3a4a5a; }
+.req { color: #e0882a; }
 .select-wrap { position: relative; }
-.select-wrap select { width: 100%; padding: 11px 36px 11px 15px; background: #e8e4dc; border: 1.5px solid #c8c4bc; border-radius: 10px; font-size: 14px; font-family: 'Source Sans 3', sans-serif; color: #1e2a35; outline: none; appearance: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
-.select-wrap select:focus { border-color: #3d6080; box-shadow: 0 0 0 3px rgba(61,96,128,0.13); }
-.select-wrap select.input-err { border-color: #c0392b; background: #f8f0ee; }
-.select-icon { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #8a9aaa; }
+.sel {
+  width: 100%; padding: 10px 36px 10px 13px;
+  background: #fff; border: 1.5px solid #d8e0ec;
+  border-radius: 10px; font-size: 13.5px;
+  font-family: 'Sora', sans-serif; color: #1a2332;
+  outline: none; appearance: none; cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.sel:focus { border-color: #2c5f8a; box-shadow: 0 0 0 3px rgba(44,95,138,.12); }
+.sel--err { border-color: #c0392b; }
+.sel-arrow {
+  position: absolute; right: 11px; top: 50%;
+  transform: translateY(-50%); pointer-events: none; color: #8a9ab0;
+}
+.err { font-size: 12px; color: #c0392b; margin-top: 4px; }
 
-.err { font-size: 12px; color: #c0392b; margin-top: 5px; display: block; }
+/* Conflict banner */
+.conflict-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 15px; background: #fff8ec;
+  border: 1.5px solid #f0c060; border-radius: 11px;
+}
+.conflict-banner__icon { color: #c07b2c; margin-top: 1px; flex-shrink: 0; }
+.conflict-banner__title { font-size: 13px; font-weight: 700; color: #7a5010; margin-bottom: 4px; }
+.conflict-banner__body  { font-size: 12.5px; color: #7a5820; line-height: 1.5; }
 
-.btn-gold { display: inline-flex; align-items: center; gap: 7px; padding: 11px 22px; border: none; border-radius: 10px; background: #f5a623; color: #fff; font-size: 14px; font-weight: 600; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: background 0.18s, transform 0.15s; box-shadow: 0 2px 10px rgba(245,166,35,0.26); }
-.btn-gold:hover { background: #d98e1a; transform: translateY(-1px); }
-.btn-outline { padding: 11px 20px; border: 1.5px solid #c8c4bc; border-radius: 10px; background: transparent; color: #4a5a6a; font-size: 14px; font-family: 'Source Sans 3', sans-serif; cursor: pointer; transition: background 0.18s; }
-.btn-outline:hover { background: rgba(0,0,0,0.05); }
+/* Spec preview */
+.spec-preview {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: #eaf4ee;
+  border: 1px solid #b8dcc8; border-radius: 10px;
+}
+.spec-preview__dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.spec-preview__name { font-size: 13.5px; font-weight: 600; color: #1a2332; }
+.spec-preview__code { font-size: 11.5px; color: #5a8a6a; font-family: 'DM Mono', monospace; }
+.spec-preview__free {
+  margin-left: auto; display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #1e7a4e; font-weight: 600;
+}
 
-.modal-fade-enter-active { transition: opacity 0.25s ease; }
-.modal-fade-leave-active { transition: opacity 0.2s ease; }
-.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+/* Confirm card */
+.confirm-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px; background: #fff;
+  border: 1px solid #e5eaf0; border-radius: 12px; margin-bottom: 12px;
+}
+.confirm-card__section { flex: 1; }
+.confirm-card__label { font-size: 11px; color: #9aabb8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+.confirm-card__value { font-size: 14px; font-weight: 600; color: #1a2332; }
+.confirm-card__arrow { color: #8a9ab0; flex-shrink: 0; }
+.confirm-replace-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 11px 13px; background: #fff3e0;
+  border: 1px solid #f0d090; border-radius: 9px;
+  font-size: 12.5px; color: #6a4010; line-height: 1.5;
+}
+.confirm-replace-note svg { flex-shrink: 0; color: #c07b2c; margin-top: 1px; }
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 20px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #2c5f8a, #3d7aba);
+  color: #fff; font-size: 13.5px; font-weight: 600;
+  font-family: 'Sora', sans-serif; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(44,95,138,.3); transition: all .18s;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(44,95,138,.4); }
+.btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+.btn-primary--orange {
+  background: linear-gradient(135deg, #c07b2c, #e09040);
+  box-shadow: 0 3px 12px rgba(192,123,44,.3);
+}
+.btn-primary--orange:hover:not(:disabled) { box-shadow: 0 5px 18px rgba(192,123,44,.4); }
+.btn-ghost {
+  padding: 10px 18px; border: 1.5px solid #d0dae6; border-radius: 10px;
+  background: transparent; color: #5a6a7a; font-size: 13.5px;
+  font-family: 'Sora', sans-serif; cursor: pointer; transition: background .18s;
+}
+.btn-ghost:hover { background: #edf1f7; }
+.spin-sm {
+  width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

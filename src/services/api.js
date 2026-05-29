@@ -1,13 +1,13 @@
 // src/services/api.js
-import axios from 'axios'
+import axios from 'axios' //biblio basé sur les promesses utilisé dans vue pour effectuer req http (get,post..)pour changer donn avec serveur ou api 
 
-const API_URL = 'http://127.0.0.1:8000/api'
+const API_URL = 'http://127.0.0.1:8000/api' //defini l'url de base d'api laravel
 
-const api = axios.create({
-    baseURL: API_URL,
+const api = axios.create({//axios personnalisé pourdire que toutes req utilisent cette url baseUrl
+    baseURL: API_URL,//chq req use comme pnt départ
     headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Content-Type': 'application/json', //le corps des req envoyés est json 
+        'Accept': 'application/json',//le serveur attend une reponse json
     },
 })
 

@@ -1,5 +1,6 @@
-import { createRouter, createWebHistory } from 'vue-router'
-
+import { createRouter, createWebHistory } from 'vue-router' //vue-router est la biblio essentielle de routage de vue 3 : permet de creer des spa (applications monopages)
+//createRouter : creer une instance de  routeur 
+//createWebHistory: activer le mode  d'historique html5 du navigation des spa càd des url sans #
 // Composants existants (Sprints 1 & 2)
 import Accueil             from '../components/Accueil.vue'
 import Login               from '../components/Login.vue'
@@ -29,13 +30,14 @@ import ConsulterResultat   from '../components/GestionArchivageCommunication/Con
 import Messagerie          from '../components/GestionArchivageCommunication/Messagerie.vue'
 import Notifications       from '../components/GestionArchivageCommunication/Notifications.vue'
 
-import { requireAdmin } from './guard'
+import { requireAdmin } from './guard' //la fonction de garde qui protége la route d'admin
 
 const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+  try { return JSON.parse(localStorage.getItem('user')) } catch { return null } 
+  //rendre le contenu de ls en un objet js utilisable sinon retourne null
 }
 
-const roleRoutes = {
+const roleRoutes = { // objet associe à chaque user son route par defaut
   admin:      '/admin',
   directeur:  '/dashboard/directeur',
   chef:       '/dashboard/chef',
@@ -45,16 +47,17 @@ const roleRoutes = {
   jury:       '/dashboard/jury',
 }
 
-const routes = [
+const routes = [ // 
   // Routes publiques
   { path: '/',            component: Accueil },
   { path: '/login',       component: Login },
   { path: '/inscription', component: Inscription },
-  { path: '/reset-password/:token?', component: () => import('../components/Resetpassword.vue') },
+  { path: '/reset-password/:token?', component: () => import('../components/Resetpassword.vue') }, //ces 2 der routes utilisent l'importation dynamique d'ou on l'applles que au moment de besoin
   { path: '/verify-email/:token',    component: () => import('../components/VerifyEmail.vue') },
+  //utilise un tocken dans l'url utilisé pour verifier le prop de l'email avec ? optionnel sans ? obligatoire 
 
   // Dashboards (Sprints 1 & 2)
-  { path: '/dashboard/directeur',  component: DashboardDirecteur,  meta: { requiresAuth: true, role: 'directeur'  } },
+  { path: '/dashboard/directeur',  component: DashboardDirecteur,  meta: { requiresAuth: true, role: 'directeur'  } }, //les métadonnées meta sans utilisé que chaque route doit avoir son propre role et que l'utilisateur doit étre connecté
   { path: '/dashboard/chef',       component: DashboardChef,       meta: { requiresAuth: true, role: 'chef'       } },
   { path: '/dashboard/encadrant',  component: DashboardEncadrant,  meta: { requiresAuth: true, role: 'encadrant'  } },
   { path: '/dashboard/enseignant', component: DashboardEnseignant, meta: { requiresAuth: true, role: 'enseignant' } },
@@ -83,29 +86,29 @@ const routes = [
   { path: '/notifications', component: Notifications,     meta: { requiresAuth: true } },
 
   // Admin
-  { path: '/admin', component: Admin, beforeEnter: requireAdmin },
+  { path: '/admin', component: Admin, beforeEnter: requireAdmin }, //protege la route admin et s'execute automatiquement et déclenche la fnct require admin qui vérifit si l'utilisateur est connecté, son role et lui donne l'accés si il est admin ou le redirige vers login si non
 
   // Redirection 404
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+  { path: '/:pathMatch(.*)*', redirect: '/' }, //redirection vers la page d'accueil si on tape une url non définit 
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(), //creation des routes depuis l'objet routes et les netoyer des # en mode html5
   routes,
 })
-
+//le filtre de sécurité prcple s'execute avant chq chargement de page 
 router.beforeEach((to, from, next) => {
-  const user = getUser()
-
-  if (to.meta.requiresAuth && !user) {
-    return next('/login')
+  const user = getUser()//recupere user depuis ls par fonct getUser 
+//1ere verif : authentification
+  if (to.meta.requiresAuth && !user) { //si l'utilisateurn'est pas authentifié et la route nécessite d'étre connecté 
+    return next('/login')//redirection vers page connection
   }
-
+//2eme verif : auth, route exige une role, user role correspond pas
   if (to.meta.requiresAuth && to.meta.role && user?.role !== to.meta.role) {
-    return next(roleRoutes[user.role] ?? '/login')
+    return next(roleRoutes[user.role] ?? '/login') //redirection vers le dashboard selon le role si non si role unconnu vers login
   }
 
-  next()
+  next()//si valide autorise l'accés à la page demandé
 })
 
-export default router
+export default router //exportation pour main.js 

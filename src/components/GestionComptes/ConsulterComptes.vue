@@ -57,7 +57,7 @@
               <th>Email</th>
               <th>Rôle</th>
               <th>Matricule</th>
-              <th>Date d'activation</th>
+              <th>Date d'inscription</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
@@ -79,7 +79,7 @@
               <td class="u-email">{{ u.email }}</td>
               <td><span :class="['role-badge', u.role]">{{ getRoleLabel(u.role) }}</span></td>
               <td class="u-matricule">{{ u.matricule || '—' }}</td>
-              <td class="u-date">{{ formatDate(u.activatedAt || u.createdAt) }}</td>
+              <td class="u-date">{{ formatDate(u.created_at) }}</td>
               <td>
                 <span :class="['status-badge', u.status === 'active' ? 'status-active' : 'status-inactive']">
                   {{ u.status === 'active' ? 'Actif' : 'Désactivé' }}
@@ -281,40 +281,3 @@ const supprimerCompte = (u) => {
   })
 }
 </script>
-
-<style scoped>
-.filter-chips-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.table-wrap-scroll { overflow-x: auto; }
-
-.stats-mini { display: flex; gap: 14px; font-size: 12.5px; font-weight: 600; }
-.stat-actif   { color: #27ae60; }
-.stat-inactif { color: #d98e1a; }
-
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 14px 16px; color: #3d6080; font-weight: 600; font-size: 13px; border-bottom: 1.5px solid #c8c4bc; background: #e8e4dc; white-space: nowrap; }
-td { padding: 14px 16px; border-bottom: 1px solid #c8c4bc; color: #4a5a6a; font-size: 13.5px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(61,96,128,0.04); }
-.empty-row { text-align: center; color: #8a9aaa; padding: 40px; font-size: 14px; }
-
-/* Status badge */
-.status-badge { padding: 3px 9px; border-radius: 5px; font-size: 11.5px; font-weight: 600; }
-.status-active   { background: rgba(39,174,96,0.12); color: #27ae60; }
-.status-inactive { background: rgba(217,142,26,0.12); color: #d98e1a; }
-
-/* Action buttons */
-.action-btns { display: flex; gap: 7px; flex-wrap: nowrap; }
-.btn-action { padding: 6px 13px; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.18s; font-family: 'Source Sans 3', sans-serif; white-space: nowrap; }
-
-/* Activer = vert */
-.btn-toggle-activate { background: rgba(39,174,96,0.15); color: #27ae60; }
-.btn-toggle-activate:hover { background: #27ae60; color: #fff; }
-
-/* Désactiver = rouge */
-.btn-toggle-deactivate { background: rgba(217,142,26,0.13); color: #d98e1a; }
-.btn-toggle-deactivate:hover { background: #d98e1a; color: #fff; }
-
-/* Supprimer */
-.btn-delete { background: rgba(192,57,43,0.10); color: #c0392b; }
-.btn-delete:hover { background: #c0392b; color: #fff; }
-</style>

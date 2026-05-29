@@ -1,223 +1,327 @@
 <template>
-  <div class="notif-container">
+  <div class="notif-wrap position-relative">
 
-    <!-- BELL TRIGGER -->
-    <div class="notif-wrapper">
-      <button class="notif-btn" @click="toggleNotif" :class="{ active: open }">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span v-if="unreadCount" class="notif-badge">{{ unreadCount }}</span>
-      </button>
-    </div>
+    <!-- ── Bell button ────────────────────────────────────── -->
+    <button
+      ref="bell"
+      class="notif-bell-btn"
+      :class="{ 'has-unread': nonLues > 0 }"
+      @click="togglePanel"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <Transition name="badge-pop">
+        <span v-if="nonLues > 0" class="notif-badge">
+          {{ nonLues > 9 ? '9+' : nonLues }}
+        </span>
+      </Transition>
+    </button>
 
-    <!-- BACKDROP -->
-    <div v-if="open" class="backdrop" @click="open = false"></div>
+    <!-- ── Dropdown panel ─────────────────────────────────── -->
+    <Transition name="panel-slide">
+      <div v-if="panelOpen" ref="panel" class="notif-panel">
 
-    <!-- DROPDOWN -->
-    <transition name="notif-drop">
-      <div v-if="open" class="notif-box">
-
-        <!-- HEADER -->
+        <!-- Header -->
         <div class="notif-header">
-          <div class="notif-header-left">
-            <span class="notif-title">Notifications</span>
-            <span v-if="unreadCount" class="header-badge">{{ unreadCount }} non lues</span>
+          <div class="notif-header__left">
+            <span class="notif-header__title">Notifications</span>
+            <span v-if="nonLues" class="notif-count-badge">
+              {{ nonLues }} non lue{{ nonLues > 1 ? 's' : '' }}
+            </span>
           </div>
-          <button v-if="unreadCount" class="btn-mark-all" @click="markAllRead">Tout lire</button>
+          <button v-if="notifications.length" class="notif-mark-all-btn" @click="marquerToutesLues">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Tout lire
+          </button>
         </div>
 
-        <!-- LIST -->
+        <!-- List -->
         <div class="notif-list">
+
+          <div v-if="loading" class="notif-empty">
+            <div class="vld-spinner" style="width:22px;height:22px;margin:0 auto"></div>
+          </div>
+
+          <div v-else-if="!notifications.length" class="notif-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="1.5"
+              style="color:var(--vld-text-faint);margin-bottom:8px">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span>Aucune notification</span>
+          </div>
+
           <div
-            v-for="notif in notifications"
-            :key="notif.id"
-            :class="['notif-item', { unread: !notif.read }]"
-            @click="marquerCommeLu(notif)"
+            v-for="(n, idx) in notifications"
+            :key="n.id"
+            class="notif-item"
+            :class="{ 'notif-item--unread': !n.lu }"
+            @click="marquerLue(idx)"
           >
-            <div class="notif-icon-wrap" :class="!notif.read ? 'icon-unread' : 'icon-read'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <div class="notif-item__icon" :class="iconClass(n)">
+              <svg v-if="typeIcon(n) === 'msg'" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <svg v-else-if="typeIcon(n) === 'check'" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <svg v-else-if="typeIcon(n) === 'alert'" xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg"
+                width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
             </div>
-            <div class="notif-content">
-              <div class="notif-text">{{ notif.text }}</div>
-              <div class="notif-time">{{ formatTime(notif.date) }}</div>
+
+            <div class="notif-item__body">
+              <div class="notif-item__title">{{ n.titre }}</div>
+              <div class="notif-item__msg">{{ n.message }}</div>
+              <div class="notif-item__meta">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                {{ n.heure }}
+              </div>
             </div>
-            <span v-if="!notif.read" class="unread-dot"></span>
-            <button class="notif-del" @click="supprimer(notif, $event)" title="Supprimer">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+
+            <div v-if="!n.lu" class="notif-item__dot"></div>
+
+            <!-- × Delete button, visible on hover -->
+            <button class="notif-del-btn" @click.stop="supprimer(idx)" title="Supprimer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
             </button>
           </div>
 
-          <div v-if="notifications.length === 0" class="empty-notif">
-            <span>🔕</span>
-            <p>Aucune notification</p>
-          </div>
         </div>
 
-        <!-- FOOTER -->
-        <div class="notif-footer" v-if="notifications.length">
-          <button class="footer-link" @click="markAllRead">✓ Tout marquer comme lu</button>
+        <!-- Footer -->
+        <div class="notif-footer">
+          <button v-if="nonLues" class="notif-footer__btn" @click="marquerToutesLues">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Tout marquer comme lu
+          </button>
+          <span v-else class="notif-footer__all-done">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Tout est à jour
+          </span>
         </div>
 
       </div>
-    </transition>
-
+    </Transition>
   </div>
 </template>
 
 <script>
 import api from '@/services/api.js'
+import { useEcho } from '@/composables/useEcho'
 
 export default {
   name: 'NotificationsDropdown',
 
   data() {
     return {
-      open: false,
       notifications: [],
-      loading: false,
+      panelOpen:     false,
+      loading:       false,
     }
   },
 
   computed: {
-    unreadCount() {
+    // Re-computes every time the notifications array reference changes
+    nonLues() {
       return this.notifications.filter(n => !n.lu).length
-    }
+    },
   },
 
   mounted() {
     this.charger()
-    // Poll every 30s for new notifications
-    this._poll = setInterval(this.charger, 30000)
+    this.initWebSocket()
+    document.addEventListener('click', this.onClickOutside)
   },
 
   beforeUnmount() {
-    clearInterval(this._poll)
+    document.removeEventListener('click', this.onClickOutside)
   },
 
   methods: {
+
+    // ── Load ──────────────────────────────────────────────────
     async charger() {
+      this.loading = true
       try {
-        const res = await api.get('/notifications')
-        this.notifications = (res.data || []).map(n => ({
-          id:   n.id,
-          text: n.message,
-          read: !!n.lu,
-          date: n.created_at,
-        }))
-      } catch (e) { /* silent */ }
+        const { data } = await api.get('/notifications')
+        this.notifications = (data || []).map(n => this.mapNotif(n))
+      } catch (e) {
+        console.error('[Notif] charger:', e)
+      } finally {
+        this.loading = false
+      }
     },
 
-    toggleNotif() {
-      this.open = !this.open
-      if (this.open) this.charger()
+    mapNotif(n) {
+      return {
+        id:      n.id,
+        titre:   n.data?.titre   || n.titre   || n.type?.split('\\').pop() || 'Notification',
+        message: n.data?.message || n.message || '',
+        heure:   n.created_at
+          ? new Date(n.created_at).toLocaleString('fr-FR', {
+              day: '2-digit', month: 'short',
+              hour: '2-digit', minute: '2-digit',
+            })
+          : '',
+        lu:   n.read_at != null ? true : !!n.lu,
+        type: n.type || n.data?.type || '',
+      }
     },
 
-    async marquerCommeLu(notif) {
-      if (notif.read) return
-      notif.read = true
+    // ── WebSocket ─────────────────────────────────────────────
+    // Laravel broadcasts NotificationCreated on the private model channel:
+    //   "App.Models.Utilisateur.{id}"
+    // Ensure routes/channels.php has:
+    //   Broadcast::channel('App.Models.Utilisateur.{id}',
+    //     fn($user, $id) => (int)$user->id === (int)$id);
+    // config/broadcasting.php → 'default' => 'reverb'
+    // The event name on the client is ".NotificationCreated" (leading dot = class name).
+    initWebSocket() {
+      const userId = JSON.parse(localStorage.getItem('user') || '{}').id
+      if (!userId) return
       try {
-        await api.put(`/notifications/${notif.id}/lire`)
-      } catch (e) { notif.read = false }
+        const { listen } = useEcho(`App.Models.Utilisateur.${userId}`)
+        listen('.NotificationCreated', data => this.onPush(data))
+      } catch {
+        try {
+          // Fallback: simpler channel name from MessageController
+          const { listen } = useEcho(`notifications.${userId}`)
+          listen('.NotificationCreated', data => this.onPush(data))
+        } catch (e) {
+          console.error('[Notif] WebSocket init failed:', e)
+        }
+      }
     },
 
-    async markAllRead() {
-      this.notifications.forEach(n => n.read = true)
+    onPush(data) {
+      // Array replacement → computed nonLues re-evaluates → badge appears
+      this.notifications = [
+        {
+          id:      data.id,
+          titre:   data.titre   || 'Nouvelle notification',
+          message: data.message || '',
+          heure:   "À l'instant",
+          lu:      false,
+          type:    data.type    || '',
+        },
+        ...this.notifications,
+      ]
+    },
+
+    // ── Panel toggle ──────────────────────────────────────────
+    togglePanel() {
+      if (this.panelOpen) {
+        this.closePanel()
+      } else {
+        this.panelOpen = true
+      }
+    },
+
+    closePanel() {
+      if (this.nonLues > 0) {
+        this.marquerToutesLues()
+      }
+      this.panelOpen = false
+    },
+
+    onClickOutside(e) {
+      if (
+        this.$refs.panel && !this.$refs.panel.contains(e.target) &&
+        this.$refs.bell  && !this.$refs.bell.contains(e.target)
+      ) {
+        this.closePanel()
+      }
+    },
+
+    // ── Mark one read ─────────────────────────────────────────
+    async marquerLue(idx) {
+      const n = this.notifications[idx]
+      if (!n || n.lu) return
+      this.notifications.splice(idx, 1, { ...n, lu: true })
+      try {
+        await api.put(`/notifications/${n.id}/lire`)
+      } catch (e) {
+        this.notifications.splice(idx, 1, { ...n, lu: false })
+        console.error('[Notif] marquerLue:', e)
+      }
+    },
+
+    // ── Mark all read — full array replacement ─────────────────
+    async marquerToutesLues() {
+      // Optimistic: replace array → nonLues = 0 → badge disappears
+      this.notifications = this.notifications.map(n => ({ ...n, lu: true }))
       try {
         await api.put('/notifications/lire-tout')
-      } catch (e) { await this.charger() }
+      } catch (e) {
+        console.error('[Notif] marquerToutesLues:', e)
+      }
     },
 
-    async supprimer(notif, e) {
-      e.stopPropagation()
-      this.notifications = this.notifications.filter(n => n.id !== notif.id)
+    // ── Delete one notification ───────────────────────────────
+    async supprimer(idx) {
+      const n = this.notifications[idx]
+      if (!n) return
+      this.notifications.splice(idx, 1)
       try {
-        await api.delete(`/notifications/${notif.id}`)
-      } catch (e) { await this.charger() }
+        await api.delete(`/notifications/${n.id}`)
+      } catch (e) {
+        this.notifications.splice(idx, 0, n)
+        console.error('[Notif] supprimer:', e)
+      }
     },
 
-    formatTime(date) {
-      if (!date) return ''
-      // Normalize "YYYY-MM-DD HH:MM:SS" → local time, not UTC
-      const normalized = typeof date === 'string' ? date.replace(' ', 'T') : date
-      const d = new Date(normalized)
-      const now = new Date()
-      const diffMin = Math.floor((now - d) / 60000)
-      if (diffMin < 1) return "À l'instant"
-      if (diffMin < 60) return `Il y a ${diffMin} min`
-      if (diffMin < 1440) return `Il y a ${Math.floor(diffMin / 60)}h`
-      return d.toLocaleDateString('fr-FR')
-    }
-  }
+    // ── Icon helpers ──────────────────────────────────────────
+    typeIcon(n) {
+      const t = ((n.type || '') + (n.titre || '') + (n.message || '')).toLowerCase()
+      if (t.includes('message'))                                               return 'msg'
+      if (t.includes('valid') || t.includes('approv') || t.includes('accept')) return 'check'
+      if (t.includes('alert') || t.includes('refus')  || t.includes('reject')) return 'alert'
+      return 'bell'
+    },
+    iconClass(n) {
+      const t = this.typeIcon(n)
+      if (t === 'msg')   return 'notif-item__icon--blue'
+      if (t === 'check') return 'notif-item__icon--green'
+      if (t === 'alert') return 'notif-item__icon--red'
+      return 'notif-item__icon--gold'
+    },
+  },
 }
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;600;700&display=swap');
-* { font-family: 'Source Sans 3', sans-serif; box-sizing: border-box; }
-
-.notif-container { position: relative; display: flex; justify-content: flex-end; }
-.notif-wrapper { display: flex; align-items: center; }
-
-/* Bell button */
-.notif-btn { position: relative; width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid #c8c4bc; background: #ddd9d1; color: #4a5a6a; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-.notif-btn:hover { border-color: #3d6080; color: #3d6080; background: rgba(61,96,128,0.06); }
-.notif-btn.active { border-color: #f5a623; color: #f5a623; background: rgba(245,166,35,0.08); }
-
-.notif-badge { position: absolute; top: -6px; right: -6px; background: #e05252; color: white; border-radius: 50%; font-size: 10px; min-width: 17px; height: 17px; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid white; }
-
-/* Backdrop */
-.backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.06); z-index: 10; }
-
-/* Dropdown */
-.notif-box { position: absolute; right: 0; top: 46px; width: 340px; background: #ddd9d1; border: 1.5px solid #c8c4bc; border-radius: 16px; box-shadow: 0 12px 36px rgba(0,0,0,0.14); overflow: hidden; z-index: 20; }
-
-.notif-drop-enter-active { transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
-.notif-drop-leave-active { transition: all 0.15s ease; }
-.notif-drop-enter-from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-.notif-drop-leave-to { opacity: 0; transform: translateY(-4px); }
-
-/* Header */
-.notif-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: linear-gradient(160deg, #4a7090, #2f4f6a); }
-.notif-header-left { display: flex; align-items: center; gap: 8px; }
-.notif-title { font-size: 14.5px; font-weight: 700; color: white; }
-.header-badge { background: rgba(245,166,35,0.35); color: #f5e6c0; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
-.btn-mark-all { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: all 0.15s; }
-.btn-mark-all:hover { background: rgba(255,255,255,0.2); }
-
-/* List */
-.notif-list { max-height: 320px; overflow-y: auto; }
-.notif-list::-webkit-scrollbar { width: 3px; }
-.notif-list::-webkit-scrollbar-thumb { background: #c8c4bc; border-radius: 3px; }
-
-/* Item */
-.notif-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #c8c4bc; cursor: pointer; transition: background 0.15s; }
-.notif-item:last-child { border-bottom: none; }
-.notif-item:hover { background: rgba(61,96,128,0.05); }
-.notif-item.unread { background: rgba(245,197,24,0.06); }
-
-.notif-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.icon-unread { background: rgba(245,166,35,0.15); color: #f5a623; }
-.icon-read   { background: rgba(61,96,128,0.08);  color: #8a9aaa; }
-
-.notif-content { flex: 1; min-width: 0; }
-.notif-text { font-size: 13.5px; font-weight: 500; color: #1e2a35; line-height: 1.4; }
-.notif-item.unread .notif-text { font-weight: 700; }
-.notif-time { font-size: 11.5px; color: #8a9aaa; margin-top: 3px; }
-
-.unread-dot { width: 8px; height: 8px; background: #f5a623; border-radius: 50%; flex-shrink: 0; }
-
-/* Empty */
-.empty-notif { text-align: center; padding: 32px 16px; color: #8a9aaa; }
-.empty-notif span { font-size: 32px; }
-.empty-notif p { font-size: 14px; color: #4a5a6a; margin: 8px 0 0; font-weight: 600; }
-
-/* Footer */
-.notif-footer { padding: 11px 16px; border-top: 1.5px solid #c8c4bc; text-align: center; }
-.footer-link { font-size: 12.5px; font-weight: 700; color: #3d6080; text-decoration: none; transition: color 0.2s; }
-.footer-link:hover { color: #f5a623; }
-
-.notif-del { background: none; border: none; color: #c8c4bc; cursor: pointer; padding: 3px; border-radius: 5px; display: flex; align-items: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s, color 0.15s; }
-.notif-item:hover .notif-del { opacity: 1; }
-.notif-del:hover { color: #e74c3c; }
-.footer-link { background: none; border: none; font-size: 12.5px; font-weight: 700; color: #3d6080; cursor: pointer; font-family: 'Source Sans 3', sans-serif; transition: color 0.2s; }
-.footer-link:hover { color: #f5a623; }
-</style>
+<!-- All styles live in design-tokens.css → "NOTIFICATIONS COMPONENT" section -->

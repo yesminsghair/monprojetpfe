@@ -1,201 +1,346 @@
 <template>
-  <div class="page-content">
+  <div class="pfe-page">
 
-    <!-- HEADER -->
-    <div class="ptb">
-      <div class="page-header-block">
+    <!-- ══ HEADER ══ -->
+    <div class="pfe-header">
+      <div class="pfe-header__left">
+        <div class="pfe-header__icon pfe-header__icon--blue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </div>
         <div>
-          <p class="pt">Archives des résultats</p>
-          <p class="ps">Consultation des résultats archivés par période</p>
-        </div>
-        <div class="header-badge">
-          <span class="archive-count-badge">{{ archives.length }} archives</span>
+          <h1 class="pfe-header__title">Archives PFE</h1>
+          <p class="pfe-header__sub">
+            {{ totalEtudiants }} étudiant(s) archivé(s) · {{ archives.length }} session(s)
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- SEARCH -->
-    <div class="search-wrapper">
-      <div class="search-input-wrap">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="search" class="search-input" placeholder="Rechercher un étudiant ou une archive..." />
+    <!-- ══ TOOLBAR ══ -->
+    <div class="pfe-toolbar">
+      <div class="pfe-search">
+        <svg class="pfe-search__icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input v-model="search" class="pfe-search__input"
+               placeholder="Nom, matricule, projet, encadrant…" />
+        <button v-if="search" class="pfe-search__clear" @click="search = ''">✕</button>
       </div>
     </div>
 
-    <!-- EMPTY STATE -->
-    <div v-if="filteredArchives.length === 0" class="empty-state">
-      <div class="empty-icon">🗄️</div>
-      <p>Aucune archive trouvée</p>
-      <span>Essayez un autre terme de recherche</span>
+    <!-- ══ LOADING ══ -->
+    <div v-if="loading" class="pfe-state">
+      <div class="pfe-spinner pfe-spinner--lg"></div>
+      <p class="pfe-state__sub">Chargement des archives…</p>
     </div>
 
-    <!-- ARCHIVE LIST -->
-    <div v-for="(archive, index) in filteredArchives" :key="index" class="archive-box">
+    <!-- ══ EMPTY ══ -->
+    <div v-else-if="!filteredArchives.length" class="pfe-state">
+      <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24"
+           fill="none" stroke="var(--vld-text-faint)" stroke-width="1.3">
+        <path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/>
+      </svg>
+      <p class="pfe-state__title">Aucune archive</p>
+      <p class="pfe-state__sub">Les résultats archivés apparaîtront ici.</p>
+    </div>
 
-      <!-- ARCHIVE HEADER -->
-      <div class="archive-header">
-        <div class="archive-header-left">
-          <div class="archive-icon-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+    <!-- ══ ARCHIVE GROUPS ══ -->
+    <div v-else class="arc-groups">
+      <div v-for="group in filteredArchives" :key="group.date" class="arc-group">
+
+        <!-- Session group header -->
+        <div class="arc-group__header">
+          <div class="arc-group__header-left">
+            <div class="arc-group__date-block">
+              <span class="arc-date-day">{{ dayOf(group.date) }}</span>
+              <span class="arc-date-month">{{ monthOf(group.date) }}</span>
+              <span class="arc-date-year">{{ yearOf(group.date) }}</span>
+            </div>
+            <div>
+              <div class="arc-group__title">Session du {{ formatDate(group.date) }}</div>
+              <div class="arc-group__count">{{ group.data.length }} étudiant(s)</div>
+            </div>
           </div>
-          <div>
-            <span class="archive-date">Archive du {{ formatDate(archive.date) }}</span>
-            <span class="archive-meta">{{ archive.data.length }} étudiants</span>
-          </div>
+          <button v-if="isDirecteur" class="arc-btn-del"
+                  :disabled="deleting === group.date"
+                  @click.stop="supprimerArchive(group.date)">
+            <span v-if="deleting === group.date"
+                  class="pfe-spinner pfe-spinner--sm"
+                  style="border-top-color:var(--vld-danger)"/>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+            Supprimer
+          </button>
         </div>
-        <button v-if="isDirecteur" class="btn-danger-sm" @click="supprimerArchive(index)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          Supprimer
-        </button>
-      </div>
 
-      <!-- TABLE -->
-      <div class="table-card">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Étudiant</th>
-              <th class="th-center">Note /20</th>
-              <th class="th-center">Mention</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="table-row" v-for="e in archive.data" :key="e.id">
-              <td>
-                <div class="student-cell">
-                  <div class="av-blue">{{ e.nom.charAt(0) }}</div>
-                  <span class="user-nom">{{ e.nom }}</span>
+        <!-- Student cards grid -->
+        <div class="pfe-grid">
+          <div
+            v-for="e in group.data"
+            :key="e.id"
+            class="pfe-card-wrap"
+          >
+            <div
+              class="pfe-card"
+              :class="{ 'pfe-card--open': openId === e.id }"
+              @click="toggle(e.id)"
+            >
+              <div class="pfe-card__body">
+                <div class="pfe-card__top">
+                  <div class="pfe-av" :class="e.note_finale >= 10 ? 'pfe-av--blue' : 'pfe-av--gold'">
+                    {{ initiales(e.nom) }}
+                  </div>
+                  <div class="pfe-card__info">
+                    <div class="pfe-card__name">{{ e.nom }}</div>
+                    <div class="pfe-card__mat">{{ e.matricule }}</div>
+                    <div class="pfe-card__sujet" :title="e.projet_titre">{{ e.projet_titre || '—' }}</div>
+                  </div>
+                  <div class="pfe-card__score">
+                    <div class="pfe-score-pill"
+                         :class="e.note_finale >= 10 ? 'pfe-score-pill--pass' : 'pfe-score-pill--fail'">
+                      <span class="pfe-score-num">{{ e.note_finale }}</span>
+                      <span class="pfe-score-denom">/20</span>
+                    </div>
+                    <span class="pfe-mention" :class="mentionClass(e.note_finale)">
+                      {{ getMention(e.note_finale) }}
+                    </span>
+                  </div>
                 </div>
-              </td>
-              <td class="td-center">
-                <span class="note-pill">{{ e.note }}/20</span>
-              </td>
-              <td class="td-center">
-                <span :class="['mention-badge', getMentionClass(e.note)]">{{ getMention(e.note) }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
 
+                <div class="pfe-card__meta">
+                  <span class="pfe-card__enc">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ e.encadrant_nom || '—' }}
+                  </span>
+                  <span v-if="e.archive_le" class="pfe-archive-tag">{{ e.archive_le }}</span>
+                </div>
+              </div>
+
+              <div class="pfe-card__footer" @click.stop>
+                <div class="pfe-card__badges">
+                  <span class="pfe-decision"
+                        :class="e.decision === 'admis' ? 'pfe-decision--admis' : 'pfe-decision--ajourne'">
+                    {{ e.decision === 'admis' ? '✓ Admis' : '✗ Ajourné' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="pfe-chevron" :class="{ 'pfe-chevron--open': openId === e.id }">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Detail panel with full encadrant + jury + soutenance info -->
+            <transition name="pfe-detail-expand">
+              <div v-if="openId === e.id" class="pfe-detail" @click.stop>
+
+                <!-- Étudiant -->
+                <div class="pfe-section">
+                  <div class="pfe-section__title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Étudiant
+                  </div>
+                  <div class="pfe-detail-grid">
+                    <div class="pfe-detail-block">
+                      <div class="pfe-detail-label">Nom complet</div>
+                      <div class="pfe-detail-val">{{ e.nom }}</div>
+                    </div>
+                    <div class="pfe-detail-block">
+                      <div class="pfe-detail-label">Matricule</div>
+                      <div class="pfe-detail-val pfe-detail-val--code">{{ e.matricule }}</div>
+                    </div>
+                    <div class="pfe-detail-block pfe-detail-block--full">
+                      <div class="pfe-detail-label">Sujet du projet</div>
+                      <div class="pfe-detail-val pfe-detail-val--sujet">{{ e.projet_titre || '—' }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Encadrant -->
+                <div class="pfe-section">
+                  <div class="pfe-section__title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Encadrant
+                  </div>
+                  <div class="pfe-detail-grid">
+                    <div class="pfe-detail-block pfe-detail-block--full">
+                      <div class="pfe-detail-label">Nom de l'encadrant</div>
+                      <div class="pfe-detail-val">{{ e.encadrant_nom || '—' }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Jury & Soutenance -->
+                <div class="pfe-section">
+                  <div class="pfe-section__title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Jury &amp; Soutenance
+                  </div>
+                  <div class="pfe-detail-grid">
+                    <div class="pfe-detail-block">
+                      <div class="pfe-detail-label">Date de soutenance</div>
+                      <div class="pfe-detail-val">
+                        {{ e.date_soutenance ? formatDate(e.date_soutenance) : '—' }}
+                      </div>
+                    </div>
+                    <div class="pfe-detail-block">
+                      <div class="pfe-detail-label">Note jury</div>
+                      <div class="pfe-detail-val">
+                        <span v-if="e.note_jury != null" class="pfe-note-chip pfe-note-chip--jury">
+                          {{ e.note_jury }}/20
+                        </span>
+                        <span v-else class="pfe-detail-val--muted">—</span>
+                      </div>
+                    </div>
+                    <div class="pfe-detail-block">
+                      <div class="pfe-detail-label">Note encadrant</div>
+                      <div class="pfe-detail-val">
+                        <span v-if="e.note_encadrant != null" class="pfe-note-chip pfe-note-chip--enc">
+                          {{ e.note_encadrant }}/20
+                        </span>
+                        <span v-else class="pfe-detail-val--muted">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Résultat -->
+                <div class="pfe-section">
+                  <div class="pfe-section__title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <circle cx="12" cy="8" r="6"/>
+                      <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+                    </svg>
+                    Résultat
+                  </div>
+                  <div class="pfe-result-row">
+                    <div class="pfe-result-score"
+                         :class="e.note_finale >= 10 ? 'pfe-result-score--pass' : 'pfe-result-score--fail'">
+                      <span class="pfe-result-num">{{ e.note_finale }}</span>
+                      <span class="pfe-result-denom">/20</span>
+                    </div>
+                    <div class="pfe-result-badges">
+                      <span class="pfe-mention" style="font-size:.82rem;padding:.3rem 1rem"
+                            :class="mentionClass(e.note_finale)">{{ getMention(e.note_finale) }}</span>
+                      <span class="pfe-decision" style="font-size:.82rem;padding:.3rem 1rem"
+                            :class="e.decision === 'admis' ? 'pfe-decision--admis' : 'pfe-decision--ajourne'">
+                        {{ e.decision === 'admis' ? '✓ Admis' : '✗ Ajourné' }}
+                      </span>
+                      <span v-if="e.publie_le"  class="pfe-publie-tag">Publié le {{ e.publie_le }}</span>
+                      <span v-if="e.archive_le" class="pfe-archive-tag">Archivé le {{ e.archive_le }}</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </transition>
+          </div>
+        </div>
+
+      </div>
     </div>
 
   </div>
 </template>
 
 <script>
+import api from '@/services/api.js'
+
 export default {
+  name: 'Archives',
+  emits: ['toast'],
   props: {
-    role: { type: String, default: "chef" }
+    role: { type: String, default: 'chef' },
   },
-  data() {
-    return {
-      search: "",
-      archives: [
-        {
-          date: new Date(),
-          data: [
-            { id: 1, nom: "Ali Ben Salah", note: 14 },
-            { id: 2, nom: "Yassine Amri", note: 10 }
-          ]
-        },
-        {
-          date: new Date(Date.now() - 86400000 * 30),
-          data: [
-            { id: 3, nom: "Sara Ben Youssef", note: 17 }
-          ]
-        }
-      ]
-    }
+  data () {
+    return { archives: [], loading: false, deleting: null, search: '', openId: null }
   },
   computed: {
-    isDirecteur() { return this.role === "directeur" },
-    filteredArchives() {
-      if (!this.search) return this.archives
-      const s = this.search.toLowerCase()
+    isDirecteur () { return this.role === 'directeur' },
+    totalEtudiants () { return this.archives.reduce((s, a) => s + a.data.length, 0) },
+    filteredArchives () {
+      if (!this.search.trim()) return this.archives
+      const q = this.search.toLowerCase()
       return this.archives
-        .map(archive => ({ ...archive, data: archive.data.filter(e => e.nom.toLowerCase().includes(s)) }))
-        .filter(archive => archive.data.length > 0)
-    }
-  },
-  methods: {
-    supprimerArchive(index) { this.archives.splice(index, 1) },
-    formatDate(date) { return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-    getMention(note) {
-      if (note >= 16) return "Très Bien"
-      if (note >= 14) return "Bien"
-      if (note >= 12) return "Assez Bien"
-      if (note >= 10) return "Passable"
-      return "Ajourné"
+        .map(a => ({ ...a, data: a.data.filter(e =>
+          (e.nom           || '').toLowerCase().includes(q) ||
+          (e.matricule     || '').toLowerCase().includes(q) ||
+          (e.projet_titre  || '').toLowerCase().includes(q) ||
+          (e.encadrant_nom || '').toLowerCase().includes(q)
+        )}))
+        .filter(a => a.data.length > 0)
     },
-    getMentionClass(note) {
-      if (note >= 16) return "mention-tb"
-      if (note >= 14) return "mention-b"
-      if (note >= 12) return "mention-ab"
-      if (note >= 10) return "mention-p"
-      return "mention-aj"
-    }
-  }
+  },
+  mounted () { this.chargerArchives() },
+  methods: {
+    async chargerArchives () {
+      this.loading = true
+      try { const { data } = await api.get('/resultats-pfe/archives'); this.archives = Array.isArray(data) ? data : [] }
+      catch { this.$emit('toast', { type: 'error', message: 'Erreur lors du chargement des archives.' }) }
+      finally { this.loading = false }
+    },
+    async supprimerArchive (date) {
+      if (!confirm(`Supprimer l'archive du ${this.formatDate(date)} ?`)) return
+      this.deleting = date
+      try {
+        await api.delete(`/resultats-pfe/archives/${date}`)
+        this.archives = this.archives.filter(a => a.date !== date)
+        this.$emit('toast', { type: 'ok', message: 'Archive supprimée.' })
+      } catch (e) {
+        this.$emit('toast', { type: 'error', message: e.response?.data?.message || 'Erreur.' })
+      } finally { this.deleting = null }
+    },
+    toggle (id) { this.openId = this.openId === id ? null : id },
+    initiales (n) { return (n || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() },
+    getMention (n) {
+      if (n == null) return '—'
+      if (n >= 16) return 'Très bien'; if (n >= 14) return 'Bien'
+      if (n >= 12) return 'Assez bien'; if (n >= 10) return 'Passable'
+      return 'Insuffisant'
+    },
+    mentionClass (n) {
+      if (n == null) return 'pfe-mention--neutral'
+      if (n >= 16) return 'pfe-mention--tb'; if (n >= 14) return 'pfe-mention--bien'
+      if (n >= 12) return 'pfe-mention--ab'; if (n >= 10) return 'pfe-mention--pass'
+      return 'pfe-mention--fail'
+    },
+    formatDate (d) { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) },
+    dayOf (d)   { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit' }) },
+    monthOf (d) { return new Date(d).toLocaleDateString('fr-FR', { month: 'short' }).replace('.','').toUpperCase() },
+    yearOf (d)  { return new Date(d).getFullYear() },
+  },
 }
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@300;400;600;700&display=swap');
-* { font-family: 'Source Sans 3', sans-serif; box-sizing: border-box; }
-
-.page-content { padding: 0; }
-
-/* Header */
-.ptb { margin-bottom: 28px; }
-.pt { font-family: 'Merriweather', serif; font-size: 24px; font-weight: 700; color: #1e2a35; margin: 0 0 5px; }
-.ps { font-size: 14px; color: #7A8FA6; margin: 0; }
-.page-header-block { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
-.archive-count-badge { background: rgba(61,96,128,0.1); color: #3d6080; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
-
-/* Search */
-.search-wrapper { margin-bottom: 24px; }
-.search-input-wrap { position: relative; max-width: 480px; }
-.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a9aaa; }
-.search-input { width: 100%; padding: 10px 14px 10px 40px; background: #ddd9d1; border: 1.5px solid #c8c4bc; border-radius: 10px; font-size: 14px; color: #1e2a35; outline: none; transition: border-color 0.2s; }
-.search-input:focus { border-color: #3d6080; }
-.search-input::placeholder { color: #8a9aaa; }
-
-/* Empty state */
-.empty-state { text-align: center; padding: 60px; color: #8a9aaa; line-height: 1.6; }
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state p { font-size: 16px; font-weight: 600; color: #4a5a6a; margin: 0 0 4px; }
-.empty-state span { font-size: 13px; }
-
-/* Archive box */
-.archive-box { margin-bottom: 20px; }
-.archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 14px 18px; background: linear-gradient(160deg, #4a7090, #2f4f6a); border-radius: 12px 12px 0 0; }
-.archive-header-left { display: flex; align-items: center; gap: 12px; }
-.archive-icon-wrap { width: 34px; height: 34px; background: rgba(255,255,255,0.12); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #f5a623; flex-shrink: 0; }
-.archive-date { display: block; font-size: 14px; font-weight: 700; color: white; }
-.archive-meta { display: block; font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
-
-.btn-danger-sm { display: flex; align-items: center; gap: 6px; background: rgba(217,83,79,0.2); color: #ff8080; border: 1.5px solid rgba(217,83,79,0.35); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Source Sans 3', sans-serif; }
-.btn-danger-sm:hover { background: rgba(217,83,79,0.35); color: #ffaaaa; }
-
-/* Table */
-.table-card { background: #ddd9d1; border: 1.5px solid #c8c4bc; border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; }
-.table { width: 100%; border-collapse: collapse; }
-.table th { background: #f0ede8; padding: 11px 16px; font-size: 11.5px; font-weight: 700; color: #4a5a6a; text-transform: uppercase; letter-spacing: 0.05em; text-align: left; }
-.th-center { text-align: center; }
-.table td { padding: 13px 16px; border-top: 1px solid #c8c4bc; font-size: 13.5px; }
-.table-row:hover td { background: rgba(61,96,128,0.04); }
-.td-center { text-align: center; }
-
-.student-cell { display: flex; align-items: center; gap: 10px; }
-.av-blue { width: 34px; height: 34px; border-radius: 9px; background: rgba(245,197,24,0.2); color: #3d6080; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.user-nom { font-weight: 600; color: #1e2a35; font-size: 14px; }
-
-.note-pill { background: rgba(61,96,128,0.1); color: #3d6080; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 20px; }
-
-.mention-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.mention-tb  { background: rgba(39,174,96,0.12);  color: #27ae60; }
-.mention-b   { background: rgba(61,96,128,0.12);  color: #3d6080; }
-.mention-ab  { background: rgba(245,197,24,0.15); color: #b8880e; }
-.mention-p   { background: rgba(245,166,35,0.12); color: #d98e1a; }
-.mention-aj  { background: rgba(217,83,79,0.12);  color: #c0392b; }
-</style>

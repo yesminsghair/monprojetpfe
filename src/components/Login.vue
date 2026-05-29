@@ -105,18 +105,6 @@
             <router-link to="/inscription">S'inscrire</router-link>
           </p>
 
-          <!-- Comptes de test -->
-          <div class="test-accounts">
-            <p class="test-title">🔑 Comptes de test</p>
-            <div class="test-grid">
-              <button class="test-btn" v-for="c in testComptes" :key="c.email"
-                @click="fillCompte(c)" type="button">
-                <span class="test-role">{{ c.label }}</span>
-                <span class="test-email">{{ c.email }}</span>
-              </button>
-            </div>
-          </div>
-
         </div>
       </main>
     </div>
@@ -142,23 +130,6 @@ const loading = ref(false)
 const showPw  = ref(false)
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-const testComptes = [
-  { email: 'admin@gmail.com',       password: 'admin123', label: 'Admin'      },
-  { email: 'directeur@isimm.tn',    password: 'dir123',   label: 'Directeur'  },
-  { email: 'chef@isimm.tn',         password: 'chef123',  label: 'Chef Dépt'  },
-  { email: 'encadrant@isimm.tn',    password: 'enc123',   label: 'Encadrant'  },
-  { email: 'enseignant@isimm.tn',   password: 'ens123',   label: 'Enseignant' },
-  { email: 'etudiant@isimm.tn',     password: 'etu123',   label: 'Étudiant'   },
-  { email: 'jury@isimm.tn',         password: 'jury123',  label: 'Jury'       },
-]
-
-const fillCompte = (c) => {
-  email.value    = c.email
-  password.value = c.password
-  emailError.value = ''
-  passwordError.value = ''
-}
 
 const validateEmail = () => {
   if (!email.value)
@@ -234,16 +205,17 @@ const handleLogin = async () => {
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 .page-shell {
-  min-height: 100vh;
+  min-height: 100vh; width: 100%;
   background: #c8c4bc;
   display: flex; align-items: center; justify-content: center;
   padding: 32px 16px;
   font-family: 'Source Sans 3', sans-serif;
+  box-sizing: border-box;
 }
 
 /* ── CARD ── */
 .card {
-  display: flex; width: 100%; max-width: 980px; min-height: 580px;
+  display: flex; flex-direction: row; width: 100%; max-width: 980px; min-height: 580px;
   border-radius: 18px; overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
   animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
@@ -255,7 +227,7 @@ const handleLogin = async () => {
 
 /* ── LEFT PANEL ── */
 .panel-left {
-  width: 40%;
+  width: 40%; min-width: 280px; flex-shrink: 0;
   background: linear-gradient(160deg, #4a7090 0%, #3d6080 30%, #2f4f6a 65%, #243d52 100%);
   padding: 48px 40px;
   display: flex; flex-direction: column; position: relative; overflow: hidden;
@@ -351,30 +323,15 @@ input:focus { outline:none; border-color: #3d6080; background: #fff; box-shadow:
 .switch-link a { color:#3d6080; font-weight:600; text-decoration:none; }
 .switch-link a:hover { text-decoration:underline; }
 
-/* ── TEST ACCOUNTS ── */
-.test-accounts {
-  margin-top: 22px; padding: 14px 16px;
-  background: #e8e4dc; border-radius: 12px;
-  border: 1.5px dashed #c8c4bc;
-}
-.test-title { font-size: 12px; font-weight: 600; color: #8a9aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.test-grid  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
-.test-btn   {
-  padding: 8px 10px; background: #ddd9d1; border: 1.5px solid #c8c4bc;
-  border-radius: 8px; cursor:pointer; text-align:left; transition:all 0.18s;
-  display:flex; flex-direction:column; gap:2px;
-}
-.test-btn:hover { border-color:#3d6080; background:#d4d0c8; }
-.test-role  { font-size: 11px; font-weight: 700; color: #3d6080; text-transform: uppercase; letter-spacing: 0.5px; }
-.test-email { font-size: 11.5px; color: #8a9aaa; }
+
 
 /* ── RESPONSIVE ── */
 @media (max-width: 700px) {
-  .card { flex-direction: column; max-width: 440px; }
-  .panel-left { width: 100%; min-height: 180px; padding: 30px 24px 24px; }
+  .page-shell { padding: 0; align-items: stretch; }
+  .card { flex-direction: column; max-width: 100%; min-height: 100vh; border-radius: 0; box-shadow: none; }
+  .panel-left { width: 100%; min-height: 220px; padding: 30px 24px 24px; }
   .hero { font-size: 20px; flex:none; margin-bottom: 10px; }
   .hero-sub { display: none; }
   .right-inner { padding: 28px 22px; }
-  .test-grid { grid-template-columns: 1fr; }
 }
 </style>

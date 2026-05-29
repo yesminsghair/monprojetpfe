@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "axios": "^1.13.6",
+    "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
+    "laravel-echo": "^2.3.4",
     "pdfjs-dist": "^2.16.105",
+    "pusher-js": "^8.5.0",
     "vue": "^3.5.25",
     "vue-router": "^4.6.4"
   },
