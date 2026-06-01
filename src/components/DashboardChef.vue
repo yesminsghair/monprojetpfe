@@ -184,9 +184,10 @@
       />
 
       <MesEvaluations
-        v-else-if="currentPage === 'jury-evaluations'"
-        key="jury-evaluations"
+        v-else-if="currentPage === 'jury-notes'"
+        key="jury-notes"
         :current-user="currentUser"
+        @toast="onToastEvent"
       />
 
       <!-- ══════════════ SHARED ══════════════ -->
@@ -277,7 +278,7 @@ const BREADCRUMBS = {
   'enc-calendrier':         'Calendrier de soutenance',
   'enc-proposer-plan':      'Proposer un plan',
   'jury-projets':           'Projets à évaluer',
-  'jury-evaluations':       'Notes finales',
+  'jury-notes':             'Notes finales',
   'messagerie':             'Messagerie',
   'profil':                 'Mon profil',
   'profil-edit':            'Modifier le profil',
@@ -285,7 +286,7 @@ const BREADCRUMBS = {
 }
 
 const ENC_PAGES  = ['enc-voeux','enc-demandes','enc-affectes','enc-suivi','enc-reunions','enc-calendrier','enc-proposer-plan']
-const JURY_PAGES = ['jury-projets','jury-evaluations']
+const JURY_PAGES = ['jury-projets', 'jury-notes']
 
 export default {
   name: 'DashboardChef',
@@ -456,8 +457,8 @@ export default {
           type: 'group', key: 'jury-eval', label: 'Évaluation PFE',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
           children: [
-            { page: 'jury-projets',     label: 'Projets à évaluer' },
-            { page: 'jury-evaluations', label: 'Notes finales'   },
+            { page: 'jury-projets', label: 'Projets à évaluer' },
+            { page: 'jury-notes',   label: 'Notes finales'     },
           ],
         },
         // ── Communication ─────────────────────────────────────

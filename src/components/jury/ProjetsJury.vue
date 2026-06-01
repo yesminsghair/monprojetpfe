@@ -2,84 +2,113 @@
   <div class="pj-root">
 
     <!-- Page header -->
-    <div class="pj-header mb-4">
-      <h2 class="pj-title">Projets à évaluer</h2>
-      <p class="pj-sub">Accédez à vos projets assignés en tant que président et soumettez vos évaluations</p>
+    <div class="pj-page-header mb-5">
+      <h2 class="pj-page-title">Mes projets jury</h2>
+      <p class="pj-page-sub">Évaluez vos projets en tant que président de jury</p>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="vld-state"><div class="vld-spinner mx-auto mb-3"></div><p>Chargement...</p></div>
-
-    <!-- Empty -->
-    <div v-else-if="!projetsEval.length" class="vld-state">
-      <div class="vld-state__icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      </div>
-      <p class="vld-state__title">Aucun projet à évaluer</p>
+    <div v-if="loading" class="vld-state">
+      <div class="vld-spinner mx-auto mb-3"></div>
+      <p>Chargement...</p>
     </div>
 
     <template v-else>
 
-      <!-- Section label -->
-      <div class="pj-col-label pj-col-label--eval mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Évaluation (Président) <span class="pj-count">{{ projetsEval.length }}</span>
-      </div>
+      <!-- ══════════════════════════════════════════════════════════
+           SECTION : ÉVALUATION (Président uniquement)
+      ═══════════════════════════════════════════════════════════ -->
+      <div class="pj-section mb-5">
+        <div class="pj-section-header pj-section-header--eval mb-3">
+          <div class="pj-section-header__icon pj-section-header__icon--eval">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <span>Évaluation — Président</span>
+          <span class="pj-count">{{ projetsEval.length }}</span>
+        </div>
 
-      <!-- Cards grid -->
-      <div class="pj-card-grid">
-        <div v-for="p in projetsEval" :key="p.id" class="pj-card pj-card--eval" :class="{ 'pj-card--done': p.evalue }">
-          <div class="pj-card__top">
-            <span class="pj-role-badge pj-role-badge--president">Président</span>
-            <span class="pj-status-dot" :class="p.evalue ? 'pj-status-dot--done' : 'pj-status-dot--pending'">
-              {{ p.evalue ? 'Évalué' : 'En attente' }}
-            </span>
+        <div v-if="!projetsEval.length" class="pj-empty">
+          <div class="pj-empty__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
-          <div class="pj-card__title">{{ p.titre }}</div>
-          <div class="pj-card__meta">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            {{ p.etudiant_nom }}
-          </div>
-          <div class="pj-card__meta">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Encadrant : {{ p.encadrant }}
-          </div>
-          <div v-if="p.date_soutenance" class="pj-card__meta">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            {{ p.date_soutenance }}<span v-if="p.salle"> · {{ p.salle }}</span>
-          </div>
+          <p>Aucun projet à évaluer en tant que président.</p>
+        </div>
 
-          <div class="pj-card__actions">
-            <!-- Visualiser livrable final -->
-            <button class="pj-btn pj-btn--livrable" @click="ouvrirLivrable(p)" :title="'Visualiser le livrable final de ' + p.etudiant_nom">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Livrable final
-            </button>
+        <div v-else class="pj-card-grid">
+          <div
+            v-for="p in projetsEval" :key="'eval-' + p.id"
+            class="pj-card pj-card--eval"
+            :class="{ 'pj-card--done': p.evalue, 'pj-card--locked': !p.peutEvaluer }"
+          >
+            <div class="pj-card__top">
+              <span class="pj-badge pj-badge--president">Président</span>
+              <span class="pj-status" :class="statusClass(p)">
+                {{ statusLabel(p) }}
+              </span>
+            </div>
 
-            <!-- Évaluer / Modifier -->
-            <button class="pj-btn pj-btn--eval" @click="ouvrirEvaluation(p)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              {{ p.evalue ? 'Modifier' : 'Évaluer' }}
-            </button>
+            <div class="pj-card__title">{{ p.titre }}</div>
+
+            <div class="pj-card__meta">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              {{ p.etudiant_nom }}
+            </div>
+            <div class="pj-card__meta">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Encadrant : {{ p.encadrant }}
+            </div>
+            <div v-if="p.date_soutenance" class="pj-card__meta">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {{ p.date_soutenance }}<span v-if="p.heure_debut"> à {{ p.heure_debut }}</span><span v-if="p.salle"> · {{ p.salle }}</span>
+            </div>
+
+            <!-- Lock notice when soutenance not started yet -->
+            <div v-if="!p.peutEvaluer" class="pj-lock-notice">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span v-if="p.statut !== 'publie'">Soutenance non encore publiée</span>
+              <span v-else>Disponible après la fin de la soutenance</span>
+            </div>
+
+            <div class="pj-card__actions">
+              <button class="pj-btn pj-btn--livrable" @click="ouvrirLivrable(p)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Livrable final
+              </button>
+
+              <!-- Evaluate button — only when allowed -->
+              <button
+                v-if="p.peutEvaluer"
+                class="pj-btn pj-btn--eval"
+                @click="ouvrirEvaluation(p)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                {{ p.evalue ? 'Modifier' : 'Évaluer' }}
+              </button>
+
+              <!-- Locked placeholder -->
+              <span v-else class="pj-btn-locked" title="La soutenance doit être publiée et l'heure de début atteinte">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Évaluation verrouillée
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
     </template>
 
-    <!-- ══ MODAL: Visualiser livrable final ════════════════════════ -->
+    <!-- ══ MODAL : Livrable final (PDF) ════════════════════════════ -->
     <Transition name="modal-fade">
       <div v-if="showLivrableModal" class="pj-overlay" @click.self="fermerLivrable">
         <div class="pj-modal pj-modal--livrable">
-
           <div class="pj-modal__header pj-modal__header--livrable">
             <div>
-              <div class="pj-modal__pretitle">Livrable final — Phase "livrables"</div>
-              <h3 class="pj-modal__title">{{ livrableProjet?.titre }}</h3>
+              <div class="pj-modal__pretitle">Livrable final</div>
+              <h3 class="pj-modal__title">{{ livrableProjet?.titre || livrableProjet?.projet_titre }}</h3>
               <p class="pj-modal__sub">{{ livrableProjet?.etudiant_nom }}</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
-              <a v-if="livrableUrl" :href="livrableUrl" target="_blank" class="pj-btn pj-btn--ghost pj-btn--sm" title="Ouvrir dans un nouvel onglet">
+              <a v-if="livrableUrl" :href="livrableUrl" target="_blank" class="pj-btn pj-btn--ghost pj-btn--sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Ouvrir
               </a>
@@ -88,62 +117,47 @@
               </button>
             </div>
           </div>
-
-          <!-- Body -->
           <div class="pj-modal__body pj-modal__body--pdf">
-
-            <!-- Loading -->
             <div v-if="loadingLivrable" class="pj-pdf-state">
               <div class="vld-spinner mx-auto mb-3"></div>
               <p>Chargement du livrable…</p>
             </div>
-
-            <!-- Not found -->
             <div v-else-if="livrableErreur" class="pj-pdf-state pj-pdf-state--err">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <p>{{ livrableErreur }}</p>
             </div>
-
-            <!-- PDF iframe -->
             <iframe v-else-if="livrableUrl"
               :src="livrableUrl + '#toolbar=1&navpanes=0'"
               class="pj-pdf-frame"
               type="application/pdf"
               frameborder="0"
             ></iframe>
-
           </div>
-
         </div>
       </div>
     </Transition>
 
-    <!-- ══ MODAL: Évaluation (président) ═══════════════════════════ -->
+    <!-- ══ MODAL : Grille d'évaluation (Président) ═════════════════ -->
     <Transition name="modal-fade">
-      <div v-if="showModal" class="pj-overlay" @click.self="showModal = false">
+      <div v-if="showEvalModal" class="pj-overlay" @click.self="showEvalModal = false">
         <div class="pj-modal pj-modal--eval">
-
           <div class="pj-modal__header pj-modal__header--eval">
             <div>
               <div class="pj-modal__pretitle">Grille d'évaluation — Président</div>
               <h3 class="pj-modal__title">{{ evalProjet?.titre }}</h3>
               <p class="pj-modal__sub">{{ evalProjet?.etudiant_nom }} · {{ evalProjet?.encadrant }}</p>
             </div>
-            <button class="pj-modal__close" @click="showModal = false">
+            <button class="pj-modal__close" @click="showEvalModal = false">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-
           <div v-if="loadingGrille" class="pj-modal__loading"><div class="vld-spinner mx-auto mb-2"></div></div>
-          <div v-else-if="!evalCategories.length" class="pj-modal__empty">Aucune grille disponible</div>
-
+          <div v-else-if="!evalCategories.length" class="pj-modal__empty">Aucune grille disponible.</div>
           <div v-else class="pj-modal__body">
             <div v-for="cat in evalCategories" :key="cat.id" class="pj-grille-cat">
               <div class="pj-grille-cat__header">
-                <span class="pj-grille-cat__name">{{ cat.nom }}</span>
-                <span class="pj-grille-cat__score">
-                  {{ catTotal(cat).toFixed(2) }} / {{ cat.bareme_max }} pts
-                </span>
+                <span>{{ cat.nom }}</span>
+                <span>{{ catTotal(cat).toFixed(2) }} / {{ cat.bareme_max }} pts</span>
               </div>
               <div class="pj-grille-cat__rows">
                 <div v-for="c in cat.criteres" :key="c.id" class="pj-critere-row">
@@ -161,7 +175,6 @@
               </div>
             </div>
           </div>
-
           <div v-if="!loadingGrille && evalCategories.length" class="pj-modal__footer">
             <div class="pj-total-bar">
               <span class="pj-total-bar__label">Note totale estimée</span>
@@ -172,14 +185,13 @@
               <textarea v-model="commentaire" class="pj-textarea" rows="3" placeholder="Observations générales..."></textarea>
             </div>
             <div class="pj-modal__actions">
-              <button class="pj-btn pj-btn--ghost" @click="showModal = false">Annuler</button>
+              <button class="pj-btn pj-btn--ghost" @click="showEvalModal = false">Annuler</button>
               <button class="pj-btn pj-btn--eval pj-btn--lg" @click="soumettre" :disabled="saving">
                 <span v-if="saving" class="vld-spinner-sm"></span>
                 {{ saving ? 'Envoi...' : "Soumettre l'évaluation" }}
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </Transition>
@@ -197,25 +209,32 @@ export default {
 
   data () {
     return {
-      projets: [], loading: false,
+      loading: false,
+      projets: [],        // jurys where the user is a member
 
-      // Livrable modal
+      // ── Modal livrable ──
       showLivrableModal: false,
       livrableProjet:    null,
       livrableUrl:       null,
       loadingLivrable:   false,
       livrableErreur:    null,
 
-      // Eval modal
-      showModal:      false,
+      // ── Modal évaluation (président) ──
+      showEvalModal:  false,
       loadingGrille:  false,
       evalProjet:     null,
-      evalCategories: [], commentaire: '', saving: false,
+      evalCategories: [],
+      commentaire:    '',
+      saving:         false,
     }
   },
 
   computed: {
-    projetsEval () { return this.projets.filter(p => p.monRole === 'president') },
+    /** Only jurys where the current user is président */
+    projetsEval () {
+      return this.projets.filter(p => p.monRole === 'president')
+    },
+
     noteTotale () {
       return this.evalCategories.reduce(
         (s, cat) => s + cat.criteres.reduce((cs, c) => cs + (c.note || 0), 0), 0
@@ -232,10 +251,8 @@ export default {
   async mounted () { await this.charger() },
 
   methods: {
-    catTotal (cat) {
-      return cat.criteres.reduce((s, c) => s + (c.note || 0), 0)
-    },
 
+    // ── Chargement initial ──────────────────────────────────────────
     async charger () {
       this.loading = true
       try {
@@ -245,10 +262,13 @@ export default {
           api.get('/jurys-pfe/mes-notes'),
         ])
         const jurys = juryRes.status === 'fulfilled' ? juryRes.value.data : []
+        const evals = evalRes.status === 'fulfilled' ? evalRes.value.data : []
+
         this.projets = jurys
           .filter(j => (j.membres || []).some(m => m.enseignant_id === userId))
           .map(j => {
             const monMembre = (j.membres || []).find(m => m.enseignant_id === userId)
+            const peutEvaluer = this.evaluerAutorise(j)
             return {
               id:              j.id,
               titre:           j.projet_titre || 'Projet #' + j.id,
@@ -256,43 +276,67 @@ export default {
               etudiant_nom:    j.etudiant_nom  || '—',
               encadrant:       j.encadrant_nom || '—',
               date_soutenance: j.date_soutenance || null,
+              heure_debut:     j.heure_debut ? j.heure_debut.substring(0, 5) : null,
+              heure_fin:       j.heure_fin   ? j.heure_fin.substring(0, 5)   : null,
               salle:           j.salle || null,
-              evalue:          false,
+              statut:          j.statut || null,
+              evalue:          evals.some(ev => ev.jury_id === j.id),
               monRole:         monMembre?.fonction || 'examinateur',
               president_id:    j.president_id || null,
+              peutEvaluer,
             }
           })
 
-        const evals = evalRes.status === 'fulfilled' ? evalRes.value.data : []
-        evals.forEach(ev => {
-          const p = this.projets.find(pr => pr.id === ev.jury_id)
-          if (p) p.evalue = true
-        })
       } catch (e) { console.error(e) }
       finally { this.loading = false }
     },
 
+    /**
+     * A président may evaluate only when:
+     *  1. The jury's soutenance statut === 'publie'
+     *  2. The scheduled end time (date_soutenance + heure_fin) has already passed
+     */
+    evaluerAutorise (jury) {
+      if (jury.statut !== 'publie') return false
+      if (!jury.date_soutenance)    return false
+
+      const heureStr = jury.heure_fin
+        ? jury.heure_fin.substring(0, 5)
+        : (jury.heure_debut ? jury.heure_debut.substring(0, 5) : null)
+      if (!heureStr) return false
+
+      const endsAt = new Date(`${jury.date_soutenance}T${heureStr}:00`)
+      return !isNaN(endsAt) && Date.now() >= endsAt.getTime()
+    },
+
+    // ── Status badge helpers ────────────────────────────────────────
+    statusLabel (p) {
+      if (p.evalue)        return 'Évalué'
+      if (!p.peutEvaluer)  return 'Non disponible'
+      return 'À évaluer'
+    },
+    statusClass (p) {
+      if (p.evalue)        return 'pj-status--done'
+      if (!p.peutEvaluer)  return 'pj-status--locked'
+      return 'pj-status--pending'
+    },
+
     // ── Livrable final ──────────────────────────────────────────────
     async ouvrirLivrable (projet) {
-      this.livrableProjet  = projet
-      this.livrableUrl     = null
-      this.livrableErreur  = null
+      this.livrableProjet    = projet
+      this.livrableUrl       = null
+      this.livrableErreur    = null
       this.showLivrableModal = true
       this.loadingLivrable   = true
       try {
-        // Fetch livrables for this student (jury-accessible endpoint)
-        const res = await api.get(`/livrables/etudiant/${projet.etudiant_id}`)
+        const res      = await api.get(`/livrables/etudiant/${projet.etudiant_id}`)
         const livrables = res.data || []
-
-        // Find the livrable belonging to the phase named "livrables" (case-insensitive)
-        const livrable = livrables.find(l =>
+        const livrable  = livrables.find(l =>
           (l.phase_nom || l.phase?.nom || '').toLowerCase().includes('livrable')
-        ) || livrables[livrables.length - 1] // fallback: last submitted livrable
-
+        ) || livrables[livrables.length - 1]
         if (!livrable) {
           this.livrableErreur = "Aucun livrable final trouvé pour cet étudiant."
         } else {
-          // Build the URL — use the download route
           this.livrableUrl = `/api/livrables/${livrable.id}/download`
         }
       } catch (e) {
@@ -310,13 +354,22 @@ export default {
       this.livrableProjet    = null
     },
 
-    // ── Évaluation ──────────────────────────────────────────────────
+    // ── Évaluation président ────────────────────────────────────────
     async ouvrirEvaluation (projet) {
-      this.evalProjet = projet
-      this.commentaire = ''
+      // Extra safety: prevent opening if no longer authorised
+      if (!projet.peutEvaluer) {
+        this.$emit('toast', {
+          message: "L'évaluation n'est disponible qu'après la fin de la soutenance.",
+          type: 'err',
+        })
+        return
+      }
+
+      this.evalProjet     = projet
+      this.commentaire    = ''
       this.evalCategories = []
-      this.showModal = true
-      this.loadingGrille = true
+      this.showEvalModal  = true
+      this.loadingGrille  = true
       try {
         const res    = await api.get('/grilles')
         const grille = (res.data || []).find(g => g.statut === 'publie' || g.statut === 'verrouille') || res.data?.[0]
@@ -347,6 +400,10 @@ export default {
       finally { this.loadingGrille = false }
     },
 
+    catTotal (cat) {
+      return cat.criteres.reduce((s, c) => s + (c.note || 0), 0)
+    },
+
     async soumettre () {
       for (const cat of this.evalCategories) {
         for (const c of cat.criteres) {
@@ -370,9 +427,12 @@ export default {
         const idx = this.projets.findIndex(p => p.id === this.evalProjet.id)
         if (idx !== -1) this.projets[idx].evalue = true
         this.$emit('toast', { message: 'Évaluation soumise avec succès.', type: 'ok' })
-        this.showModal = false
+        this.showEvalModal = false
       } catch (e) {
-        this.$emit('toast', { message: e?.response?.data?.message || 'Erreur lors de la soumission.', type: 'err' })
+        this.$emit('toast', {
+          message: e?.response?.data?.message || 'Erreur lors de la soumission.',
+          type: 'err',
+        })
       } finally { this.saving = false }
     },
   },
@@ -380,196 +440,254 @@ export default {
 </script>
 
 <style scoped>
-/* ── Root ──────────────────────────────────────────────────────── */
+/* ── Root & variables ──────────────────────────────────────────── */
 .pj-root {
-  --pj-blue: #3d6080; --pj-blue-lt: #e8f0fe; --pj-blue-mid: #3d6080;
-  --pj-yellow: #f59e0b; --pj-yellow-lt: #fef9ee; --pj-yellow-dark: #d97706;
-  --pj-green: #10b981; --pj-red: #ef4444;
-  --pj-surface: var(--vld-surface, #fff);
-  --pj-border: var(--bs-border-color, #e5e7eb);
-  --pj-text: var(--vld-text-strong, #111827);
-  --pj-muted: var(--vld-text-muted, #6b7280);
-  --pj-r: 12px;
+  --pj-blue:        #3d6080;
+  --pj-blue-lt:     #4a7090;
+  --pj-blue-dark:   #2f4f6a;
+  --pj-blue-tint:   #e8f0f5;
+  --pj-gold:        #f5a623;
+  --pj-gold-dark:   #d98e1a;
+  --pj-gold-tint:   #fef9ed;
+  --pj-green:       #10b981;
+  --pj-red:         #ef4444;
+  --pj-amber:       #f59e0b;
+  --pj-border:      #c8c4bc;
+  --pj-card:        #e8e4dc;
+  --pj-text:        #1e2a35;
+  --pj-muted:       #8a9aaa;
+  --pj-surface:     var(--vld-surface, #fff);
 }
 
 /* ── Page header ───────────────────────────────────────────────── */
-.pj-header { border-left: 4px solid var(--pj-yellow); padding-left: 14px; }
-.pj-title  { font-size: 20px; font-weight: 700; color: var(--pj-text); margin: 0 0 4px; }
-.pj-sub    { font-size: 13px; color: var(--pj-muted); margin: 0; }
+.pj-page-header { border-left: 4px solid var(--pj-gold); padding-left: 14px; }
+.pj-page-title  { font-size: 20px; font-weight: 700; color: var(--pj-text); margin: 0 0 4px; }
+.pj-page-sub    { font-size: 13px; color: var(--pj-muted); margin: 0; }
 
-/* ── Section label ─────────────────────────────────────────────── */
-.pj-col-label {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  padding: 6px 12px; border-radius: 8px; width: fit-content;
+/* ── Section header ────────────────────────────────────────────── */
+.pj-section-header {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  padding: 6px 14px 6px 8px; border-radius: 50px;
+  border: 1.5px solid transparent;
 }
-.pj-col-label--eval { background: var(--pj-yellow-lt); color: var(--pj-yellow-dark); border: 1px solid #fde68a; }
-.pj-count { background: rgba(0,0,0,.10); border-radius: 20px; padding: 1px 7px; font-size: 11px; margin-left: 2px; }
+.pj-section-header__icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pj-section-header--eval {
+  background: var(--pj-gold-tint); color: var(--pj-gold-dark);
+  border-color: rgba(245,166,35,.35);
+}
+.pj-section-header__icon--eval { background: rgba(245,166,35,.2); color: var(--pj-gold-dark); }
+.pj-count {
+  background: rgba(0,0,0,.1); border-radius: 20px;
+  padding: 1px 8px; font-size: 11px;
+}
 
-/* ── Cards grid ────────────────────────────────────────────────── */
+/* ── Empty states ──────────────────────────────────────────────── */
+.pj-empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 36px 24px; color: var(--pj-muted); gap: 10px; font-size: 13.5px;
+}
+.pj-empty__icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--pj-blue-tint); display: flex; align-items: center; justify-content: center;
+  color: var(--pj-blue);
+}
+
+/* ── Card grid ─────────────────────────────────────────────────── */
 .pj-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
 }
 .pj-card {
-  background: var(--pj-surface); border-radius: var(--pj-r);
-  border: 1.5px solid var(--pj-border); padding: 16px;
-  transition: box-shadow .15s, border-color .15s;
+  background: var(--pj-card); border-radius: 16px;
+  border: 1.5px solid var(--pj-border);
+  padding: 16px; transition: box-shadow .2s, transform .2s;
 }
-.pj-card:hover         { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
-.pj-card--eval         { border-left: 4px solid var(--pj-yellow); }
-.pj-card--eval:hover   { border-color: var(--pj-yellow); }
-.pj-card--done         { opacity: .88; }
+.pj-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); }
+.pj-card--eval    { border-left: 4px solid var(--pj-gold); }
+.pj-card--done    { opacity: .85; }
+.pj-card--locked  { border-left-color: var(--pj-muted); }
 
-.pj-card__top {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+/* ── Top row ───────────────────────────────────────────────────── */
+.pj-card__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+/* ── Badges ────────────────────────────────────────────────────── */
+.pj-badge {
+  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
 }
+.pj-badge--president { background: rgba(245,166,35,.15); color: var(--pj-gold-dark); border: 1px solid rgba(245,166,35,.3); }
+
+/* ── Status chips ──────────────────────────────────────────────── */
+.pj-status { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.pj-status--done   { background: #d1fae5; color: #065f46; }
+.pj-status--pending { background: #fef3c7; color: #92400e; }
+.pj-status--locked  { background: #f3f4f6; color: #6b7280; }
+
+/* ── Card body ─────────────────────────────────────────────────── */
 .pj-card__title {
-  font-size: 14.5px; font-weight: 700; color: var(--pj-text); margin-bottom: 6px;
-  line-height: 1.35;
+  font-size: 14px; font-weight: 700; color: var(--pj-text); line-height: 1.35; margin-bottom: 8px;
 }
 .pj-card__meta {
   display: flex; align-items: center; gap: 5px;
-  font-size: 12px; color: var(--pj-muted); margin-bottom: 3px;
+  font-size: 12px; color: var(--pj-muted); margin-bottom: 5px;
 }
-.pj-card__actions {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+.pj-card__meta:last-of-type { margin-bottom: 12px; }
+
+/* ── Lock notice ───────────────────────────────────────────────── */
+.pj-lock-notice {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--pj-muted); font-style: italic;
+  background: rgba(0,0,0,.04); border-radius: 8px;
+  padding: 6px 10px; margin-bottom: 12px;
 }
+.pj-lock-notice svg { flex-shrink: 0; stroke: var(--pj-muted); }
 
-/* ── Role badges ───────────────────────────────────────────────── */
-.pj-role-badge {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
-  text-transform: uppercase; padding: 3px 9px; border-radius: 20px;
-}
-.pj-role-badge--president { background: var(--pj-yellow-lt); color: var(--pj-yellow-dark); border: 1px solid #fde68a; }
+/* ── Actions ───────────────────────────────────────────────────── */
+.pj-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ── Status dots ───────────────────────────────────────────────── */
-.pj-status-dot { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
-.pj-status-dot--done    { background: #d1fae5; color: #065f46; }
-.pj-status-dot--pending { background: #fef3c7; color: #92400e; }
-
-/* ── Buttons ───────────────────────────────────────────────────── */
 .pj-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12.5px; font-weight: 600; padding: 6px 14px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 700; padding: 7px 14px;
   border-radius: 8px; border: none; cursor: pointer;
-  transition: background .15s, transform .1s;
-  text-decoration: none;
+  transition: all .2s; text-decoration: none; flex: 1; justify-content: center;
 }
-.pj-btn:active { transform: scale(.97); }
-.pj-btn--eval         { background: var(--pj-yellow); color: #1a1a1a; }
-.pj-btn--eval:hover   { background: var(--pj-yellow-dark); color: #fff; }
-.pj-btn--ghost        { background: transparent; color: var(--pj-muted); border: 1.5px solid var(--pj-border); }
-.pj-btn--ghost:hover  { background: #f3f4f6; }
-.pj-btn--livrable        { background: var(--pj-blue-lt); color: var(--pj-blue); border: 1.5px solid rgba(61,96,128,.25); }
-.pj-btn--livrable:hover  { background: var(--pj-blue); color: #fff; }
-.pj-btn--lg { padding: 9px 22px; font-size: 13.5px; }
-.pj-btn--sm { padding: 5px 11px; font-size: 11.5px; }
+.pj-btn--livrable {
+  background: var(--pj-blue-tint); color: var(--pj-blue);
+  border: 1.5px solid rgba(61,96,128,.25);
+}
+.pj-btn--livrable:hover { background: var(--pj-blue); color: #fff; }
+
+.pj-btn--eval {
+  background: linear-gradient(160deg, var(--pj-gold), var(--pj-gold-dark));
+  color: #fff; box-shadow: 0 3px 10px rgba(245,166,35,.3);
+}
+.pj-btn--eval:hover {
+  box-shadow: 0 5px 16px rgba(245,166,35,.45); transform: translateY(-1px);
+}
+.pj-btn--eval:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+.pj-btn--ghost {
+  background: transparent; color: var(--pj-blue);
+  border: 1.5px solid rgba(61,96,128,.3);
+}
+.pj-btn--ghost:hover { background: var(--pj-blue-tint); }
+
+.pj-btn--lg { padding: 9px 22px; font-size: 13px; }
+.pj-btn--sm { padding: 5px 12px; font-size: 12px; flex: unset; }
+
+.pj-btn-locked {
+  display: inline-flex; align-items: center; gap: 6px; flex: 1; justify-content: center;
+  font-size: 12px; color: var(--pj-muted); font-style: italic;
+  padding: 7px 14px; border-radius: 8px;
+  background: rgba(0,0,0,.04); border: 1.5px dashed var(--pj-border);
+  cursor: not-allowed;
+}
 
 /* ── Modal overlay ─────────────────────────────────────────────── */
 .pj-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.50); z-index: 1000;
+  position: fixed; inset: 0; background: rgba(30,42,53,.6); z-index: 1000;
   display: flex; align-items: center; justify-content: center; padding: 20px;
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(4px);
 }
 .pj-modal {
-  background: var(--pj-surface); border-radius: 16px; width: 100%;
-  max-width: 660px; max-height: 92vh; overflow: hidden;
+  background: var(--pj-surface); border-radius: 20px; width: 100%;
+  max-width: 640px; max-height: 92vh; overflow: hidden;
   display: flex; flex-direction: column;
-  box-shadow: 0 24px 64px rgba(0,0,0,.20);
+  box-shadow: 0 30px 80px rgba(0,0,0,.25);
 }
-.pj-modal--livrable { max-width: 860px; }
+.pj-modal--livrable { max-width: 880px; }
+.pj-modal--eval     { max-width: 660px; }
 
 /* Modal header */
 .pj-modal__header {
   display: flex; justify-content: space-between; align-items: flex-start;
-  padding: 20px 24px 18px; border-bottom: 1.5px solid var(--pj-border);
+  padding: 22px 26px 20px;
 }
-.pj-modal__header--eval     { background: var(--pj-yellow-lt); border-bottom-color: #fde68a; }
-.pj-modal__header--livrable {
-  background: linear-gradient(135deg, #2f4f6a, #3d6080);
-  border-bottom-color: rgba(255,255,255,.1);
-}
-.pj-modal__header--livrable .pj-modal__pretitle { color: rgba(255,255,255,.65); }
-.pj-modal__header--livrable .pj-modal__title    { color: #fff; }
-.pj-modal__header--livrable .pj-modal__sub      { color: rgba(255,255,255,.7); }
-.pj-modal__header--livrable .pj-modal__close    { background: rgba(255,255,255,.15); color: #fff; }
-.pj-modal__header--livrable .pj-modal__close:hover { background: rgba(255,255,255,.25); }
-
-.pj-modal__pretitle { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px; }
-.pj-modal__header--eval .pj-modal__pretitle { color: var(--pj-yellow-dark); }
-.pj-modal__title { font-size: 17px; font-weight: 700; color: var(--pj-text); margin: 0 0 3px; }
-.pj-modal__sub   { font-size: 12.5px; color: var(--pj-muted); margin: 0; }
+.pj-modal__header--eval    { background: linear-gradient(160deg, #c47c0c, #a36208); }
+.pj-modal__header--livrable { background: linear-gradient(160deg, #2f4f6a, #1e2a35); }
+.pj-modal__pretitle { font-size: 10.5px; font-weight: 700; letter-spacing:.09em; text-transform:uppercase; color:rgba(255,255,255,.65); margin-bottom:5px; }
+.pj-modal__title    { font-size: 17px; font-weight: 700; color: #fff; margin: 0 0 4px; }
+.pj-modal__sub      { font-size: 12.5px; color: rgba(255,255,255,.7); margin: 0; }
 .pj-modal__close {
-  background: rgba(0,0,0,.06); border: none; border-radius: 8px;
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0; margin-left: 12px; transition: background .15s;
+  background: rgba(255,255,255,.12); border: none; border-radius: 9px;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; margin-left: 12px; color: #fff; transition: background .15s;
 }
-.pj-modal__close:hover { background: rgba(0,0,0,.12); }
+.pj-modal__close:hover { background: rgba(255,255,255,.22); }
 
-.pj-modal__loading { padding: 40px; text-align: center; }
-.pj-modal__empty   { padding: 40px; text-align: center; color: var(--pj-muted); font-size: 14px; }
-.pj-modal__body    { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.pj-modal__body    { flex: 1; overflow-y: auto; padding: 22px 26px; }
 .pj-modal__body--pdf { padding: 0; overflow: hidden; }
-.pj-modal__footer  { padding: 16px 24px; border-top: 1.5px solid var(--pj-border); background: var(--pj-surface); }
+.pj-modal__loading { padding: 40px; text-align: center; color: var(--pj-muted); }
+.pj-modal__empty   { padding: 32px; text-align: center; color: var(--pj-muted); font-size: 13.5px; }
+.pj-modal__footer  { padding: 18px 26px; border-top: 1.5px solid var(--pj-border); }
 .pj-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 
-/* ── PDF viewer ────────────────────────────────────────────────── */
-.pj-pdf-frame {
-  width: 100%; height: 72vh; border: none; display: block;
-}
+/* ── PDF viewer ─────────────────────────────────────────────────── */
+.pj-pdf-frame { width: 100%; height: 74vh; border: none; display: block; }
 .pj-pdf-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 320px; gap: 12px; color: var(--pj-muted); font-size: 13.5px; text-align: center;
-  padding: 24px;
+  height: 320px; gap: 12px; color: var(--pj-muted); font-size: 13.5px; text-align: center; padding: 24px;
 }
 .pj-pdf-state--err { color: var(--pj-red); }
 .pj-pdf-state--err svg { stroke: var(--pj-red); }
 
-/* ── Grille ────────────────────────────────────────────────────── */
-.pj-grille-cat { margin-bottom: 16px; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--pj-border); }
+/* ── Grille ─────────────────────────────────────────────────────── */
+.pj-grille-cat { margin-bottom: 16px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--pj-border); }
 .pj-grille-cat__header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 9px 14px; background: var(--pj-yellow-dark); color: #fff;
-  font-size: 13px; font-weight: 700;
+  display: flex; justify-content: space-between;
+  padding: 9px 14px;
+  background: linear-gradient(160deg, var(--pj-gold), var(--pj-gold-dark));
+  color: #fff; font-size: 12.5px; font-weight: 700;
 }
-.pj-grille-cat__score { font-size: 12px; opacity: .9; font-weight: 600; }
-.pj-critere-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-top: 1px solid var(--pj-border); background: var(--pj-surface);
-}
-.pj-critere-row__info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding-right: 12px; }
-.pj-critere-row__nom    { font-size: 13px; font-weight: 600; color: var(--pj-text); }
+.pj-grille-cat__rows { background: var(--pj-surface); }
+.pj-critere-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--pj-border); }
+.pj-critere-row__info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+.pj-critere-row__nom    { font-size: 13px; color: var(--pj-text); }
 .pj-critere-row__bareme { font-size: 11.5px; color: var(--pj-muted); }
 .pj-critere-row__input-wrap { flex-shrink: 0; }
-.pj-note-input {
-  width: 72px; height: 36px; border: 2px solid var(--pj-border); border-radius: 8px;
-  text-align: center; font-size: 14px; font-weight: 700;
-  color: var(--pj-text); background: var(--pj-surface); transition: border-color .15s;
-}
-.pj-note-input:focus    { outline: none; border-color: var(--pj-yellow); box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
-.pj-note-input--err     { border-color: var(--pj-red) !important; background: #fff5f5; }
 
-/* ── Total bar ─────────────────────────────────────────────────── */
+.pj-note-input {
+  width: 72px; height: 32px; text-align: center;
+  border: 1.5px solid var(--pj-border); border-radius: 8px;
+  font-size: 13px; font-weight: 700; color: var(--pj-text);
+  background: var(--pj-surface); outline: none; transition: border-color .15s;
+}
+.pj-note-input:focus { border-color: var(--pj-gold); }
+.pj-note-input--err  { border-color: var(--pj-red); color: var(--pj-red); }
+
+/* ── Total & comment ─────────────────────────────────────────────── */
 .pj-total-bar {
   display: flex; justify-content: space-between; align-items: center;
-  background: var(--pj-yellow-lt); border: 1.5px solid #fde68a;
-  border-radius: 10px; padding: 10px 16px; margin-bottom: 14px;
+  background: var(--pj-gold-tint); border: 1.5px solid rgba(245,166,35,.35);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
 }
-.pj-total-bar__label { font-size: 13px; font-weight: 600; color: var(--pj-yellow-dark); }
-.pj-total-bar__val   { font-size: 20px; font-weight: 800; color: var(--pj-yellow-dark); }
-.pj-note--high { color: var(--pj-green)       !important; }
-.pj-note--mid  { color: var(--pj-yellow-dark) !important; }
-.pj-note--low  { color: var(--pj-red)         !important; }
+.pj-total-bar__label { font-size: 13px; font-weight: 600; color: var(--pj-blue-dark); }
+.pj-total-bar__val   { font-size: 22px; font-weight: 800; }
+.pj-note--high { color: var(--pj-green); }
+.pj-note--mid  { color: var(--pj-amber); }
+.pj-note--low  { color: var(--pj-red); }
 
-/* ── Comment ───────────────────────────────────────────────────── */
-.pj-comment-wrap  { margin-bottom: 4px; }
-.pj-label         { font-size: 12.5px; font-weight: 600; color: var(--pj-muted); margin-bottom: 6px; display: block; }
-.pj-textarea      { width: 100%; border: 1.5px solid var(--pj-border); border-radius: 8px; padding: 9px 12px; font-size: 13px; resize: vertical; }
-.pj-textarea:focus { outline: none; border-color: var(--pj-yellow); box-shadow: 0 0 0 3px rgba(245,158,11,.12); }
+.pj-label    { display: block; font-size: 12.5px; font-weight: 600; color: var(--pj-muted); margin-bottom: 6px; }
+.pj-textarea {
+  width: 100%; border: 1.5px solid var(--pj-border); border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; color: var(--pj-text); resize: vertical;
+  background: var(--pj-surface); outline: none; transition: border-color .15s;
+}
+.pj-textarea:focus { border-color: var(--pj-gold); }
+.pj-comment-wrap { margin-bottom: 4px; }
 
-/* ── Transition ────────────────────────────────────────────────── */
-.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity .2s, transform .2s; }
-.modal-fade-enter-from, .modal-fade-leave-to       { opacity: 0; transform: scale(.97); }
+/* ── Spinner (tiny) ─────────────────────────────────────────────── */
+.vld-spinner-sm {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Transition ─────────────────────────────────────────────────── */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity .22s, transform .22s; }
+.modal-fade-enter-from, .modal-fade-leave-to       { opacity: 0; transform: scale(.96); }
 </style>

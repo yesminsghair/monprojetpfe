@@ -165,6 +165,7 @@
 </template>
 
 <script>
+import { ref } from 'vue'
 import api from '@/services/api.js'
 import {
   Chart, BarController, LineController, DoughnutController,
@@ -192,13 +193,25 @@ export default {
   },
   emits: ['navigate'],
 
+  // setup() runs before data(), ensuring `downloading` and `loading` are
+  // defined on the public instance proxy from the very first render tick.
+  // This prevents the "[Vue warn]: Property was accessed during render but
+  // is not defined on instance" warning triggered by vue-router's initial
+  // navigation finalizing before data() has been called.
+  setup() {
+    const downloading = ref(false)
+    const loading     = ref(true)
+    return { downloading, loading }
+  },
+
   computed: {
     isHome() { return this.pageMode === 'home' },
   },
 
   data() {
     return {
-      loading: true,
+      // `downloading` and `loading` are already provided by setup() above;
+      // do NOT redeclare them here or Vue will warn about duplicate keys.
       heureActualisation: '--:--',
       kpi:    { totalSpecialites: 0, totalEtudiants: 0, totalEncadrants: 0, totalSoutenances: 0, soutenancesTerminees: 0, tauxReussite: 0 },
       charts: {},
@@ -210,6 +223,25 @@ export default {
   beforeUnmount() { Object.values(this.instances).forEach(c => c?.destroy()) },
 
   methods: {
+    async telechargerPDF() {
+      this.downloading = true
+      try {
+        const res = await api.get('/dashboard/directeur/export-pdf', { responseType: 'blob' })
+        const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `tableau-de-bord-${new Date().toISOString().slice(0,10)}.pdf`)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+      } catch (e) {
+        console.error('Export PDF échoué', e)
+      } finally {
+        this.downloading = false
+      }
+    },
+
     async charger() {
       Object.values(this.instances).forEach(c => c?.destroy())
       this.instances = {}

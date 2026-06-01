@@ -4,7 +4,7 @@
     <!-- Page header -->
     <div class="ce-page-header mb-4">
       <h2 class="ce-page-title">Évaluations du président</h2>
-      <p class="ce-page-sub">Consultez les évaluations soumises par le président pour vos jurys</p>
+      <p class="ce-page-sub">Consultez les évaluations soumises par le président (encadrant &amp; examinateur uniquement)</p>
     </div>
 
     <!-- Loading -->
@@ -198,7 +198,7 @@
 import api from '@/services/api.js'
 
 export default {
-  name: 'ConsultEvaluationPresident',
+  name: 'MesEvaluations',
   emits: ['toast'],
   props: { currentUser: { type: Object, required: true } },
 
@@ -234,8 +234,11 @@ export default {
 
         this.projetsConsult = jurys
           .filter(j => {
+            // Only show jurys where:
+            //  1. The current user is a non-president member (encadrant / examinateur)
+            //  2. The soutenance is published (statut === 'publie')
             const moi = (j.membres || []).find(m => m.enseignant_id === userId)
-            return moi && moi.fonction !== 'president'
+            return moi && moi.fonction !== 'president' && j.statut === 'publie'
           })
           .map(j => {
             const moi = (j.membres || []).find(m => m.enseignant_id === userId)

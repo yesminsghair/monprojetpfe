@@ -20,6 +20,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nouvelle phase
         </button>
+        <button class="btn btn-reinit d-flex align-items-center gap-2" @click="confirmReinit = true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.85"/></svg>
+          Réinitialiser
+        </button>
       </div>
     </div>
 
@@ -75,7 +79,32 @@
                   </div>
                 </div>
               </td>
-              <td><div class="fw-bold" style="color:var(--vld-text-strong)">{{ p.nom }}</div></td>
+              <td>
+                <div class="fw-bold" style="color:var(--vld-text-strong)">{{ p.nom }}</div>
+                <!-- Livrable submission stats for active phases -->
+                <template v-if="p.active && !p.terminee">
+                  <div v-if="statForPhase(p.id)" class="phase-livrable-stats mt-1">
+                    <div class="phase-livrable-stats__bar-wrap">
+                      <div class="phase-livrable-stats__bar"
+                        :style="{ width: statForPhase(p.id).percent + '%' }"
+                        :class="statForPhase(p.id).percent >= 80 ? 'phase-livrable-stats__bar--ok'
+                               : statForPhase(p.id).percent >= 50 ? 'phase-livrable-stats__bar--warn'
+                               : 'phase-livrable-stats__bar--low'">
+                      </div>
+                    </div>
+                    <span class="phase-livrable-stats__label"
+                      :class="statForPhase(p.id).percent >= 80 ? 'text-success'
+                             : statForPhase(p.id).percent >= 50 ? 'text-warning'
+                             : 'text-danger'">
+                      {{ statForPhase(p.id).submitted }}/{{ statForPhase(p.id).total }} livrables déposés
+                    </span>
+                    <span v-if="statForPhase(p.id).percent < 100" class="phase-livrable-stats__chip phase-livrable-stats__chip--warn">
+                      ⚠ {{ statForPhase(p.id).percent }}%
+                    </span>
+                    <span v-else class="phase-livrable-stats__chip phase-livrable-stats__chip--ok">✓ Complet</span>
+                  </div>
+                </template>
+              </td>
               <td style="font-size:12.5px;color:var(--vld-text-muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.description||'—' }}</td>
               <td style="font-size:12.5px;white-space:nowrap;color:var(--vld-text)">
                 {{ fmtDate(p.dateDebut) }} <span style="color:var(--vld-border);margin:0 4px">→</span> {{ fmtDate(p.dateFin) }}
@@ -170,6 +199,155 @@
         </div>
       </div>
     </Transition>
+    <!-- MODAL RÉINITIALISER -->
+    <Transition name="modal-fade">
+      <div v-if="confirmReinit" class="modal-overlay" @click.self="confirmReinit = false">
+        <div class="card p-0" style="width:100%;max-width:460px">
+          <div class="card-header d-flex align-items-center gap-3" style="background:linear-gradient(135deg,#c0392b,#e74c3c);border-bottom:3px solid #ff6b6b;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold text-white" style="font-size:14px">Réinitialiser toutes les phases</div>
+              <div style="font-size:11.5px;color:rgba(255,255,255,.75)">Action irréversible</div>
+            </div>
+            <button class="btn-close btn-close-white" @click="confirmReinit = false"></button>
+          </div>
+          <div class="card-body d-flex flex-column gap-3 p-4">
+            <div class="reinit-warn-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Cette action va :</span>
+            </div>
+            <ul class="reinit-list">
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.85"/></svg>
+                Remettre toutes les phases à <strong>inactive</strong> (elles sont conservées)
+              </li>
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                Supprimer <strong>tous les livrables</strong> déposés par les étudiants
+              </li>
+              <li>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                Effacer tout <strong>l'historique de suivi</strong> des étudiants
+              </li>
+            </ul>
+            <div class="reinit-confirm-input">
+              <label style="font-size:12.5px;font-weight:600;color:#c0392b;margin-bottom:4px;display:block">
+                Tapez <strong>REINITIALISER</strong> pour confirmer
+              </label>
+              <input v-model="reinitWord" class="form-control" placeholder="REINITIALISER" style="font-family:monospace;letter-spacing:.05em" />
+            </div>
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <button class="btn btn-outline-secondary" @click="confirmReinit = false; reinitWord = ''">Annuler</button>
+            <button class="btn btn-danger d-flex align-items-center gap-2"
+              :disabled="reinitWord !== 'REINITIALISER' || reinitLoading"
+              @click="reinitialiser">
+              <span v-if="reinitLoading" class="spinner-border spinner-border-sm"></span>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.85"/></svg>
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- MODAL TERMINER — smart warning when not all livrables submitted -->
+    <Transition name="modal-fade">
+      <div v-if="terminerConfirm" class="modal-overlay" @click.self="terminerConfirm = null">
+        <div class="card p-0" style="width:100%;max-width:460px">
+          <div class="card-header d-flex align-items-center gap-3"
+            style="background:linear-gradient(135deg,#e67e22,#d35400);border-bottom:3px solid #f39c12;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold text-white" style="font-size:14px">Terminer « {{ terminerConfirm.phase.nom }} »</div>
+              <div style="font-size:11.5px;color:rgba(255,255,255,.75)">Des livrables manquants ont été détectés</div>
+            </div>
+            <button class="btn-close btn-close-white" @click="terminerConfirm = null"></button>
+          </div>
+          <div class="card-body d-flex flex-column gap-3 p-4">
+            <!-- Submission progress -->
+            <div class="terminer-stat-box">
+              <div class="terminer-stat-box__top">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Livrables déposés pour cette phase</span>
+              </div>
+              <div class="terminer-stat-box__count">
+                <span class="terminer-stat-box__num">{{ terminerConfirm.stat.submitted }}</span>
+                <span class="terminer-stat-box__sep">/</span>
+                <span class="terminer-stat-box__total">{{ terminerConfirm.stat.total }}</span>
+                <span class="terminer-stat-box__pct">({{ terminerConfirm.stat.percent }}%)</span>
+              </div>
+              <div class="terminer-stat-box__bar-wrap">
+                <div class="terminer-stat-box__bar"
+                  :style="{ width: terminerConfirm.stat.percent + '%' }"
+                  :class="terminerConfirm.stat.percent >= 80 ? 'terminer-stat-box__bar--ok'
+                         : terminerConfirm.stat.percent >= 50 ? 'terminer-stat-box__bar--warn'
+                         : 'terminer-stat-box__bar--low'">
+                </div>
+              </div>
+              <div class="terminer-stat-box__missing">
+                {{ terminerConfirm.stat.total - terminerConfirm.stat.submitted }} étudiant(s) n'ont pas encore déposé de livrable.
+              </div>
+            </div>
+            <div class="reinit-warn-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Terminer la phase maintenant empêchera les étudiants retardataires de déposer leur livrable.</span>
+            </div>
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <button class="btn btn-outline-secondary" @click="terminerConfirm = null">Annuler</button>
+            <button class="btn btn-warning text-white d-flex align-items-center gap-2" @click="_doTerminer(terminerConfirm.phase)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Terminer quand même
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- MODAL SUPPRIMER ─────────────────────────────────────── -->
+    <Transition name="modal-fade">
+      <div v-if="supprimerConfirm" class="modal-overlay" @click.self="supprimerConfirm = null">
+        <div class="card p-0" style="width:100%;max-width:420px">
+          <div class="card-header d-flex align-items-center gap-3"
+            style="background:linear-gradient(135deg,#c0392b,#e74c3c);border-bottom:3px solid #ff6b6b;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-bold text-white" style="font-size:14px">Supprimer la phase</div>
+              <div style="font-size:11.5px;color:rgba(255,255,255,.75)">Action irréversible</div>
+            </div>
+            <button class="btn-close btn-close-white" @click="supprimerConfirm = null"></button>
+          </div>
+          <div class="card-body d-flex flex-column gap-3 p-4">
+            <div class="reinit-warn-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Cette action va supprimer définitivement la phase suivante :</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--vld-surface-alt,#f5f5f5);border:1.5px solid var(--vld-border,#e0e0e0);border-radius:8px;">
+              <div class="phase-num" style="flex-shrink:0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+              </div>
+              <span class="fw-bold" style="font-size:14px;color:var(--vld-text-strong)">{{ supprimerConfirm.nom }}</span>
+            </div>
+            <p style="font-size:13px;color:var(--vld-text-muted);margin:0">Les données associées à cette phase (livrables, suivi) ne seront <strong>pas</strong> supprimées — seule la définition de la phase sera retirée.</p>
+          </div>
+          <div class="card-footer d-flex justify-content-end gap-2">
+            <button class="btn btn-outline-secondary" @click="supprimerConfirm = null">Annuler</button>
+            <button class="btn btn-danger d-flex align-items-center gap-2" @click="_doSupprimer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
@@ -184,6 +362,12 @@ export default {
       phases: [],
       form: { id: null, nom: '', description: '', dateDebut: '', dateFin: '', coefficient: 1, livrableObligatoire: true },
       errors: {}, loading: false,
+      confirmReinit: false,
+      reinitWord:       '',
+      reinitLoading:    false,
+      livrableStats:    [],   // [{ phase_id, submitted, total, percent, jours_restants }]
+      terminerConfirm:  null, // phase object pending termination confirmation
+      supprimerConfirm: null, // phase object pending deletion confirmation
     }
   },
   mounted () { this.chargerPhases() },
@@ -191,12 +375,17 @@ export default {
     async chargerPhases () {
       this.loading = true
       try {
-        const res = await api.get('/phases')
-        this.phases = res.data.filter(p => p.type !== 'sujet').map(p => ({
+        const [resPhases, resStats] = await Promise.all([
+          api.get('/phases'),
+          api.get('/phases/livrable-stats').catch(() => ({ data: [] })),
+        ])
+        const toDate = v => v ? String(v).split('T')[0] : ''
+        this.phases = resPhases.data.filter(p => p.type !== 'sujet').map(p => ({
           id: p.id, nom: p.nom, description: p.description || '', ordre: p.ordre,
-          dateDebut: p.date_debut, dateFin: p.date_fin, coefficient: p.coefficient,
+          dateDebut: toDate(p.date_debut), dateFin: toDate(p.date_fin), coefficient: p.coefficient,
           livrableObligatoire: p.livrable_obligatoire, active: p.active ?? false, terminee: p.terminee ?? false,
         }))
+        this.livrableStats = resStats.data || []
       } catch { this.showNotif('Erreur de chargement', 'err') }
       finally { this.loading = false }
     },
@@ -207,9 +396,21 @@ export default {
       catch (e) { this.showNotif(e.response?.data?.message || "Erreur lors de l'activation", 'err') }
     },
     async terminerPhase (p) {
-      if (!confirm(`Marquer "${p.nom}" comme terminée ?`)) return
+      const stat = this.livrableStats.find(s => s.phase_id === p.id)
+      if (stat && stat.total > 0 && stat.percent < 100) {
+        // Show smart confirmation modal with submission details
+        this.terminerConfirm = { phase: p, stat }
+      } else {
+        this._doTerminer(p)
+      }
+    },
+    async _doTerminer (p) {
+      this.terminerConfirm = null
       try { await api.put(`/phases/${p.id}`, { terminee: true }); await this.chargerPhases(); this.showNotif(`Phase "${p.nom}" terminée ✓`) }
       catch (e) { this.showNotif(e.response?.data?.message || 'Erreur', 'err') }
+    },
+    statForPhase (phaseId) {
+      return this.livrableStats.find(s => s.phase_id === phaseId) || null
     },
     fmtDate (d) { if (!d) return '—'; const p = String(d).split('T')[0].split('-'); if (p.length!==3) return d; return `${p[2]}/${p[1]}/${p[0]}` },
     toggleLivrable (p) { p.livrableObligatoire = !p.livrableObligatoire; this.updatePhase(p) },
@@ -240,7 +441,12 @@ export default {
     },
     editPhase (p) { this.form = { id:p.id, nom:p.nom, description:p.description||'', dateDebut:p.dateDebut, dateFin:p.dateFin, coefficient:p.coefficient, livrableObligatoire:p.livrableObligatoire }; this.editMode=true; this.showForm=true; this.errors={} },
     async supprimer (id) {
-      if (!confirm('Supprimer cette phase ?')) return
+      const phase = this.phases.find(p => p.id === id)
+      this.supprimerConfirm = phase || { id, nom: 'cette phase' }
+    },
+    async _doSupprimer () {
+      const id = this.supprimerConfirm.id
+      this.supprimerConfirm = null
       try { await api.delete(`/phases/${id}`); await this.chargerPhases(); this.showNotif('Phase supprimée') }
       catch { this.showNotif('Erreur lors de la suppression', 'err') }
     },
@@ -255,6 +461,21 @@ export default {
       try { await api.put('/phases/reorder',{phases:o.map((p,idx)=>({id:p.id,ordre:idx+1}))}); await this.chargerPhases() } catch { this.showNotif('Erreur','err') }
     },
     showNotif (msg, type='ok') { this.notif={show:true,msg,type}; setTimeout(()=>this.notif.show=false,3500) },
+    async reinitialiser () {
+      if (this.reinitWord !== 'REINITIALISER') return
+      this.reinitLoading = true
+      try {
+        await api.post('/phases/reinitialiser')
+        this.confirmReinit = false
+        this.reinitWord = ''
+        await this.chargerPhases()
+        this.showNotif('Phases réinitialisées — livrables et suivi effacés ✓')
+      } catch (e) {
+        this.showNotif(e.response?.data?.message || 'Erreur lors de la réinitialisation', 'err')
+      } finally {
+        this.reinitLoading = false
+      }
+    },
   },
 }
 </script>
@@ -263,6 +484,38 @@ export default {
 .btn-gold { background:linear-gradient(135deg,#f5a623,#d98e1a);color:#fff;border:none;font-weight:600;font-family:var(--vld-font-body); }
 .btn-gold:hover { transform:translateY(-1px);box-shadow:0 4px 14px rgba(245,166,35,.3);color:#fff; }
 .btn-gold:disabled { opacity:.4;transform:none;cursor:not-allowed; }
+.btn-reinit { background:rgba(192,57,43,.10);color:#c0392b;border:1.5px solid rgba(192,57,43,.30);font-weight:600;font-family:var(--vld-font-body); }
+.btn-reinit:hover { background:rgba(192,57,43,.18);border-color:#c0392b;transform:translateY(-1px); }
+.reinit-warn-box { display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(192,57,43,.07);border:1px solid rgba(192,57,43,.22);border-radius:8px;font-size:13px;font-weight:600;color:#c0392b; }
+.reinit-list { margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px; }
+.reinit-list li { display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--vld-text);padding:8px 12px;background:var(--vld-surface-alt,#f5f5f5);border:1px solid var(--vld-border,#e0e0e0);border-radius:7px; }
+.reinit-list li svg { flex-shrink:0;margin-top:2px;color:#c0392b; }
+.reinit-confirm-input { display:flex;flex-direction:column; }
+.phase-livrable-stats { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+.phase-livrable-stats__bar-wrap { width:80px;height:5px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden;flex-shrink:0; }
+.phase-livrable-stats__bar { height:100%;border-radius:99px;transition:width .4s ease; }
+.phase-livrable-stats__bar--ok   { background:#27ae60; }
+.phase-livrable-stats__bar--warn { background:#f39c12; }
+.phase-livrable-stats__bar--low  { background:#e74c3c; }
+.phase-livrable-stats__label { font-size:11px;color:var(--vld-text-muted);font-weight:500; }
+.phase-livrable-stats__chip { font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:99px; }
+.phase-livrable-stats__chip--warn { background:rgba(243,156,18,.15);color:#d68910; }
+.phase-livrable-stats__chip--ok   { background:rgba(39,174,96,.12);color:#1e8449; }
+.terminer-stat-box { background:rgba(230,126,34,.06);border:1.5px solid rgba(230,126,34,.25);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px; }
+.terminer-stat-box__top { display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#a04000; }
+.terminer-stat-box__count { display:flex;align-items:baseline;gap:3px; }
+.terminer-stat-box__num  { font-size:28px;font-weight:800;color:#27ae60;line-height:1; }
+.terminer-stat-box__sep  { font-size:22px;color:var(--vld-text-muted);margin:0 1px; }
+.terminer-stat-box__total{ font-size:22px;font-weight:700;color:var(--vld-text); }
+.terminer-stat-box__pct  { font-size:13px;color:var(--vld-text-muted);margin-left:4px; }
+.terminer-stat-box__bar-wrap { height:8px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden; }
+.terminer-stat-box__bar { height:100%;border-radius:99px;transition:width .5s ease; }
+.terminer-stat-box__bar--ok   { background:linear-gradient(90deg,#27ae60,#2ecc71); }
+.terminer-stat-box__bar--warn { background:linear-gradient(90deg,#e67e22,#f39c12); }
+.terminer-stat-box__bar--low  { background:linear-gradient(90deg,#c0392b,#e74c3c); }
+.terminer-stat-box__missing { font-size:12px;color:#a04000;font-weight:500; }
+.btn-warning { background:#e67e22;border-color:#d35400; }
+.btn-warning:hover { background:#d35400;color:#fff; }
 .phase-num { width:28px;height:28px;border-radius:7px;background:rgba(245,197,24,.12);border:1.5px solid rgba(245,197,24,.4);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--vld-accent);flex-shrink:0; }
 .arr-btn { width:18px;height:18px;border:1px solid var(--vld-border);background:var(--vld-surface-alt);border-radius:4px;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:var(--vld-text);transition:.15s;padding:0; }
 .arr-btn:hover:not(:disabled) { background:var(--vld-primary);color:#fff;border-color:var(--vld-primary); }
