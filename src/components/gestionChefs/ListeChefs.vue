@@ -378,7 +378,7 @@ export default {
       this.$nextTick(() => this.showToast(pending.message, pending.type))
     }
   },
-
+//on envoi 2 requetes simultanée aux back pour recupérer la liste des chefs et des spécialit"s
   methods: {
     async charger() {
       this.loading = true; this.erreur = ''
@@ -400,23 +400,24 @@ export default {
       return COLORS[idx]
     },
 
-    startEdit(c) {
-      this.editId = c.id
-      this.editForm = {
+    startEdit(c) {//prend le ched cliqué dans modifier 
+      this.editId = c.id//memorise l'id pour l'affichage 
+      this.editForm = {//prerempli le form de modif
         nom: c.nom, prenom: c.prenom, email: c.email,
         telephone: c.telephone || '', domaineExpertise: c.domaineExpertise || '',
       }
     },
 
     async sauvegarder() {
-      this.editSaving = true
-      try {
+      this.editSaving = true//active le spinner de boutton enbregistrer
+      try {//envoi une req de rempplissage 
         const r = await api.put(`/chefs/${this.editId}/modifier`, {
           nom: this.editForm.nom, prenom: this.editForm.prenom,
           email: this.editForm.email,
           telephone: this.editForm.telephone || null,
           domaineExpertise: this.editForm.domaineExpertise || null,
         })
+        //cherchje le chef dans le tableau de chef  et le mettre à jour pour l'affichage
         const idx = this.chefs.findIndex(c => c.id === this.editId)
         if (idx !== -1) this.chefs.splice(idx, 1, r.data)
         this.editId = null
@@ -430,15 +431,19 @@ export default {
     async retirerChef() {
       this.retraitSaving = true
       try {
-        await api.post(`/chefs/${this.modalRetrait.id}/retirer`, { supprimerCompte: false, motif: '' })
+        // envoie la requete POST au back — le back repasse le role à 'encadrant'
+        await api.post(`/chefs/${this.modalRetrait.id}/retirer`, {})
+        // supprime le chef de la liste locale (il n'est plus chef de département)
         this.chefs = this.chefs.filter(c => c.id !== this.modalRetrait.id)
         this.showToast(`${this.modalRetrait.prenom} ${this.modalRetrait.nom} retiré du poste`, 'warn')
         this.modalRetrait = null
       } catch (e) {
         console.error(e)
         this.showToast(e.response?.data?.message || 'Erreur lors du retrait', 'err')
-      } finally { this.retraitSaving = false }
-    },
+      } finally {
+        this.retraitSaving = false
+      }   
+    }, 
 
     onAffecte(updatedChef) {
       const idx = this.chefs.findIndex(c => c.id === updatedChef.id)
@@ -456,7 +461,9 @@ export default {
         c.specialiteNom||'', c.specialiteCode||'', c.domaineExpertise||'', c.dateAffectation||'',
       ])
       const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+      //Crée un fichier en mémoire. \uFEFF = BOM UTF-8, nécessaire pour que Excel affiche correctement les accents français.
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+      //Crée un lien invisible, lui donne le nom du fichier avec la date du jour (ex: chefs_2025-06-02.csv), simule un clic pour déclencher le téléchargement, puis libère la mémoire.
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url
       a.download = `chefs_${new Date().toISOString().slice(0,10)}.csv`; a.click()

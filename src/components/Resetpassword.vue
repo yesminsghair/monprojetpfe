@@ -171,8 +171,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed } from 'vue'//ref: cree un objet reactif , computed: prop calculé se metàj auto quand ses dependances changent 
+import { useRouter, useRoute } from 'vue-router'//cree une instance du router, acceder aux parametres d'une route
 import axios from 'axios'
 
 const api = axios.create({
@@ -180,14 +180,14 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 })
 
-const router = useRouter()
-const route  = useRoute()   // Pour lire le token et email depuis l'URL
-
-const step     = ref('email')
+const router = useRouter()//permet de resiriger luti
+const route  = useRoute() //pour lire lurl courante  
+//declaration and intialisation variables reactives composant 
+const step     = ref('email')//l'etape actuelle entrez votre email
 const email    = ref('')
 const emailError = ref('')
-const loading  = ref(false)
-const resendTimer = ref(0)
+const loading  = ref(false)//afiche spinner si une req en cours
+const resendTimer = ref(0)//compteur pour renvoyer l'email
 
 const newPassword     = ref('')
 const confirmPassword = ref('')
@@ -196,27 +196,27 @@ const confirmError    = ref('')
 const showNew    = ref(false)
 const showConfirm = ref(false)
 
-const stepsList = ['Email', 'Lien envoyé', 'Nouveau mot de passe', 'Succès']
-const stepIndex = computed(() => ({ email:0, sent:1, expired:1, newPassword:2, success:3 }[step.value] ?? 0))
+const stepsList = ['Email', 'Lien envoyé', 'Nouveau mot de passe', 'Succès']//liste des etape de composant 
+const stepIndex = computed(() => ({ email:0, sent:1, expired:1, newPassword:2, success:3 }[step.value] ?? 0))//convert sieps en num pour la coloration
 
 // resetToken et email lus depuis l'URL quand l'utilisateur arrive via le lien email
-const resetToken = route.params.token || ''
-const resetEmail = route.query.email || ''
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const resetToken = route.params.token || '' //extrait token de la route
+const resetEmail = route.query.email || ''//extrait l'email de la requette
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ //valid format mail
 
-// Indicateur de force
+// force mdp 
 const strength = computed(() => {
   const p = newPassword.value; if (!p) return { pct:0, color:'#e2e8f0', label:'' }
   let s = 0
   if (p.length >= 8) s++; if (p.length >= 12) s++
   if (/[A-Z]/.test(p)) s++; if (/[0-9]/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++
-  return [
+  return [//tab niveau possibles
     { pct:20, color:'#e74c3c', label:'Très faible' },
     { pct:40, color:'#e67e22', label:'Faible' },
     { pct:60, color:'#f5a623', label:'Moyen' },
     { pct:80, color:'#27ae60', label:'Fort' },
     { pct:100,color:'#1e8449', label:'Très fort' },
-  ][Math.min(s, 4)]
+  ][Math.min(s, 4)]// maximum
 })
 
 // ── Validations
@@ -238,14 +238,14 @@ const validateConfirm = () => {
 
 // ── Handlers
 const handleSendEmail = async () => {
-  validateEmail()
-  if (emailError.value) return           // 6.a champ vide/invalide
-  loading.value = true
+  validateEmail()//on valide l'email
+  if (emailError.value) return           // s'il ya une err on arrete
+  loading.value = true//active spiner de chargement
   try {
-    await api.post('/forgot-password', { email: email.value })
-    // Même réponse succès si email existe ou non (sécurité)
-    step.value = 'sent'                  // Étape 7 : lien envoyé
-    startResendTimer()
+    await api.post('/forgot-password', { email: email.value })//envoi une req post avec l'email
+    //la reponse est tjr mail envoyé pour la securité
+    step.value = 'sent'   //etape 2 : sent
+    startResendTimer()//commence le compteur 
   } catch (e) {
     emailError.value = "Erreur de connexion. Réessayez plus tard."
   } finally {
@@ -253,50 +253,51 @@ const handleSendEmail = async () => {
   }
 }
 
-// Si l'URL contient un token de reset (l'utilisateur arrive via le lien email)
+// Si l'uti vient direct du lien 
 // On passe directement à l'étape 'newPassword'
 if (resetToken && resetEmail) {
   step.value = 'newPassword'
 }
-
+//passe à etape sent 
 const resendAndGoToSent = () => { step.value = 'sent'; startResendTimer() }
-
+//envoi nv pwd au back
 const handleChangePassword = async () => {
-  validateNewPassword(); validateConfirm()
-  if (newPasswordError.value || confirmError.value) return   // 12.a
-  loading.value = true
+  validateNewPassword(); validateConfirm()//valider lamdp et conf
+  if (newPasswordError.value || confirmError.value) return   // on arrete 
+  loading.value = true //active le spinner 
   try {
-    await api.post('/reset-password', {
+    await api.post('/reset-password', {//envoi la nouvelle pwd , token ,email
       email:    resetEmail,
       token:    resetToken,
       password: newPassword.value,
     })
-    step.value = 'success'               // Étape 13-14
+    step.value = 'success'               // etape 4 reussi
   } catch (e) {
     if (e.response?.data?.message === 'expired') {
-      step.value = 'expired'             // Scénario 8.a : lien expiré
-    } else {
+      step.value = 'expired'             //si le back repond avec expired on passe à l'etape expired 
+    } else {//sinou affiche msg erreur
       newPasswordError.value = e.response?.data?.message || "Erreur. Réessayez."
     }
-  } finally {
+  } finally {//desactive le spinner
     loading.value = false
   }
 }
-
+//si on clique sur le boutton modifier email
 const backToEmail  = () => { step.value = 'email'; emailError.value = '' }
-const resendEmail = async () => {
+const resendEmail = async () => { //on verifier le miniteur envoi req et redemarre le min
   if (resendTimer.value > 0) return
   try {
     await api.post('/forgot-password', { email: email.value })
-  } catch (e) { /* silencieux */ }
+  } catch (e) { /* on ignore les erreurr*/ }
   startResendTimer()
 }
-const goToLogin    = () => router.push('/login')
+const goToLogin    = () => router.push('/login')//si on cique retour à la connexion
 
+//config du min 
 const startResendTimer = () => {
-  resendTimer.value = 30
+  resendTimer.value = 30//30 sencond 
   const iv = setInterval(() => { resendTimer.value--; if (resendTimer.value <= 0) clearInterval(iv) }, 1000)
-}
+}//diminue 1 chq sec arrete quand atteindre 0
 </script>
 
 <style scoped>

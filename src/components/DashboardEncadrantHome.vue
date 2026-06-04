@@ -45,20 +45,6 @@
       </div>
     </div>
 
-    <!-- ── Role tabs ─────────────────────────────────────────── -->
-    <div class="d-flex gap-2 mb-4 flex-wrap">
-      <button v-for="tab in roleTabs" :key="tab.key"
-              class="btn d-flex align-items-center gap-2"
-              :class="activeRole===tab.key ? 'btn-primary' : 'btn-outline-secondary'"
-              @click="switchRole(tab.key)">
-        <span v-html="tab.icon"></span>
-        <span>{{ tab.label }}</span>
-        <span v-if="activeRole===tab.key"
-              class="badge bg-light text-primary ms-1"
-              style="font-size:10px;font-weight:400">{{ tab.desc }}</span>
-      </button>
-    </div>
-
     <div v-if="loading" class="vld-state">
       <div class="vld-spinner mx-auto mb-3"></div><p>Chargement...</p>
     </div>
@@ -68,56 +54,51 @@
     </div>
 
     <!-- ════════════════════════════════════
-         ENCADRANT TAB
+         ENCADRANT
     ════════════════════════════════════ -->
-    <template v-else-if="activeRole==='encadrant'">
+    <template v-else>
       <div class="vld-section-label">Indicateurs clés</div>
       <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-lg-2">
           <div class="vld-kpi">
             <div class="vld-kpi__icon vld-kpi__icon--blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
             <div><div class="vld-kpi__value">{{ kpi.nbEtudiants }}</div><div class="vld-kpi__label">Étudiants encadrés</div></div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-lg-2">
           <div class="vld-kpi">
             <div class="vld-kpi__icon vld-kpi__icon--green"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div><div class="vld-kpi__value">{{ kpi.tauxValidation }}%</div><div class="vld-kpi__label">Taux de validation</div></div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-lg-2">
           <div class="vld-kpi">
             <div class="vld-kpi__icon vld-kpi__icon--gold"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
             <div><div class="vld-kpi__value">{{ kpi.avancementMoyen }}%</div><div class="vld-kpi__label">Avancement moyen</div></div>
           </div>
         </div>
-        <div class="col-6 col-lg-3">
+        <div class="col-6 col-lg-2">
           <div class="vld-kpi">
             <div class="vld-kpi__icon vld-kpi__icon--slate"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
             <div><div class="vld-kpi__value">{{ kpi.tauxReussite }}%</div><div class="vld-kpi__label">Taux de réussite</div></div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="vld-kpi">
+            <div class="vld-kpi__icon vld-kpi__icon--blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <div><div class="vld-kpi__value">{{ kpi.reunionsMoyennes }}</div><div class="vld-kpi__label">Réunions / étudiant</div></div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="vld-kpi">
+            <div class="vld-kpi__icon" :style="kpi.tauxRetard > 0 ? 'background:rgba(231,76,60,.15)' : 'background:rgba(39,174,96,.15)'"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="kpi.tauxRetard > 0 ? '#e74c3c' : '#27ae60'" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div><div class="vld-kpi__value" :style="kpi.tauxRetard > 0 ? 'color:#e74c3c' : ''">{{ kpi.tauxRetard }}%</div><div class="vld-kpi__label">PFE en retard</div></div>
           </div>
         </div>
       </div>
 
       <!-- ACCUEIL : bannière CTA + raccourcis -->
       <template v-if="isHome">
-        <div class="card mb-4" style="border:1.5px dashed var(--vld-border);background:transparent">
-          <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap py-3">
-            <div>
-              <div class="fw-semibold" style="color:var(--vld-text-strong)">Accéder au tableau de bord complet</div>
-              <div style="font-size:13px;color:var(--vld-text-muted)">Avancement étudiants, validation des rapports, taux de réussite…</div>
-            </div>
-            <button class="btn btn-primary d-flex align-items-center gap-2 flex-shrink-0"
-                    @click="$emit('navigate', 'tableau-de-bord')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                   fill="none" stroke="currentColor" stroke-width="2.5">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-              Ouvrir le tableau de bord
-            </button>
-          </div>
-        </div>
         <div class="vld-section-label">Accès rapide</div>
         <div class="row g-3">
           <div class="col-12 col-sm-6 col-lg-4" v-for="s in encShortcuts" :key="s.page">
@@ -148,7 +129,14 @@
           <div class="col-12 col-md-4">
             <div class="card h-100">
               <div class="card-header">Validation des sujets</div>
-              <div class="card-body" style="height:180px"><canvas ref="sujetsCanvas"></canvas></div>
+              <div class="card-body d-flex align-items-center justify-content-center"
+                   style="height:180px;position:relative">
+                <canvas ref="sujetsCanvas"></canvas>
+                <div style="position:absolute;text-align:center;pointer-events:none">
+                  <div style="font-family:var(--vld-font-display);font-size:22px;font-weight:700;color:var(--vld-text-strong)">{{ kpi.tauxValidation }}%</div>
+                  <div style="font-size:11px;color:var(--vld-text-muted)">Validés</div>
+                </div>
+              </div>
               <div class="card-footer bg-transparent d-flex gap-3" style="font-size:12.5px">
                 <span><span class="badge bg-success me-1">●</span>{{ kpi.sujetsValides }} validés</span>
                 <span><span class="badge bg-warning me-1">●</span>{{ kpi.sujetsTotal - kpi.sujetsValides }} en attente</span>
@@ -166,7 +154,19 @@
           <div class="col-12 col-md-4">
             <div class="card h-100">
               <div class="card-header">Validation des rapports</div>
-              <div class="card-body" style="height:180px"><canvas ref="rapportsCanvas"></canvas></div>
+              <div class="card-body d-flex align-items-center justify-content-center"
+                   style="height:180px;position:relative">
+                <canvas ref="rapportsCanvas"></canvas>
+                <div style="position:absolute;text-align:center;pointer-events:none">
+                  <div style="font-family:var(--vld-font-display);font-size:22px;font-weight:700;color:var(--vld-text-strong)">{{ charts.rapports?.taux ?? 0 }}%</div>
+                  <div style="font-size:11px;color:var(--vld-text-muted)">Validés</div>
+                </div>
+              </div>
+              <div class="card-footer bg-transparent d-flex gap-3 flex-wrap" style="font-size:12.5px">
+                <span><span class="badge bg-success me-1">●</span>{{ charts.rapports?.values?.[0] ?? 0 }} validés</span>
+                <span><span class="badge bg-warning me-1">●</span>{{ charts.rapports?.values?.[1] ?? 0 }} en attente</span>
+                <span><span class="badge bg-danger me-1">●</span>{{ charts.rapports?.values?.[2] ?? 0 }} rejetés</span>
+              </div>
             </div>
           </div>
           <div class="col-12 col-md-4">
@@ -213,10 +213,8 @@
       </template>
     </template>
 
-    <!-- ════════════════════════════════════
-         JURY TAB
-    ════════════════════════════════════ -->
-    <template v-else-if="activeRole==='jury'">
+    <!-- jury tab removed -->
+    <template v-if="false">
       <div class="vld-section-label">Indicateurs clés — Jury</div>
       <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
@@ -293,7 +291,8 @@
 
       <!-- TABLEAU DE BORD : graphiques jury -->
       <template v-else>
-        <div class="row g-4">
+        <!-- Row 1: État évaluations + Notes par projet -->
+        <div class="row g-4 mb-4">
           <div class="col-12 col-md-5">
             <div class="card h-100">
               <div class="card-header">État des évaluations</div>
@@ -311,6 +310,45 @@
             </div>
           </div>
         </div>
+
+        <!-- Row 2: Soutenances — Planification & Calendrier -->
+        <div class="vld-section-label">Soutenances — Planification et respect du calendrier</div>
+        <div class="row g-4 mb-4">
+          <!-- Taux de planification gauge -->
+          <div class="col-12 col-md-5">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Taux de planification</span>
+                <span class="badge" style="background:var(--vld-blue);font-size:11px">Jauge</span>
+              </div>
+              <div class="card-body d-flex align-items-center justify-content-center"
+                   style="height:200px;position:relative">
+                <canvas ref="juryPlanifCanvas"></canvas>
+                <div style="position:absolute;text-align:center;pointer-events:none">
+                  <div style="font-family:var(--vld-font-display);font-size:26px;font-weight:700;color:var(--vld-text-strong)">
+                    {{ juryData.soutenances.total > 0 ? Math.round(juryData.soutenances.planifiees / juryData.soutenances.total * 100) : 0 }}%
+                  </div>
+                  <div style="font-size:11px;color:var(--vld-text-muted)">Planifiées</div>
+                </div>
+              </div>
+              <div class="card-footer bg-transparent d-flex gap-3" style="font-size:12.5px">
+                <span><span class="badge bg-success me-1">●</span>{{ juryData.soutenances.planifiees }} planifiées</span>
+                <span><span class="badge" style="background:#666;font-size:10px">●</span> {{ juryData.soutenances.total - juryData.soutenances.planifiees }} restantes</span>
+              </div>
+            </div>
+          </div>
+          <!-- Respect du calendrier par mois -->
+          <div class="col-12 col-md-7">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span>Respect du calendrier par mois</span>
+                <span class="badge" style="background:var(--vld-teal);font-size:11px">Ligne</span>
+              </div>
+              <div class="card-body" style="height:200px"><canvas ref="juryCalendrierCanvas"></canvas></div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="!juryData.totalProjets" class="vld-state mt-4">
           <p class="vld-state__title">Aucun projet de jury assigné</p>
         </div>
@@ -349,22 +387,12 @@ export default {
       loading: false, downloading: false,
       heureActualisation: '--:--',
       instances: {}, erreur: null,
-      loaded: { encadrant: false, jury: false },
+      loaded: { encadrant: false },
 
-      roleTabs: [
-        {
-          key: 'encadrant', label: 'Encadrant', desc: 'Suivi de vos étudiants',
-          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><polyline points="16 11 18 13 22 9"/></svg>',
-        },
-        {
-          key: 'jury', label: 'Jury', desc: 'Vos évaluations',
-          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-        },
-      ],
 
-      kpi: { nbEtudiants:0, tauxValidation:0, avancementMoyen:0, reunionsMoyennes:0, tauxReussite:0, sujetsValides:0, sujetsTotal:0 },
+      kpi: { nbEtudiants:0, tauxValidation:0, avancementMoyen:0, reunionsMoyennes:0, tauxReussite:0, sujetsValides:0, sujetsTotal:0, tauxRetard:0 },
       charts: { sujets:null, reunions:null, rapports:null, avancement:null, retard:null, reussite:null },
-      juryData: { totalProjets:0, evalues:0, nonEvalues:0, noteMoyenne:'—', projets:[], notes:[] },
+      juryData: { totalProjets:0, evalues:0, nonEvalues:0, noteMoyenne:'—', projets:[], notes:[], soutenances:{ total:0, planifiees:0, calendrier:{ labels:[], total:[], aTemps:[] } } },
 
       encShortcuts: [
         { page:'demandes',  label:'Gérer les demandes',  desc:'Traiter les demandes en attente',  icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
@@ -399,27 +427,17 @@ export default {
     async charger() {
       this.loading = true; this.erreur = null
       try {
-        if (this.activeRole === 'encadrant') {
-          const r = await api.get('/dashboard/encadrant')
-          this.kpi = r.data.kpi
-          this.charts = {
-            sujets:    r.data.charts.validationSujets,
-            reunions:  r.data.charts.chargeSuiviEtudiants,
-            rapports:  r.data.charts.validationRapports,
-            avancement:r.data.charts.avancementMoyen,
-            retard:    r.data.charts.pfeEnRetard,
-            reussite:  r.data.charts.tauxReussite,
-          }
-        } else {
-          const userId = this.currentUser.id
-          const res    = await api.get('/jurys-pfe')
-          const mp     = (res.data||[]).filter(j=>(j.membres||[]).some(m=>m.enseignant_id===userId))
-          const ev     = mp.filter(j=>(j.membres||[]).find(m=>m.enseignant_id===userId)?.note!==null)
-          const nd     = ev.map(j=>{ const m=(j.membres||[]).find(m=>m.enseignant_id===userId); return{titre:j.projet_titre||'Projet #'+j.id,note:m?.note||0} })
-          const nm     = nd.length ? (nd.reduce((s,n)=>s+n.note,0)/nd.length).toFixed(1) : '—'
-          this.juryData = { totalProjets:mp.length, evalues:ev.length, nonEvalues:mp.length-ev.length, noteMoyenne:nm, projets:nd.map(n=>n.titre), notes:nd.map(n=>n.note) }
+        const r = await api.get('/dashboard/encadrant')
+        this.kpi = r.data.kpi
+        this.charts = {
+          sujets:    r.data.charts.validationSujets,
+          reunions:  r.data.charts.chargeSuiviEtudiants,
+          rapports:  r.data.charts.validationRapports,
+          avancement:r.data.charts.avancementMoyen,
+          retard:    r.data.charts.pfeEnRetard,
+          reussite:  r.data.charts.tauxReussite,
         }
-        this.loaded[this.activeRole] = true
+        this.loaded.encadrant = true
         this.heureActualisation = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
       } catch(e) {
         const s = e?.response?.status
@@ -435,24 +453,98 @@ export default {
     // En mode 'home' les canvas ne sont pas dans le DOM
     buildCharts() {
       if (this.isHome) return
-      if (this.activeRole === 'encadrant') this.buildEncCharts()
-      else                                 this.buildJuryCharts()
+      this.buildEncCharts()
     },
     destroyAll() { Object.values(this.instances).forEach(c=>c?.destroy()); this.instances={} },
     d(key) { this.instances[key]?.destroy(); delete this.instances[key] },
 
     // ── Encadrant charts ─────────────────────────────────────
     buildEncCharts() { this.buildSujets(); this.buildReunions(); this.buildRapports(); this.buildAvancement(); this.buildAvancGauge(); this.buildRetard(); this.buildReussite() },
-    buildSujets()    { this.d('sujets');    const ctx=this.$refs.sujetsCanvas;    if(!ctx||!this.charts.sujets?.values?.length) return;    this.instances.sujets=new Chart(ctx,{type:'doughnut',data:{labels:this.charts.sujets.labels,datasets:[{data:this.charts.sujets.values,backgroundColor:[hex(C.teal,.8),hex(C.gold,.75)],borderColor:[C.teal,C.gold],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}}) },
+    buildSujets()    { this.d('sujets');    const ctx=this.$refs.sujetsCanvas;    if(!ctx||!this.charts.sujets?.values?.length) return;    this.instances.sujets=new Chart(ctx,{type:'doughnut',data:{labels:this.charts.sujets.labels,datasets:[{data:this.charts.sujets.values,backgroundColor:[hex(C.teal,.8),hex(C.gold,.75)],borderColor:[C.teal,C.gold],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}`}}}}}) },
     buildReunions()  { this.d('reunions');  const ctx=this.$refs.reunionsCanvas;  if(!ctx||!this.charts.reunions?.labels?.length) return;  this.instances.reunions=new Chart(ctx,{type:'bar',data:{labels:this.charts.reunions.labels,datasets:[{label:'Réunions',data:this.charts.reunions.values,backgroundColor:this.charts.reunions.values.map((_,i)=>hex(Object.values(C)[i%6],.72)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:{ticks:{color:'#8a9aaa',maxRotation:30},grid:{display:false}}}}}) },
-    buildRapports()  { this.d('rapports');  const ctx=this.$refs.rapportsCanvas;  if(!ctx||!this.charts.rapports?.values?.length) return;  this.instances.rapports=new Chart(ctx,{type:'doughnut',data:{labels:this.charts.rapports.labels,datasets:[{data:this.charts.rapports.values,backgroundColor:[hex(C.teal,.8),hex(C.gold,.75),hex(C.red,.7)],borderColor:[C.teal,C.gold,C.red],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}}) },
+    buildRapports()  { this.d('rapports');  const ctx=this.$refs.rapportsCanvas;  if(!ctx||!this.charts.rapports?.values?.length||this.charts.rapports.values.reduce((a,b)=>a+b,0)===0) return;  this.instances.rapports=new Chart(ctx,{type:'doughnut',data:{labels:this.charts.rapports.labels,datasets:[{data:this.charts.rapports.values,backgroundColor:[hex(C.teal,.8),hex(C.gold,.75),hex(C.red,.7)],borderColor:[C.teal,C.gold,C.red],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}`}}}}}) },
     buildAvancement(){ this.d('avancement');const ctx=this.$refs.avancementCanvas;if(!ctx||!this.charts.avancement?.labels?.length) return; this.instances.avancement=new Chart(ctx,{type:'bar',data:{labels:this.charts.avancement.labels,datasets:[{label:'Avancement (%)',data:this.charts.avancement.values,backgroundColor:this.charts.avancement.values.map(v=>v>=70?hex(C.teal,.75):v>=40?hex(C.gold,.75):hex(C.red,.7)),borderRadius:5,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},y:{ticks:{color:'#8a9aaa'},grid:{display:false}}}}}) },
     buildAvancGauge(){ this.d('avancGauge');const ctx=this.$refs.avancGaugeCanvas;if(!ctx) return; const v=this.kpi.avancementMoyen; const c=v>=70?C.teal:v>=40?C.gold:C.red; this.instances.avancGauge=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[v,100-v],backgroundColor:[hex(c,.85),hex(C.slate,.15)],borderColor:[c,'transparent'],borderWidth:2,circumference:270,rotation:-135}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}}) },
-    buildRetard()    { this.d('retard');    const ctx=this.$refs.retardCanvas;    if(!ctx||!this.charts.retard?.labels?.length) return;    this.instances.retard=new Chart(ctx,{type:'bar',data:{labels:this.charts.retard.labels,datasets:[{label:'En retard',data:this.charts.retard.values,backgroundColor:this.charts.retard.values.map(v=>v?hex(C.red,.75):hex(C.teal,.65)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:1,ticks:{stepSize:1,callback:v=>v===1?'Retard':'OK',color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:{ticks:{color:'#8a9aaa',maxRotation:30},grid:{display:false}}}}}) },
+    buildRetard() {
+      this.d('retard')
+      const ctx = this.$refs.retardCanvas
+      if (!ctx || !this.charts.retard?.labels?.length) return
+      const values = this.charts.retard.values
+      const allZero = values.every(v => v === 0)
+      if (allZero) {
+        ctx.style.display = 'none'
+        if (!ctx.parentElement.querySelector('.retard-ok-msg')) {
+          const div = document.createElement('div')
+          div.className = 'retard-ok-msg d-flex flex-column align-items-center justify-content-center h-100 gap-1'
+          div.style.cssText = 'color:#27ae60;font-size:13px;text-align:center'
+          div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Aucun retard — tous les étudiants sont à jour</span>'
+          ctx.parentElement.appendChild(div)
+        }
+        return
+      }
+      const old = ctx.parentElement.querySelector('.retard-ok-msg')
+      if (old) old.remove()
+      ctx.style.display = ''
+      const maxVal = Math.max(...values)
+      this.instances.retard = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: this.charts.retard.labels,
+          datasets: [{ label: 'Phases en retard', data: values, backgroundColor: values.map(v => v > 0 ? hex(C.red, .75) : hex(C.teal, .65)), borderRadius: 6, borderSkipped: false }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: maxVal + 1, ticks: { stepSize: 1, precision: 0, color: '#8a9aaa' }, grid: { color: 'rgba(200,196,188,0.1)' }, title: { display: true, text: 'Phases en retard', color: '#8a9aaa', font: { size: 11 } } },
+            x: { ticks: { color: '#8a9aaa', maxRotation: 30 }, grid: { display: false } },
+          },
+        },
+      })
+    },
     buildReussite()  { this.d('reussite');  const ctx=this.$refs.reussiteCanvas;  if(!ctx) return; const v=this.kpi.tauxReussite; const c=v>=70?C.teal:C.red; this.instances.reussite=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[v,100-v],backgroundColor:[hex(c,.85),hex(C.slate,.15)],borderColor:[c,'transparent'],borderWidth:2,circumference:270,rotation:-135}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}}) },
 
     // ── Jury charts ──────────────────────────────────────────
-    buildJuryCharts(){ this.buildJuryEtat(); this.buildJuryNotes() },
+    buildJuryCharts(){ this.buildJuryEtat(); this.buildJuryNotes(); this.buildJuryPlanif(); this.buildJuryCalendrier() },
+    buildJuryPlanif() {
+      this.d('juryPlanif')
+      const ctx = this.$refs.juryPlanifCanvas
+      if (!ctx) return
+      const s = this.juryData.soutenances
+      const pct = s.total > 0 ? Math.round(s.planifiees / s.total * 100) : 0
+      const c = pct >= 70 ? C.teal : pct >= 40 ? C.gold : C.red
+      this.instances.juryPlanif = new Chart(ctx, {
+        type: 'doughnut',
+        data: { datasets: [{ data: [pct, 100 - pct], backgroundColor: [hex(c, .85), hex(C.slate, .15)], borderColor: [c, 'transparent'], borderWidth: 2, circumference: 270, rotation: -135 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { display: false } } }
+      })
+    },
+    buildJuryCalendrier() {
+      this.d('juryCalendrier')
+      const ctx = this.$refs.juryCalendrierCanvas
+      const cal = this.juryData.soutenances.calendrier
+      if (!ctx || !cal || !Array.isArray(cal.labels) || !cal.labels.length) return
+      const aTemps = Array.isArray(cal.aTemps) && cal.aTemps.length ? cal.aTemps : []
+      const chartType = cal.labels.length === 1 ? 'bar' : 'line'
+      this.instances.juryCalendrier = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: cal.labels,
+          datasets: [
+            { label: 'Total prévues', data: cal.total, borderColor: C.blue, backgroundColor: hex(C.blue, 0.08), tension: 0.4, fill: true, pointRadius: 4 },
+            { label: 'À temps',       data: aTemps,    borderColor: C.teal, backgroundColor: hex(C.teal, 0.08), tension: 0.4, fill: true, pointRadius: 4 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#8a9aaa', boxWidth: 12 } } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, color: '#8a9aaa' }, grid: { color: 'rgba(200,196,188,0.1)' } },
+            x: { ticks: { color: '#8a9aaa' }, grid: { display: false } }
+          }
+        }
+      })
+    },
     buildJuryEtat()  { this.d('juryEtat');  const ctx=this.$refs.juryEtatCanvas;  if(!ctx) return; this.instances.juryEtat=new Chart(ctx,{type:'doughnut',data:{labels:['Soumises','En attente'],datasets:[{data:[this.juryData.evalues,this.juryData.nonEvalues],backgroundColor:[hex(C.teal,.8),hex(C.gold,.75)],borderColor:[C.teal,C.gold],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}}) },
     buildJuryNotes() { this.d('juryNotes'); const ctx=this.$refs.juryNotesCanvas; if(!ctx||!this.juryData.projets?.length) return; this.instances.juryNotes=new Chart(ctx,{type:'bar',data:{labels:this.juryData.projets,datasets:[{label:'Note /20',data:this.juryData.notes,backgroundColor:this.juryData.notes.map(n=>n>=10?hex(C.teal,.75):hex(C.red,.7)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:20,ticks:{stepSize:4,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:{ticks:{color:'#8a9aaa',maxRotation:30},grid:{display:false}}}}}) },
 

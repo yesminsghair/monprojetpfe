@@ -162,13 +162,12 @@ const COLORS = ['#3d6080','#2e7d6b','#7c5cbf','#c07b2c','#b03d5b']
 export default {
   name: 'AjouterChef',
   props: {
-    specialites: { type: Array, default: () => [] },
-    chefs:       { type: Array, default: () => [] },
+    specialites: { type: Array, default: () => [] },//recus depuis le parent par defaut vide
+    chefs:       { type: Array, default: () => [] },//recus du parent
   },
-  emits: ['chef-ajoute'],
-
-  data() {
-    return {
+  emits: ['chef-ajoute'],//evenement de promotion reussie
+  data() {//etat initiale reactif du comp
+    return { //decl var reactives et initialisation
       recherche: '', erreurRecherche: '',
       utilisateurTrouve: null, domaineExpertise: '',
       chargement: false, saving: false,
@@ -178,39 +177,39 @@ export default {
   },
 
   computed: {
-    initiales() {
-      if (!this.utilisateurTrouve) return ''
+    initiales() {//les initiales(2lettres de nom&prenom d'utilisateur trouvé)
+      if (!this.utilisateurTrouve) return ''//si l'utilisateur cherché n'existe pas 
       return ((this.utilisateurTrouve.prenom || '')[0] + (this.utilisateurTrouve.nom || '')[0]).toUpperCase()
     },
-    avatarBg() {
-      return COLORS[(this.utilisateurTrouve?.id || 0) % COLORS.length]
+    avatarBg() {//utiliser la palette pour lui donner une couleur 
+      return COLORS[(this.utilisateurTrouve?.id || 0) % COLORS.length]//modulo pour rester dans la liste 
     },
   },
 
-  methods: {
+  methods: {//methode s'execute lorsque on clique sur rechercher 
     async rechercherUtilisateur() {
-      this.erreurRecherche = ''; this.utilisateurTrouve = null
-      if (!this.recherche.trim()) { this.erreurRecherche = 'Ce champ est obligatoire.'; return }
-      this.chargement = true
-      try {
+      this.erreurRecherche = ''; this.utilisateurTrouve = null //vider les erreur et effacer l'utilisateur precedent
+      if (!this.recherche.trim()) { this.erreurRecherche = 'Ce champ est obligatoire.'; return }//verif que le champ de recherche n'est pas vide si oui on arrete 
+      this.chargement = true//active le spinner de chargement 
+      try { //envoi une requette au front pour chercher l'utilisateur saisie
         const r = await api.get('/chefs/rechercher', { params: { q: this.recherche.trim() } })
-        this.utilisateurTrouve = r.data || null
-        if (!this.utilisateurTrouve) this.erreurRecherche = 'Utilisateur non trouvé.'
-      } catch (e) {
+        this.utilisateurTrouve = r.data || null //on stocke les données de user trouvé
+        if (!this.utilisateurTrouve) this.erreurRecherche = 'Utilisateur non trouvé.'//sinon affiche msg erreur 
+      } catch (e) {// sinon affiché err de backend
         this.erreurRecherche = e.response?.data?.message || 'Erreur lors de la recherche.'
-      } finally { this.chargement = false }
+      } finally { this.chargement = false }//desactive le spinner 
     },
 
     async confirmerAjout() {
-      if (!this.utilisateurTrouve) return
-      this.saving = true
+      if (!this.utilisateurTrouve) return //methode de promouvoir quand on clique sur promouvoir chef 
+      this.saving = true//spinner active
       try {
         const r = await api.post('/chefs/promouvoir', {
-          utilisateurId:    this.utilisateurTrouve.id,
-          domaineExpertise: this.domaineExpertise || null,
+          utilisateurId:    this.utilisateurTrouve.id,//envoi l'id et domaine 
+          domaineExpertise: this.domaineExpertise || null,//optionnelle
         })
-        this.$emit('chef-ajoute', r.data)
-        this.utilisateurTrouve = null; this.recherche = ''; this.domaineExpertise = ''
+        this.$emit('chef-ajoute', r.data)//emet event au parent et lkui passe les données du nv chef
+        this.utilisateurTrouve = null; this.recherche = ''; this.domaineExpertise = ''//reinitialiser le form
       } catch (e) {
         this.showToast(e.response?.data?.message || 'Erreur lors de la promotion.', 'err')
       } finally { this.saving = false }

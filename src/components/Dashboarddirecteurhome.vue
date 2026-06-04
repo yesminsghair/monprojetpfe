@@ -1,203 +1,217 @@
-<!-- DashboardDirecteurHome.vue -->
-<!-- Usage: replace the <div v-if="currentPage==='home'" key="home"> block in Dashboarddirecteur.vue -->
-<!-- Import:  import DashboardDirecteurHome from './DashboardDirecteurHome.vue' -->
-<!-- Register: components: { DashboardDirecteurHome, ... } -->
-<!-- Template: <DashboardDirecteurHome v-if="currentPage==='home'" :current-user="currentUser" @navigate="navigate" /> -->
-
 <template>
   <div class="home-wrap" ref="dashboardRoot">
-
-    <!-- Header -->
-    <div class="page-header">
+<!-- header -->
+    <div class="page-header"><!-- entete -->
       <div>
         <h1 class="page-title">Bonjour, {{ currentUser.prenom }} 👋</h1>
         <p class="page-sub">Tableau de bord GIMSI — Vue nationale des PFE</p>
       </div>
+
       <div class="header-meta">
         <span class="last-refresh">{{ heureActualisation }}</span>
-        <button class="btn-refresh" @click="charger" :disabled="loading">
+        <button class="btn-refresh" @click="charger" :disabled="loading"><!-- buttonactualiser  appelle charger()-->
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :class="{spinning: loading}"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Actualiser
+          Actualiser<!-- icone svg de refresh-->
         </button>
-        <button class="btn-download" @click="telechargerPDF" :disabled="downloading || loading">
+        <button class="btn-download" @click="telechargerPDF" :disabled="downloading || loading"><!-- btn telecharger pdf-->
+          <!-- icone svg de download-->
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
+          <!-- text en cours-->
           {{ downloading ? 'Export en cours…' : 'Télécharger PDF' }}
         </button>
       </div>
     </div>
-
+<!--condition si on ai en cours de telechargement / spinner de chargement-->
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div><p>Chargement des indicateurs...</p>
     </div>
 
-    <template v-else>
-
-      <!-- ══ HOME MODE: KPI + Quick Actions ══ -->
+    <template v-else><!-- sinon on affiche le template principal-->
+<!--homepage: kpi+quick actions-->
       <template v-if="isHome">
+        <!-- alerte s'ilya une grille en attente>0-->
       <div v-if="grillesEnAttente > 0" class="alert-warning">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div class="aw-body">
           <div class="aw-title">{{ grillesEnAttente }} grille(s) en attente de validation</div>
           <div class="aw-sub">Des chefs ont soumis des grilles pour votre approbation.</div>
-        </div>
+        </div><!-- boutton valider grille-->
         <button class="btn-warning" @click="$emit('navigate','grilles-validation')">Valider →</button>
       </div>
 
-      <!-- ══ KPI CARDS ══ -->
+      <!--les cardes des kpi-->
       <div class="section-label">Indicateurs globaux</div>
-      <div class="kpi-row">
-        <div class="kpi-card kpi-blue">
+      <div class="kpi-row"><!--conteneur des cartes kpi-->
+        <!-- carte des spécialité -->
+        <div class="kpi-card kpi-blue"><!-- icone dossier svg-->
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.totalSpecialites }}</div><div class="kpi-label">Spécialités</div></div>
         </div>
-        <div class="kpi-card kpi-slate">
+        <!-- carte des etudiants -->
+        <div class="kpi-card kpi-slate"><!-- icone user svg-->
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.totalEtudiants }}</div><div class="kpi-label">Étudiants</div></div>
         </div>
-        <div class="kpi-card kpi-teal">
+        <!--carte encadrants-->
+        <div class="kpi-card kpi-teal"><!--icone livre-->
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.totalEncadrants }}</div><div class="kpi-label">Encadrants</div></div>
         </div>
-        <div class="kpi-card kpi-gold">
+        <!--carte soutenance totales-->
+        <div class="kpi-card kpi-gold"><!--icone calendrier -->
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.totalSoutenances }}</div><div class="kpi-label">Soutenances totales</div></div>
         </div>
-        <div class="kpi-card kpi-green">
+        <!--soutenances réalisé -->
+        <div class="kpi-card kpi-green"><!--icone done-->
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.soutenancesTerminees }}</div><div class="kpi-label">Soutenances réalisées</div></div>
         </div>
+        <!--carte taux de reussites--><!--couleur par condition-->
         <div class="kpi-card" :class="kpi.tauxReussite >= 70 ? 'kpi-green' : 'kpi-red'">
           <div class="kpi-icon-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
           <div class="kpi-body"><div class="kpi-value">{{ kpi.tauxReussite }}%</div><div class="kpi-label">Taux de réussite global</div></div>
         </div>
       </div>
 
-      <!-- Quick actions -->
-      <div class="section-label">Actions rapides</div>
-      <div class="qa-grid">
-        <button class="qa-card" @click="$emit('navigate','spec-create')">
+      <!-- section des actions rapides -->
+      <div class="section-label">Actions rapides</div> <!--label de titre -->
+      <div class="qa-grid"><!--section d'actipn rapide-->
+        <!--boutton creer spécialité-->
+        <button class="qa-card" @click="$emit('navigate','spec-create')"><!--icone svg + -->
           <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Nouvelle spécialité</div><div class="qa-s">Créer une filière académique</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <!--promouvoir d'un chef -->
         <button class="qa-card" @click="$emit('navigate','chef-create')">
           <div class="qa-icon qa-gold"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Ajouter un chef</div><div class="qa-s">Nouveau chef de département</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <!--les grilles en attente-->
         <button class="qa-card" @click="$emit('navigate','grilles-validation')">
           <div class="qa-icon" :class="grillesEnAttente>0 ? 'qa-red' : 'qa-teal'"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Grilles d'évaluation</div><div class="qa-s">{{ grillesEnAttente > 0 ? grillesEnAttente + ' en attente' : 'Toutes validées' }}</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <!--liste des spécialité -->
         <button class="qa-card" @click="$emit('navigate','spec-list')">
           <div class="qa-icon qa-slate"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Liste des spécialités</div><div class="qa-s">Consulter, modifier, supprimer</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <!--consulter l'archive -->
         <button class="qa-card" @click="$emit('navigate','archives')">
           <div class="qa-icon qa-slate"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Archives PFE</div><div class="qa-s">Consulter les PFE archivés</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <!--consulter le tableau de board-->
         <button class="qa-card" @click="$emit('navigate','tableau-de-bord')">
           <div class="qa-icon qa-blue"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
           <div class="qa-txt"><div class="qa-t">Tableau de bord</div><div class="qa-s">Graphiques et statistiques</div></div>
           <svg class="qa-arr" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
+      </template>
 
-      </template><!-- end !chartsOnly -->
 
-      <!-- ══ CHARTS MODE: all Chart.js visuals ══ -->
+      <!-- les charts graphiques par chart.js -->
       <template v-if="!isHome">
 
-        <!-- ── ROW 1 : Soutenances + Encadrants + Étudiants par spécialité ── -->
+        <!-- 1ére section les histogtammes des soutenance ,encadrants et etudiants dans chaque spécialité -->
         <div class="section-label">Répartition par spécialité</div>
         <div class="chart-row three-cols">
+          <!--histo 1-->
           <div class="chart-card">
             <div class="chart-header"><div class="chart-title">Soutenances par spécialité</div><div class="chart-badge">Histogramme</div></div>
             <div class="chart-area"><canvas ref="soutSpecCanvas"></canvas></div>
           </div>
+          <!--histo 2-->
           <div class="chart-card">
             <div class="chart-header"><div class="chart-title">Encadrants par spécialité</div><div class="chart-badge">Histogramme</div></div>
             <div class="chart-area"><canvas ref="encSpecCanvas"></canvas></div>
           </div>
+          <!--histo3-->
           <div class="chart-card">
             <div class="chart-header"><div class="chart-title">Étudiants par spécialité</div><div class="chart-badge chart-badge-purple">Histogramme</div></div>
             <div class="chart-area"><canvas ref="etuSpecCanvas"></canvas></div>
           </div>
         </div>
 
-        <!-- ── ROW 2 : Réussite + Camembert + Courbe ── -->
+      <!-- 2eme section  jouge, camembert,courbe-->
         <div class="section-label">Performance et réalisation</div>
         <div class="chart-row">
+          <!--cart jauge : taux de reu-->
           <div class="chart-card">
+            <!--entete-->
             <div class="chart-header"><div class="chart-title">Taux global de réussite PFE</div><div class="chart-badge chart-badge-green">Jauge</div></div>
-            <div class="gauge-wrap">
+            <div class="gauge-wrap"><!--conteneur de jauge-->
+              <!--canvas de jauge-->
               <canvas ref="reussiteGaugeCanvas" height="180"></canvas>
-              <div class="gauge-center"><div class="gauge-pct">{{ kpi.tauxReussite }}%</div><div class="gauge-lbl">Admis</div></div>
+              <div class="gauge-center"><div class="gauge-pct">{{ kpi.tauxReussite }}%</div><div class="gauge-lbl">Admis</div></div><!--centre de jauge-->
             </div>
+            <!--details-->
             <div class="planif-details">
               <span class="pd-item"><span class="dot dot-green"></span>{{ charts.reussite?.admis || 0 }} admis</span>
               <span class="pd-item"><span class="dot dot-red"></span>{{ charts.reussite?.ajournes || 0 }} ajournés</span>
             </div>
           </div>
+          <!--carte camembert sout réalisés et pas encore-->
           <div class="chart-card">
             <div class="chart-header"><div class="chart-title">Soutenances réalisées</div><div class="chart-badge chart-badge-blue">Camembert</div></div>
             <div class="chart-area"><canvas ref="soutRealisCanvas"></canvas></div>
+            <!--pied-->
             <div class="chart-footer">{{ charts.soutRealis?.taux || 0 }}% de soutenances réalisées</div>
           </div>
+          <!--courbe évolution des pfe par mois-->
           <div class="chart-card chart-wide">
             <div class="chart-header"><div class="chart-title">PFE finalisés dans les délais — évolution mensuelle</div><div class="chart-badge chart-badge-blue">Courbe</div></div>
             <div class="chart-area"><canvas ref="delaisCanvas"></canvas></div>
           </div>
         </div>
 
-      </template><!-- end chartsOnly -->
+      </template>
 
     </template>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue'
-import api from '@/services/api.js'
-import {
-  Chart, BarController, LineController, DoughnutController,
-  BarElement, LineElement, PointElement, ArcElement,
-  CategoryScale, LinearScale, Tooltip, Legend, Filler
+import { ref } from 'vue'//pour creer une variable reactive (utilisé dans downloading et loading)
+import api from '@/services/api.js'//notre instance pers d'axios
+import {//composants necessaire de chart.js , chart la classe principal
+  Chart, BarController, LineController, DoughnutController,//type ses graphique
+  BarElement, LineElement, PointElement, ArcElement,//evenement visuelle
+  CategoryScale, LinearScale, Tooltip, Legend, Filler//les echelles et les légendes
 } from 'chart.js'
 
-Chart.register(
+Chart.register(//obliga dans v3 enreg pour chart js comprend
   BarController, LineController, DoughnutController,
   BarElement, LineElement, PointElement, ArcElement,
   CategoryScale, LinearScale, Tooltip, Legend, Filler
 )
-
+//colors palette pour les histogrammes(hexadicimale)
 const COLORS = ['#3d6080','#27ae60','#f5a623','#8e44ad','#e74c3c','#2980b9','#d35400','#16a085']
+//chart js ne comprend que les couleurs rgba 
 function hex(h, a) { const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16); return `rgba(${r},${g},${b},${a})` }
 
 export default {
   name: 'DashboardDirecteurHome',
-  props: {
+  props: {//props recu du parend dashboard directeur . vue
     currentUser:      { type: Object, default: () => ({}) },
     grillesEnAttente: { type: Number, default: 0 },
     // 'home'      → KPIs + raccourcis (sans graphiques)
     // 'dashboard' → graphiques & analyses complètes
     pageMode:         { type: String, default: 'dashboard' },
   },
-  emits: ['navigate'],
+  emits: ['navigate'],//evenenment pour changer les pages 
 
-  // setup() runs before data(), ensuring `downloading` and `loading` are
-  // defined on the public instance proxy from the very first render tick.
-  // This prevents the "[Vue warn]: Property was accessed during render but
-  // is not defined on instance" warning triggered by vue-router's initial
-  // navigation finalizing before data() has been called.
   setup() {
     const downloading = ref(false)
     const loading     = ref(true)
@@ -205,36 +219,35 @@ export default {
   },
 
   computed: {
-    isHome() { return this.pageMode === 'home' },
+    isHome() { return this.pageMode === 'home' },//prop cal pour affiché la page
   },
 
   data() {
     return {
-      // `downloading` and `loading` are already provided by setup() above;
-      // do NOT redeclare them here or Vue will warn about duplicate keys.
-      heureActualisation: '--:--',
+     //initialisation
+      heureActualisation: '--:--',//valeur par defaut
       kpi:    { totalSpecialites: 0, totalEtudiants: 0, totalEncadrants: 0, totalSoutenances: 0, soutenancesTerminees: 0, tauxReussite: 0 },
       charts: {},
-      instances: {},
+      instances: {},//pour stocke les instances de charte js 
     }
   },
 
-  async mounted() { await this.charger() },
-  beforeUnmount() { Object.values(this.instances).forEach(c => c?.destroy()) },
+  async mounted() { await this.charger() },//execute charger lors de l'insertion dans le dom
+  beforeUnmount() { Object.values(this.instances).forEach(c => c?.destroy()) },//on detruit les graphique pour les rechargement et eviter le stockage dans la memoire
 
   methods: {
     async telechargerPDF() {
-      this.downloading = true
+      this.downloading = true//disactive le boutton et change le texte du boutton
       try {
-        const res = await api.get('/dashboard/directeur/export-pdf', { responseType: 'blob' })
-        const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+        const res = await api.get('/dashboard/directeur/export-pdf', { responseType: 'blob' })//on utilise blob pour eviter que le backend renvoi une reponse json, reponse pdf binaire
+        const url  = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))//creer un url pour le document dans le memoire
         const link = document.createElement('a')
         link.href = url
         link.setAttribute('download', `tableau-de-bord-${new Date().toISOString().slice(0,10)}.pdf`)
         document.body.appendChild(link)
         link.click()
         link.remove()
-        window.URL.revokeObjectURL(url)
+        window.URL.revokeObjectURL(url)//libére le mémoire 
       } catch (e) {
         console.error('Export PDF échoué', e)
       } finally {

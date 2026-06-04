@@ -142,32 +142,33 @@ const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 })
+//interceptor pour proteger les routes de l'administrateur et intercepter les req avant etre envoyé 
 api.interceptors.request.use(config => {
   const u = localStorage.getItem('user')
   if (u) {
     const token = JSON.parse(u).token
     if (token) config.headers.Authorization = `Bearer ${token}`
-  }
+  }//si l'utilisateur est connecté en extrait tous ces données et en ajoute le token à la entete
   return config
-})
+})//retourne la nvl configuration
 
-const props = defineProps({
+const props = defineProps({//prop recu du parent 
   users: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:users'])
 
-const localUsers = ref([])
+const localUsers = ref([])//un tableau reactives vide pour stocker les utilisateurs chargé
 
 const chargerUtilisateurs = async () => {
-  try {
+  try {//charge la liste des utilisateurs 
     const res = await api.get('/utilisateurs')
-    localUsers.value = res.data
-    emit('update:users', res.data)
+    localUsers.value = res.data//stocke localement
+    emit('update:users', res.data)//envoi l'enven au parent
   } catch (e) { console.error('Erreur chargement utilisateurs:', e) }
 }
-
+//execute la fonction quand le composant est monté
 onMounted(() => { chargerUtilisateurs() })
-
+//les filtres 
 const searchQuery  = ref('')
 const roleFilter   = ref('tous')
 const statutFilter = ref('tous')
@@ -186,7 +187,7 @@ const statutFilters = [
   { value:'inactive', label:'Désactivés' },
 ]
 
-const applyFilters = (list) => {
+const applyFilters = (list) => {//fonction filyre une liste selon criteres
   const q = searchQuery.value.toLowerCase()
   return list.filter(u =>
     (!q || `${u.nom} ${u.prenom} ${u.email} ${u.matricule}`.toLowerCase().includes(q)) &&

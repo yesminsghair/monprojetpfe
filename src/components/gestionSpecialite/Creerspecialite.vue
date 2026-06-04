@@ -165,36 +165,37 @@
 </template>
 
 <script>
-import api from '@/services/api.js'
+import api from '@/services/api.js'//import l'instance d'axios crée 
 
 export default {
-  name: 'CreerSpecialite',
-  props: { specialite: { type: Object, default: null } },
-  emits: ['creee', 'modifiee', 'annuler'],
+  name: 'CreerSpecialite', 
+  props: { specialite: { type: Object, default: null } }, //la propriete recus du parent , doit etre un objet javascript
+  emits: ['creee', 'modifiee', 'annuler'],//declaration des evenenments que le composant envoi au parant
 
-  data() {
+  data() {//la fonction qui retourne l'etat initial reactif du composant 
     return {
+      //un objet de form f et ces champs
       f: { nom: '', code: '', description: '', date_creation: '', capacite_max: 30 },
-      errs: {},
+      errs: {},//objet vide de depart pour stocker les messages d'err
       saving: false,
       toast: { visible: false, message: '', type: 'toast-ok', _timer: null },
     }
   },
 
-  computed: {
+  computed: {//si la specialité existe retourne true: on le modifie sinon pn peut créer une nouvelle
     editing() { return !!this.specialite },
   },
 
-  watch: {
+  watch: {//utiliser surveille la prop specialité pour le preremplissage 
     specialite: {
-      immediate: true,
+      immediate: true,//excution emadiatment au montage du composant
       handler(s) {
-        if (s) this.f = {
+        if (s) this.f = { //si existe mode de modification si non mode creation (vide)
           nom: s.nom || '',
           code: s.code || '',
           description: s.description || '',
           date_creation: s.date_creation || '',
-          capacite_max: s.capacite_max ?? 30,
+          capacite_max: s.capacite_max ?? 30,//si la capacité est null ou underfined elle prend la valeur 30
         }
       },
     },
@@ -202,44 +203,46 @@ export default {
 
   methods: {
     validate() {
-      this.errs = {}
+      this.errs = {}//vide les erreur precedente 
+      //trim pour verifier si le champ contient que les espaces
       if (!this.f.nom.trim())  this.errs.nom  = 'Ce champ est obligatoire.'
       if (!this.f.code.trim()) this.errs.code = 'Ce champ est obligatoire.'
       if (!this.f.capacite_max || this.f.capacite_max < 1)
         this.errs.capacite_max = 'Veuillez saisir une capacité valide (≥ 1).'
-      return !Object.keys(this.errs).length
+      return !Object.keys(this.errs).length//obj d'erreur retourne true si acune erreur
     },
 
-    showToast(message, type = 'toast-ok') {
-      clearTimeout(this.toast._timer)
+    showToast(message, type = 'toast-ok') {//par defaut
+      clearTimeout(this.toast._timer)//annule le timer precedent
       this.toast = { visible: true, message, type, _timer: null }
-      this.toast._timer = setTimeout(() => { this.toast.visible = false }, 3500)
+      this.toast._timer = setTimeout(() => { this.toast.visible = false }, 3500)//3.5
     },
 
-    async save() {
-      if (!this.validate()) return
-      this.saving = true
+    async save() {//coeur du comp
+      if (!this.validate()) return //validation si echoué on areete
+      this.saving = true//spinner et desactive boutton
       try {
-        if (this.editing) {
-          const r = await api.put(`/specialites/${this.specialite.id}`, this.f)
-          this.$emit('modifiee', r.data)
-          this.showToast(`Spécialité « ${r.data.nom} » modifiée avec succès.`, 'toast-ok')
-        } else {
+        if (this.editing) {//si on ai dans le mode d'edition
+          const r = await api.put(`/specialites/${this.specialite.id}`, this.f)//on envoi une req put de remplessage avec l'id de specialité et le contenu de formulaire objet f
+          this.$emit('modifiee', r.data)//emet l'evenement
+          this.showToast(`Spécialité « ${r.data.nom} » modifiée avec succès.`, 'toast-ok')// affiche le toast de modif avec succes
+        } else {//mode creation , requete post , objet f
           const r = await api.post('/specialites', this.f)
+          //msg de creation avec success
           const msg = `Spécialité « ${r.data.nom} » créée avec succès.`
-          this.showToast(msg, 'toast-ok')
+          this.showToast(msg, 'toast-ok')//toast de creation
           setTimeout(() => {
             this.$emit('creee', { data: r.data, toastMessage: msg })
-          }, 900)
+          }, 900)//attendre 0.9 secondes et emet levenement creee
         }
-      } catch (e) {
+      } catch (e) {//cas d'erreur on recupere l'erreur du backend 
         const v = e.response?.data?.errors || {}
-        if (v.nom)          this.errs.nom          = v.nom[0]
+        if (v.nom)          this.errs.nom          = v.nom[0]//premier message d'erreur..
         if (v.code)         this.errs.code         = v.code[0]
         if (v.capacite_max) this.errs.capacite_max = v.capacite_max[0]
         this.showToast(e.response?.data?.message || 'Une erreur est survenue.', 'toast-err')
       } finally {
-        this.saving = false
+        this.saving = false//désactive le spinner dans les 2 cas 
       }
     },
   },

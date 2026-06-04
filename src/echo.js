@@ -3,19 +3,8 @@ import Pusher from 'pusher-js'
 
 window.Pusher = Pusher
 
-// Override the authorizer to prevent any auth requests
-Pusher.Runtime.createXHR = function() {
-    var xhr = new XMLHttpRequest();
-    xhr.open = function(method, url, async) {
-        // Block auth requests
-        if (url.includes('/broadcasting/auth')) {
-            return false;
-        }
-        return XMLHttpRequest.prototype.open.call(this, method, url, async);
-    };
-    return xhr;
-};
-
+// Public channels (Channel, not PrivateChannel) require no auth handshake.
+// Keep this config clean — no XHR overrides or fake authorizers needed.
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: 'uvs7qkafvkegkqlgoyev',
@@ -24,17 +13,6 @@ window.Echo = new Echo({
     scheme: 'http',
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
-    authEndpoint: null,
-    auth: {
-        headers: {}
-    },
-    authorizer: (channel) => {
-        return {
-            authorize: (socketId, callback) => {
-                callback(null, { auth: '' })
-            }
-        }
-    }
 })
 
 export default window.Echo

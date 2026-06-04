@@ -109,35 +109,35 @@ import api from '@/services/api.js'
 export default {
   name: 'SupprimerSpecialite',
   props: { specialite: { type: Object, default: null } },
-  emits: ['supprimee', 'fermer'],
+  emits: ['supprimee', 'fermer'],//evenement pour suppriomer ou fermer le modal de suppression
 
-  data() {
+  data() {//objet data initial
     return {
-      saisie: '',
+      saisie: '',//chamlp pour confirmer la supp
       saving: false,
       toast: { visible: false, message: '', _timer: null },
     }
   },
 
   computed: {
-    saisieOk() {
+    saisieOk() {//verif si le code de spec est le meme entré pour la confirmlation
       return this.saisie.trim().toUpperCase() === (this.specialite?.code || '').toUpperCase()
     },
   },
 
-  watch: {
+  watch: {//si saisi est vide nothing happens 
     specialite() { this.saisie = '' },
   },
 
   methods: {
     async confirmer() {
-      if (!this.saisieOk) return
-      this.saving = true
+      if (!this.saisieOk) return //si false on arrete 
+      this.saving = true//sinon on active le spinner
       try {
-        await api.delete(`/specialites/${this.specialite.id}`)
-        this.$emit('supprimee', this.specialite.id)
-        this.$emit('fermer')
-      } catch (e) {
+        await api.delete(`/specialites/${this.specialite.id}`)//envoi du req http de suppression avec id dans le corps 
+        this.$emit('supprimee', this.specialite.id)//evennement de suppression 
+        this.$emit('fermer')//frmer le modal
+      } catch (e) {//afficher l'erreur envoyé ou bien 
         const msg = e.response?.data?.message || 'Erreur lors de la suppression.'
         this.showToast(msg)
       } finally {

@@ -93,26 +93,6 @@
 
       <!-- ACCUEIL : bannière + raccourcis -->
       <template v-if="isHome">
-        <div class="card mb-4"
-             style="border:1.5px dashed var(--vld-border);background:transparent">
-          <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap py-3">
-            <div>
-              <div class="fw-semibold" style="color:var(--vld-text-strong)">Accéder au tableau de bord complet</div>
-              <div style="font-size:13px;color:var(--vld-text-muted)">
-                Charge encadrants, respect des phases, planification des soutenances…
-              </div>
-            </div>
-            <button class="btn btn-primary d-flex align-items-center gap-2 flex-shrink-0"
-                    @click="$emit('navigate', 'tableau-de-bord')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                   fill="none" stroke="currentColor" stroke-width="2.5">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-              Ouvrir le tableau de bord
-            </button>
-          </div>
-        </div>
         <div class="vld-section-label">Accès rapide</div>
         <div class="row g-3">
           <div class="col-12 col-sm-6 col-lg-4" v-for="s in activeShortcuts" :key="s.page">
@@ -232,7 +212,7 @@
     <template v-else-if="activeRole==='encadrant'">
       <div class="vld-section-label">Indicateurs clés — Encadrant</div>
       <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3" v-for="kpi in encKpis" :key="kpi.label">
+        <div class="col-6 col-lg-2" v-for="kpi in encKpis" :key="kpi.label">
           <div class="vld-kpi">
             <div class="vld-kpi__icon" :class="kpi.icon"><span v-html="kpi.svg"></span></div>
             <div>
@@ -245,26 +225,6 @@
 
       <!-- ACCUEIL : bannière + raccourcis -->
       <template v-if="isHome">
-        <div class="card mb-4"
-             style="border:1.5px dashed var(--vld-border);background:transparent">
-          <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap py-3">
-            <div>
-              <div class="fw-semibold" style="color:var(--vld-text-strong)">Accéder au tableau de bord complet</div>
-              <div style="font-size:13px;color:var(--vld-text-muted)">
-                Avancement étudiants, validation des rapports, taux de réussite…
-              </div>
-            </div>
-            <button class="btn btn-primary d-flex align-items-center gap-2 flex-shrink-0"
-                    @click="$emit('navigate', 'tableau-de-bord')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                   fill="none" stroke="currentColor" stroke-width="2.5">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-              Ouvrir le tableau de bord
-            </button>
-          </div>
-        </div>
         <div class="vld-section-label">Accès rapide</div>
         <div class="row g-3">
           <div class="col-12 col-sm-6 col-lg-4" v-for="s in activeShortcuts" :key="s.page">
@@ -460,10 +420,34 @@
 
       <!-- TABLEAU DE BORD : graphiques jury -->
       <template v-else>
-        <div class="row g-4">
-          <div class="col-12 col-md-5">
+        <div class="vld-section-label">Taux de complétion et avancement des évaluations</div>
+        <div class="row g-4 mb-4">
+          <div class="col-12 col-md-4">
             <div class="card h-100">
-              <div class="card-header">État des évaluations</div>
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Taux de complétion</span>
+                <span class="badge bg-success bg-opacity-10 text-success">Camembert</span>
+              </div>
+              <div class="card-body d-flex align-items-center justify-content-center" style="height:200px;position:relative">
+                <canvas ref="juryCompletionCanvas"></canvas>
+                <div style="position:absolute;text-align:center;pointer-events:none">
+                  <div style="font-family:var(--vld-font-display);font-size:22px;font-weight:700;color:var(--vld-text-strong)">
+                    {{ juryData.totalProjets ? Math.round(juryData.evalues/juryData.totalProjets*100) : 0 }}%
+                  </div>
+                  <div style="font-size:11px;color:var(--vld-text-muted)">Complétées</div>
+                </div>
+              </div>
+              <div class="card-footer bg-transparent" style="font-size:12.5px;text-align:center">
+                {{ juryData.evalues }} soumises / {{ juryData.totalProjets }} total
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Avancement des évaluations</span>
+                <span class="badge bg-warning bg-opacity-10 text-warning">Camembert</span>
+              </div>
               <div class="card-body" style="height:200px"><canvas ref="juryEtatCanvas"></canvas></div>
               <div class="card-footer bg-transparent d-flex gap-3" style="font-size:12.5px">
                 <span><span class="badge bg-success me-1">●</span>{{ juryData.evalues }} soumises</span>
@@ -471,10 +455,42 @@
               </div>
             </div>
           </div>
-          <div class="col-12 col-md-7">
+          <div class="col-12 col-md-4">
             <div class="card h-100">
-              <div class="card-header">Notes par projet</div>
-              <div class="card-body" style="height:200px"><canvas ref="juryNotesCanvas"></canvas></div>
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Résumé des évaluations</span>
+              </div>
+              <div class="card-body d-flex flex-column justify-content-center gap-3 px-4">
+                <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--vld-border)">
+                  <span style="font-size:13px;color:var(--vld-text-muted)">Projets assignés</span>
+                  <strong style="font-size:18px;color:var(--vld-text-strong)">{{ juryData.totalProjets }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--vld-border)">
+                  <span style="font-size:13px;color:var(--vld-text-muted)">Évaluations soumises</span>
+                  <strong style="font-size:18px;color:#27ae60">{{ juryData.evalues }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid var(--vld-border)">
+                  <span style="font-size:13px;color:var(--vld-text-muted)">Évaluations en attente</span>
+                  <strong style="font-size:18px;color:#f5a623">{{ juryData.nonEvalues }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2">
+                  <span style="font-size:13px;color:var(--vld-text-muted)">Note moyenne</span>
+                  <strong style="font-size:18px;color:var(--vld-text-strong)">{{ juryData.noteMoyenne }}/20</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vld-section-label">Notes attribuées par projet</div>
+        <div class="row g-4">
+          <div class="col-12">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Notes par projet</span>
+                <span class="badge bg-primary bg-opacity-10 text-primary">Histogramme</span>
+              </div>
+              <div class="card-body" style="height:220px"><canvas ref="juryNotesCanvas"></canvas></div>
             </div>
           </div>
         </div>
@@ -533,15 +549,14 @@ export default {
       roleTabs: [
         { key:'chef',      label:'Chef de Département', desc:'Pilotage de votre spécialité',    icon:'<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
         { key:'encadrant', label:'Encadrant',            desc:'Suivi de vos étudiants encadrés', icon:'<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><polyline points="16 11 18 13 22 9"/></svg>' },
-        { key:'jury',      label:'Jury',                 desc:'Vos évaluations de soutenance',  icon:'<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },
       ],
 
       chefData: {
-        kpi: { totalSoutenances:0, totalEncadrants:0, chargeMoyenne:0, tauxRetard:0, tauxPlanification:0, totalEtudiants:0 },
+        kpi: { totalSoutenances:0, totalEncadrants:0, chargeMoyenne:0, tauxRetard:0, tauxPlanification:0, totalEtudiants:0, tauxSurcharge:0 },
         charts: { charge:null, surcharge:null, planif:null, calendrier:null, phases:null, retard:null },
       },
       encData: {
-        kpi: { nbEtudiants:0, tauxValidation:0, avancementMoyen:0, reunionsMoyennes:0, tauxReussite:0, sujetsValides:0, sujetsTotal:0 },
+        kpi: { nbEtudiants:0, tauxValidation:0, avancementMoyen:0, reunionsMoyennes:0, tauxReussite:0, sujetsValides:0, sujetsTotal:0, tauxRetard:0 },
         charts: { sujets:null, reunions:null, rapports:null, avancement:null, retard:null, reussite:null },
       },
       juryData: { totalProjets:0, evalues:0, nonEvalues:0, noteMoyenne:'—', projets:[], notes:[] },
@@ -555,22 +570,25 @@ export default {
     chefKpis() {
       const k = this.chefData.kpi
       return [
-        { label:'Soutenances totales',   val:k.totalSoutenances,      icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
-        { label:'Encadrants actifs',     val:k.totalEncadrants,       icon:'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-        { label:'Charge moy. / enc.',    val:k.chargeMoyenne,         icon:'vld-kpi__icon--gold',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-        { label:'Taux de retard',        val:k.tauxRetard+'%',        icon:k.tauxRetard>30?'vld-kpi__icon--slate':'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
-        { label:'Taux de planification', val:k.tauxPlanification+'%', icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' },
-        { label:'Étudiants totaux',      val:k.totalEtudiants,        icon:'vld-kpi__icon--slate', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+        { label:'Soutenances totales',    val:k.totalSoutenances,                      icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+        { label:'Encadrants actifs',      val:k.totalEncadrants,                       icon:'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+        { label:'Charge moy. / enc.',     val:k.chargeMoyenne,                         icon:'vld-kpi__icon--gold',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+        { label:'Taux de surcharge enc.', val:(k.tauxSurcharge ?? 0)+'%',              icon:(k.tauxSurcharge??0)>30?'vld-kpi__icon--red':'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' },
+        { label:'Taux de planification',  val:k.tauxPlanification+'%',                 icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' },
+        { label:'Taux de retard',         val:k.tauxRetard+'%',                        icon:k.tauxRetard>30?'vld-kpi__icon--slate':'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+        { label:'Étudiants totaux',       val:k.totalEtudiants,                        icon:'vld-kpi__icon--slate', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
       ]
     },
 
     encKpis() {
       const k = this.encData.kpi
       return [
-        { label:'Étudiants encadrés', val:k.nbEtudiants,         icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
-        { label:'Taux de validation', val:k.tauxValidation+'%',  icon:'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' },
-        { label:'Avancement moyen',   val:k.avancementMoyen+'%', icon:'vld-kpi__icon--gold',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-        { label:'Taux de réussite',   val:k.tauxReussite+'%',    icon:'vld-kpi__icon--slate', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>' },
+        { label:'Étudiants encadrés',         val:k.nbEtudiants,               icon:'vld-kpi__icon--blue',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
+        { label:'Taux de validation',          val:k.tauxValidation+'%',        icon:'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' },
+        { label:'Charge moy. suivi / étudiant',val:k.reunionsMoyennes,          icon:'vld-kpi__icon--gold',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+        { label:'Avancement moyen',            val:k.avancementMoyen+'%',       icon:'vld-kpi__icon--gold',  svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
+        { label:'PFE en retard',               val:(k.tauxRetard ?? 0)+'%',     icon:(k.tauxRetard??0)>20?'vld-kpi__icon--red':'vld-kpi__icon--green', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+        { label:'Taux de réussite',            val:k.tauxReussite+'%',          icon:'vld-kpi__icon--slate', svg:'<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>' },
       ]
     },
 
@@ -628,12 +646,25 @@ export default {
 
     async loadChef() {
       const r = await api.get('/dashboard/chef')
-      this.chefData.kpi = r.data.kpi
+      this.chefData.kpi = {
+        ...r.data.kpi,
+        tauxSurcharge: r.data.charts.surchargeEncadrants?.tauxSurcharge
+                    ?? r.data.kpi.tauxSurcharge
+                    ?? 0,
+      }
+      // FIX: PHP respectCalendrier returns { labels, total, aTemps }
+      // but 'aTemps' key is snake_case 'a_temps' from DB raw — normalize here
+      const cal = r.data.charts.respectCalendrier || {}
       this.chefData.charts = {
         charge:     r.data.charts.chargeEncadrants,
         surcharge:  r.data.charts.surchargeEncadrants,
         planif:     r.data.charts.planificationSoutenances,
-        calendrier: r.data.charts.respectCalendrier,
+        calendrier: {
+          labels: cal.labels || [],
+          total:  cal.total  || [],
+          // handle both snake_case and camelCase from backend
+          aTemps: cal.aTemps || cal.a_temps || [],
+        },
         phases:     r.data.charts.respectPhases,
         retard:     r.data.charts.retardParEncadrant,
       }
@@ -641,7 +672,7 @@ export default {
 
     async loadEncadrant() {
       const r = await api.get('/dashboard/encadrant')
-      this.encData.kpi = r.data.kpi
+      this.encData.kpi = { ...r.data.kpi, tauxRetard: r.data.kpi.tauxRetard ?? 0 }
       this.encData.charts = {
         sujets:    r.data.charts.validationSujets,
         reunions:  r.data.charts.chargeSuiviEtudiants,
@@ -654,23 +685,58 @@ export default {
 
     async loadJury() {
       const userId = this.currentUser.id
-      const mesProjets = (await api.get('/jurys-pfe')).data
-        .filter(j => (j.membres||[]).some(m => m.enseignant_id === userId))
-      const evalues = mesProjets.filter(j =>
-        (j.membres||[]).find(m => m.enseignant_id === userId)?.note !== null)
-      const notes = evalues.map(j => {
-        const m = (j.membres||[]).find(m => m.enseignant_id === userId)
-        return { titre: j.projet_titre || 'Projet #' + j.id, note: m?.note || 0 }
+
+      // FIX 1: /jurys-pfe returns jury_membres_pfe rows, not notes.
+      // Notes live in notes_pfe keyed by soutenance_id + enseignant_id.
+      // We fetch both endpoints in parallel then cross-reference.
+      const [jurysRes, notesRes] = await Promise.all([
+        api.get('/jurys-pfe'),
+        api.get('/jurys-pfe/mes-notes'),   // returns notes_pfe[] for current user
+      ])
+
+      // FIX 2: jury filter — membre match uses encadrant_id OR president_id OR examinateur_id
+      // depending on how the API serialises jury_membres_pfe.
+      // We check all three columns to be safe.
+      const mesProjets = (jurysRes.data || []).filter(j => {
+        const m = j.membres || []
+        return (
+          j.encadrant_id    === userId ||
+          j.president_id    === userId ||
+          j.examinateur_id  === userId ||
+          m.some(mb => mb.enseignant_id === userId || mb.id === userId)
+        )
       })
-      const noteMoyenne = notes.length
-        ? (notes.reduce((s,n) => s + n.note, 0) / notes.length).toFixed(1) : '—'
+
+      // FIX 3: "évalué" means a notes_pfe row exists for this user + soutenance
+      const mesNotes = notesRes.data || []
+      // Build a map soutenance_id → note for quick lookup
+      const notesBySoutenance = Object.fromEntries(
+        mesNotes.map(n => [n.soutenance_id, n.note])
+      )
+
+      // Match chaque projet à sa soutenance via j.soutenance_id (if present)
+      // or j.projet_id via soutenances lookup
+      const evalues = mesProjets.filter(j =>
+        j.soutenance_id != null && notesBySoutenance[j.soutenance_id] != null
+      )
+
+      const notesValues = mesProjets.map(j =>
+        j.soutenance_id != null ? (notesBySoutenance[j.soutenance_id] ?? null) : null
+      )
+
+      const notesNonNull = notesValues.filter(n => n !== null)
+      const noteMoyenne  = notesNonNull.length
+        ? (notesNonNull.reduce((s, n) => s + Number(n), 0) / notesNonNull.length).toFixed(1)
+        : '—'
+
       this.juryData = {
         totalProjets: mesProjets.length,
         evalues:      evalues.length,
         nonEvalues:   mesProjets.length - evalues.length,
         noteMoyenne,
-        projets:      mesProjets.map(j => j.projet_titre || 'Projet #' + j.id),
-        notes:        notes.map(n => n.note),
+        // For the bar chart: show all projects, 0 for not yet evaluated
+        projets:      mesProjets.map(j => j.projet_titre || j.titre || 'Projet #' + j.id),
+        notes:        notesValues.map(n => n ?? 0),
       }
     },
 
@@ -689,7 +755,7 @@ export default {
     buildCharge() { this.d('charge'); const ctx=this.$refs.chargeCanvas; if(!ctx||!this.chefData.charts.charge?.labels?.length) return; this.instances.charge=new Chart(ctx,{type:'bar',data:{labels:this.chefData.charts.charge.labels,datasets:[{label:'Étudiants',data:this.chefData.charts.charge.values,backgroundColor:this.chefData.charts.charge.labels.map((_,i)=>hex(Object.values(P)[i%5],0.75)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw} étudiant(s)`}}},scales:{y:{...scaleY(),ticks:{stepSize:1,color:'#8a9aaa'}},x:scaleX()}}}) },
     buildSurcharge() { this.d('surcharge'); const ctx=this.$refs.surchargeCanvas; if(!ctx||!this.chefData.charts.surcharge?.labels?.length) return; const s=this.chefData.charts.surcharge.seuil||5; this.instances.surcharge=new Chart(ctx,{type:'bar',data:{labels:this.chefData.charts.surcharge.labels,datasets:[{label:'Étudiants',data:this.chefData.charts.surcharge.values,backgroundColor:this.chefData.charts.surcharge.values.map(v=>v>s?hex(P.red,0.75):hex(P.teal,0.65)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:scaleX()}}}) },
     buildPlanif() { this.d('planif'); const ctx=this.$refs.planifCanvas; if(!ctx||!this.chefData.charts.planif) return; this.instances.planif=new Chart(ctx,{type:'doughnut',data:{labels:this.chefData.charts.planif.labels,datasets:[{data:this.chefData.charts.planif.values,backgroundColor:[hex(P.teal,0.8),hex(P.slate,0.3)],borderColor:['#27ae60','#c8c4bc'],borderWidth:2,circumference:270,rotation:-135}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}}) },
-    buildCalendrier() { this.d('calendrier'); const ctx=this.$refs.calendrierCanvas; if(!ctx||!this.chefData.charts.calendrier?.labels?.length) return; this.instances.calendrier=new Chart(ctx,{type:'line',data:{labels:this.chefData.charts.calendrier.labels,datasets:[{label:'Total prévues',data:this.chefData.charts.calendrier.total,borderColor:P.blue,backgroundColor:hex(P.blue,0.08),tension:0.4,fill:true,pointRadius:4},{label:'À temps',data:this.chefData.charts.calendrier.aTemps,borderColor:P.teal,backgroundColor:hex(P.teal,0.08),tension:0.4,fill:true,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8a9aaa',boxWidth:12}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:scaleX()}}}) },
+    buildCalendrier() { this.d('calendrier'); const ctx=this.$refs.calendrierCanvas; const cal=this.chefData.charts.calendrier; if(!ctx||!cal?.labels?.length) return; const aTemps=cal.aTemps||cal.a_temps||[]; this.instances.calendrier=new Chart(ctx,{type:'line',data:{labels:cal.labels,datasets:[{label:'Total prévues',data:cal.total,borderColor:P.blue,backgroundColor:hex(P.blue,0.08),tension:0.4,fill:true,pointRadius:4},{label:'À temps',data:aTemps,borderColor:P.teal,backgroundColor:hex(P.teal,0.08),tension:0.4,fill:true,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8a9aaa',boxWidth:12}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:scaleX()}}}) },
     buildPhases() { this.d('phases'); const ctx=this.$refs.phasesCanvas; if(!ctx||!this.chefData.charts.phases?.labels?.length) return; this.instances.phases=new Chart(ctx,{type:'line',data:{labels:this.chefData.charts.phases.labels,datasets:[{label:'Taux de respect (%)',data:this.chefData.charts.phases.values,borderColor:P.purple,backgroundColor:hex(P.purple,0.1),tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:P.purple}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:scaleX()}}}) },
     buildRetardChef() { this.d('retard'); const ctx=this.$refs.retardCanvas; if(!ctx||!this.chefData.charts.retard?.labels?.length) return; this.instances.retard=new Chart(ctx,{type:'bar',data:{labels:this.chefData.charts.retard.labels,datasets:[{label:'Taux de retard (%)',data:this.chefData.charts.retard.values,backgroundColor:this.chefData.charts.retard.values.map(v=>v>40?hex(P.red,0.75):v>20?hex(P.gold,0.75):hex(P.teal,0.65)),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},y:{ticks:{color:'#8a9aaa'},grid:{display:false}}}}}) },
 
@@ -704,7 +770,8 @@ export default {
     buildEncReussite() { this.d('encReussite'); const ctx=this.$refs.encReussiteCanvas; if(!ctx) return; const v=this.encData.kpi.tauxReussite; const c=v>=70?P.teal:P.red; this.instances.encReussite=new Chart(ctx,{type:'doughnut',data:{datasets:[{data:[v,100-v],backgroundColor:[hex(c,0.85),hex(P.slate,0.15)],borderColor:[c,'transparent'],borderWidth:2,circumference:270,rotation:-135}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}}) },
 
     // ── Jury charts ──────────────────────────────────────────
-    buildJuryCharts() { this.buildJuryEtat(); this.buildJuryNotes() },
+    buildJuryCharts() { this.buildJuryCompletion(); this.buildJuryEtat(); this.buildJuryNotes() },
+    buildJuryCompletion() { this.d('juryCompletion'); const ctx=this.$refs.juryCompletionCanvas; if(!ctx) return; const done=this.juryData.evalues, total=this.juryData.totalProjets||1; this.instances.juryCompletion=new Chart(ctx,{type:'doughnut',data:{labels:['Soumises','Restantes'],datasets:[{data:[done,total-done],backgroundColor:[hex(P.teal,0.82),hex(P.slate,0.2)],borderColor:[P.teal,'transparent'],borderWidth:2,circumference:270,rotation:-135}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}}) },
     buildJuryEtat() { this.d('juryEtat'); const ctx=this.$refs.juryEtatCanvas; if(!ctx) return; this.instances.juryEtat=new Chart(ctx,{type:'doughnut',data:{labels:['Soumises','En attente'],datasets:[{data:[this.juryData.evalues,this.juryData.nonEvalues],backgroundColor:[hex(P.teal,0.8),hex(P.gold,0.75)],borderColor:[P.teal,P.gold],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}}) },
     buildJuryNotes() { this.d('juryNotes'); const ctx=this.$refs.juryNotesCanvas; if(!ctx||!this.juryData.projets?.length) return; this.instances.juryNotes=new Chart(ctx,{type:'bar',data:{labels:this.juryData.projets,datasets:[{label:'Note /20',data:this.juryData.notes,backgroundColor:this.juryData.notes.map(n=>n>=10?hex(P.teal,0.75):hex(P.red,0.7)),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:20,ticks:{stepSize:4,color:'#8a9aaa'},grid:{color:'rgba(200,196,188,0.1)'}},x:{ticks:{color:'#8a9aaa',maxRotation:30},grid:{display:false}}}}}) },
 

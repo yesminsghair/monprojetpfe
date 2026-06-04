@@ -112,67 +112,69 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue'//pour créer une var reactives 
+import { useRouter } from 'vue-router'//donne acces au router pour decidez la direction (navigation)
 import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api',
   headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 })
-
+//variables reactives necessaires 
 const router  = useRouter()
 const email   = ref('')
 const password = ref('')
 const emailError   = ref('')
 const passwordError = ref('')
 const loading = ref(false)
-const showPw  = ref(false)
+const showPw  = ref(false)//masqué
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ 
+//format reg de pwd
 
-const validateEmail = () => {
+const validateEmail = () => { //verif validité d'email
   if (!email.value)
     emailError.value = "L'email est obligatoire"
   else if (!emailRegex.test(email.value))
     emailError.value = "Format d'email invalide"
   else
-    emailError.value = ''
+    emailError.value = ''//sinon pas d'err
 }
 
-const validatePassword = () => {
+const validatePassword = () => {//verif validité pwd
   if (!password.value)
     passwordError.value = 'Le mot de passe est obligatoire'
   else if (password.value.length < 6)
     passwordError.value = 'Minimum 6 caractères'
   else
-    passwordError.value = ''
+    passwordError.value = '' //sinon pas d'er
 }
-
+//coeur du composant login , fonct appelée à la soumission du form
 const handleLogin = async () => {
+  //efface err precedentes
   emailError.value    = ''
   passwordError.value = ''
+  //valide les champs
   validateEmail()
   validatePassword()
-  if (emailError.value || passwordError.value) return
+  if (emailError.value || passwordError.value) return //onarrete
 
-  loading.value = true
+  loading.value = true  //sinon on active le spinner et desactive le boutton
 
   try {
-    const response = await api.post('/login', {
+    const response = await api.post('/login', { //req post avec mail et pwd
       email:    email.value,
       password: password.value,
     })
 
-    // AuthController retourne { id, nom, prenom, email, role, token, isAdmin }
-    // directement (pas imbriqué sous une clé 'user')
+    // AuthController retourne directement id,nom,prenom,email,role,token,isAdmin
+//si données validé,copie les données de la reponse dans le local storage pour qu'il reste connecté
     const data = response.data
-
     localStorage.setItem('user', JSON.stringify({
       ...data,
-      isAdmin: data.role === 'admin',
+      isAdmin: data.role === 'admin', //pour eviter la reverification 
     }))
-
+//tab des routes selon les roles pour la direction
     const routes = {
       admin:      '/admin',
       directeur:  '/dashboard/directeur',
@@ -182,13 +184,13 @@ const handleLogin = async () => {
       etudiant:   '/dashboard/etudiant',
       jury:       '/dashboard/jury',
     }
-
+//si son role existe redirige vers son dashboard si non vers login
     router.push(routes[data.role] ?? '/login')
 
-  } catch (error) {
-    if (error.response?.status === 401) {
+  } catch (error) {//les reponses d'err du backend
+    if (error.response?.status === 401) {//données incorrect
       passwordError.value = 'Email ou mot de passe incorrect'
-    } else if (error.response?.status === 403) {
+    } else if (error.response?.status === 403) {//compte existe main pas activé
       emailError.value = "Compte non activé. Contactez l'administrateur."
     } else {
       emailError.value = 'Erreur de connexion. Vérifiez votre réseau.'

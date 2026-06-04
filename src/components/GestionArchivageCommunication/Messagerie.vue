@@ -287,25 +287,27 @@ export default {
 
   data() {
     return {
-      conversations:   [],
-      messages:        [],        // ascending: oldest → newest
-      utilisateurs:    [],
-      selectedConvId:  null,
-      hasMore:         false,
-      oldestMsgId:     null,
-      loadingMore:     false,
-      userScrolledUp:  false,     // true when user manually scrolled up (pauses auto-scroll)
-      showScrollBtn:   false,
-      newWhileScrolled: 0,
-      newMsg:          '',
-      searchConv:      '',
-      searchDest:      '',
-      showModal:       false,
-      newDest:         null,
-      newMsgModal:     '',
-      loadingConvs:    false,
-      loadingMessages: false,
-      echoChannel:     null,
+      conversations:      [],
+      messages:           [],        // ascending: oldest → newest
+      utilisateurs:       [],
+      selectedConvId:     null,
+      hasMore:            false,
+      oldestMsgId:        null,
+      loadingMore:        false,
+      userScrolledUp:     false,
+      showScrollBtn:      false,
+      newWhileScrolled:   0,
+      newMsg:             '',
+      searchConv:         '',
+      searchDest:         '',
+      showModal:          false,
+      newDest:            null,
+      newMsgModal:        '',
+      loadingConvs:       false,
+      loadingMessages:    false,
+      // ── WebSocket state ──────────────────────────────────────
+      _convChannel:       null,   // active Echo channel object
+      _convChannelId:     null,   // conv id currently subscribed to
       _programmaticScroll: false,
     }
   },
@@ -334,7 +336,8 @@ export default {
   mounted() {
     this.chargerConversations()
     this.chargerUtilisateurs()
-    this.initWebSocket()
+    // NOTE: no global initWebSocket() here anymore.
+    // We subscribe per-conversation inside ouvrirConversation().
   },
 
   beforeUnmount() {
@@ -378,40 +381,22 @@ export default {
     },
 
     // ── Scroll helpers ────────────────────────────────────────
-    //
-    // Standard chat scroll (no column-reverse):
-    //   scrollTop = 0                        → top of history (oldest)
-    //   scrollTop = scrollHeight-clientHeight → bottom (newest messages)
-    //
-    // "At bottom" = scrolled within BOTTOM_THRESHOLD px of the very bottom.
-    // When at bottom, auto-scroll is active. When the user scrolls up,
-    // auto-scroll pauses until they return to the bottom or click the FAB.
-    //
-    //
-    // Standard chat scroll:
-    //   scrollTop = 0                          → top (oldest messages)
-    //   scrollTop = scrollHeight - clientHeight → bottom (newest messages)
-    //
     isAtBottom() {
       const el = this.$refs.msgArea
       if (!el) return true
       return el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD
     },
 
-    // Programmatic scroll to bottom — sets a guard so onScroll
-    // doesn't mistake it for a user scroll-up action
     scrollToBottom(smooth = false) {
       this._programmaticScroll = true
       this.$nextTick(() => {
         const el = this.$refs.msgArea
         if (!el) { this._programmaticScroll = false; return }
         el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'instant' })
-        // Clear guard after scroll settles
         setTimeout(() => { this._programmaticScroll = false }, 100)
       })
     },
 
-    // FAB click — smooth scroll back to newest, resume auto-scroll
     goToBottom() {
       this.userScrolledUp   = false
       this.showScrollBtn    = false
@@ -420,24 +405,20 @@ export default {
     },
 
     onScroll() {
-      // Ignore scroll events triggered by our own programmatic scrolls
       if (this._programmaticScroll) return
 
       const el = this.$refs.msgArea
       if (!el) return
 
       if (this.isAtBottom()) {
-        // User scrolled back to the bottom → resume auto-scroll
         this.userScrolledUp   = false
         this.showScrollBtn    = false
         this.newWhileScrolled = 0
       } else {
-        // User scrolled up → pause auto-scroll, show FAB
         this.userScrolledUp = true
         this.showScrollBtn  = true
       }
 
-      // Near the top → load older messages
       if (
         el.scrollTop < TOP_THRESHOLD &&
         this.hasMore &&
@@ -479,6 +460,9 @@ export default {
       this.showScrollBtn    = false
       this.newWhileScrolled = 0
 
+      // ── FIX: subscribe to the correct per-conversation channel ──
+      this.subscribeToConversation(c.id)
+
       try {
         const { data } = await api.get(`/conversations/${c.id}/messages`, { params: { limit: 50 } })
         const list       = data.data ?? data
@@ -491,7 +475,6 @@ export default {
       } catch (e) { console.error('[Msg] messages:', e) }
       finally {
         this.loadingMessages = false
-        // Wait for Vue to render the messages into the DOM, then jump to bottom
         await this.$nextTick()
         const el = this.$refs.msgArea
         if (el) el.scrollTop = el.scrollHeight
@@ -502,7 +485,6 @@ export default {
       if (!this.selectedConvId || !this.oldestMsgId || this.loadingMore) return
       this.loadingMore = true
 
-      // Save scroll position before DOM changes so viewport doesn't jump
       const el = this.$refs.msgArea
       const scrollBottom = el ? el.scrollHeight - el.scrollTop : 0
 
@@ -515,7 +497,6 @@ export default {
         this.hasMore     = !!data.has_more
         this.oldestMsgId = data.oldest_id ?? null
 
-        // Restore scroll position: keep the user at the same message after prepend
         await this.$nextTick()
         if (el) el.scrollTop = el.scrollHeight - scrollBottom
       } catch (e) { console.error('[Msg] chargerPlus:', e) }
@@ -532,7 +513,6 @@ export default {
         this.messages.push(this.mapMsg(data))
         const conv = this.conversations.find(c => c.id === this.selectedConvId)
         if (conv) { conv.dernier_message = txt; conv.updated_at = new Date().toISOString() }
-        // Always snap to bottom when YOU send a message
         this.userScrolledUp   = false
         this.showScrollBtn    = false
         this.newWhileScrolled = 0
@@ -563,79 +543,73 @@ export default {
       this.newMsgModal = ''; this.searchDest = ''
     },
 
-    // ── WebSocket — raw window.Echo, no composable wrapper ───
+    // ── WebSocket ─────────────────────────────────────────────
     //
-    // Your MessageController does:
-    //   broadcast(new MessageSent($msg))->toOthers();
-    //   broadcast(new NotificationCreated($notif));
+    // Strategy: subscribe to the public channel 'conversation.{id}'
+    // each time a conversation is opened, and leave the previous one.
     //
-    // MessageSent must implement ShouldBroadcast and define:
-    //   public function broadcastOn() {
-    //     return new PrivateChannel('conversation.' . $this->message->conversation_id);
-    //   }
-    //   public function broadcastAs() { return 'MessageSent'; }   // optional
+    // This matches:
+    //   - MessageSent.php  → broadcastOn(): new Channel('conversation.{id}')
+    //   - channels.php     → Broadcast::channel('conversation.{id}', ...)
+    //   - echo.js          → Echo({ broadcaster: 'reverb', ... })  (public, no auth)
     //
-    // routes/channels.php must have:
-    //   Broadcast::channel('conversation.{id}', function ($user, $id) {
-    //     return \App\Models\Conversation::where('id', $id)
-    //       ->where(fn($q) => $q->where('user1_id', $user->id)->orWhere('user2_id', $user->id))
-    //       ->exists();
-    //   });
-    //
-    // config/broadcasting.php → default: 'reverb'
-    // .env → BROADCAST_DRIVER=reverb (or BROADCAST_CONNECTION=reverb in newer Laravel)
-    //
-    initWebSocket() {
+    subscribeToConversation(convId) {
       if (typeof window.Echo === 'undefined') {
-        console.warn('[Msg] window.Echo not found — check bootstrap.js / echo setup')
+        console.warn('[Msg] window.Echo not found — check echo.js import in main.js')
         return
       }
-      const userId = this.myId()
-      if (!userId) return
 
-      // Subscribe to the user's private channel for incoming notifications
-      // (NotificationCreated is also broadcast here)
-      try {
-        this.echoChannel = window.Echo
-          .private(`App.Models.Utilisateur.${userId}`)
-          .listen('MessageSent', payload => {
-            // Laravel strips the namespace: event class = 'MessageSent'
-            this.onIncomingMessage(payload)
-          })
-          .listen('NotificationCreated', () => {
-            // Optionally emit an event so the Notifications component refreshes
-            this.$emit('notification-received')
-          })
-      } catch (e) {
-        console.error('[Msg] Echo channel error:', e)
+      // Leave the previous conversation's channel if switching
+      if (this._convChannelId && this._convChannelId !== convId) {
+        window.Echo.leave(`conversation.${this._convChannelId}`)
+        this._convChannel   = null
+        this._convChannelId = null
       }
+
+      // Already subscribed to this conversation
+      if (this._convChannelId === convId) return
+
+      this._convChannelId = convId
+
+      // .channel() = public channel (no auth required)
+      // .listen('.MessageSent') — leading dot skips Laravel's namespace prefix,
+      //   matching broadcastAs() { return 'MessageSent'; } exactly.
+      this._convChannel = window.Echo
+        .channel(`conversation.${convId}`)
+        .listen('.MessageSent', payload => {
+          this.onIncomingMessage(payload)
+        })
+
+      console.log(`[Msg] Subscribed to conversation.${convId}`)
     },
 
     leaveChannel() {
-      if (typeof window.Echo !== 'undefined' && this.echoChannel) {
-        window.Echo.leave(`App.Models.Utilisateur.${this.myId()}`)
-        this.echoChannel = null
+      if (typeof window.Echo !== 'undefined' && this._convChannelId) {
+        window.Echo.leave(`conversation.${this._convChannelId}`)
+        console.log(`[Msg] Left conversation.${this._convChannelId}`)
+        this._convChannel   = null
+        this._convChannelId = null
       }
     },
 
     onIncomingMessage(payload) {
+      // broadcastWith() sends the fields directly at the top level
       const msg = payload.message ?? payload
 
+      // Add to chat if this message belongs to the open conversation
       if (msg.conversation_id === this.selectedConvId) {
         if (!this.messages.find(m => m.id === msg.id)) {
           this.messages.push(this.mapMsg(msg))
 
           if (!this.userScrolledUp) {
-            // User is at the bottom — auto-scroll to reveal the new message
             this.scrollToBottom(true)
           } else {
-            // User is reading history — don't interrupt, just count the new message
             this.newWhileScrolled++
           }
         }
       }
 
-      // Update sidebar for other conversations
+      // Always update sidebar: unread count + preview for other conversations
       const conv = this.conversations.find(c => c.id === msg.conversation_id)
       if (conv && msg.conversation_id !== this.selectedConvId) {
         conv.non_lu          = (conv.non_lu || 0) + 1

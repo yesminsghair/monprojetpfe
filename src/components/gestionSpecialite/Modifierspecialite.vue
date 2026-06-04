@@ -90,12 +90,11 @@ import api from '@/services/api.js'
 
 export default {
   name: 'ModifierSpecialite',
-  props: { specialite: { type: Object, default: null } },
+  props: { specialite: { type: Object, default: null } }, 
   emits: ['creee', 'modifiee', 'fermer', 'annuler'],
 
   data() {
     return {
-      // FIXED: field is now capacite_max everywhere (was 'capacite' before)
       f: { nom: '', code: '', description: '', date_creation: '', capacite_max: null },
       errs: {},
       saving: false,

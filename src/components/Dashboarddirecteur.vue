@@ -14,114 +14,106 @@
       <NotificationsDropdown />
     </template>
 
+    <!-- Single keyed wrapper: gives <Transition mode="out-in"> one stable root
+         child so it never blanks out during navigation. -->
     <Transition name="page" mode="out-in">
+      <div :key="currentPage" class="vld-page-wrapper">
 
-      <!-- HOME -->
-      <DashboardDirecteurHome
-        v-if="currentPage === 'home'"
-        key="home"
-        page-mode="home"
-        :current-user="currentUser"
-        :grilles-en-attente="grillesEnAttente"
-        @navigate="navigate"
-      />
+        <!-- HOME -->
+        <DashboardDirecteurHome
+          v-if="currentPage === 'home'"
+          page-mode="home"
+          :current-user="currentUser"
+          :grilles-en-attente="grillesEnAttente"
+          @navigate="navigate"
+        />
 
-      <!-- TABLEAU DE BORD (charts) -->
-      <DashboardDirecteurHome
-        v-else-if="currentPage === 'tableau-de-bord'"
-        key="tableau-de-bord"
-        page-mode="dashboard"
-        :current-user="currentUser"
-      />
+        <!-- TABLEAU DE BORD (charts) -->
+        <DashboardDirecteurHome
+          v-else-if="currentPage === 'tableau-de-bord'"
+          page-mode="dashboard"
+          :current-user="currentUser"
+        />
 
-      <!-- ══ SPÉCIALITÉS ══ -->
-      <Creerspecialite
-        v-else-if="currentPage === 'spec-create'"
-        key="spec-create"
-        @toast="onToastEvent"
-        @creee="onSpecCreee"
-      />
+        <!-- ══ SPÉCIALITÉS ══ -->
+        <Creerspecialite
+          v-else-if="currentPage === 'spec-create'"
+          @toast="onToastEvent"
+          @creee="onSpecCreee"
+        />
 
-      <Listespecialites
-        v-else-if="currentPage === 'spec-list'"
-        key="spec-list"
-        :pending-toast="pendingSpecToast"
-        @toast="onToastEvent"
-        @create="navigate('spec-create')"
-      />
+        <Listespecialites
+          v-else-if="currentPage === 'spec-list'"
+          :pending-toast="pendingSpecToast"
+          @toast="onToastEvent"
+          @create="navigate('spec-create')"
+        />
 
-      <!-- ══ CHEFS ══ -->
-      <AjouterChef
-        v-else-if="currentPage === 'chef-create'"
-        key="chef-create"
-        @chef-ajoute="onChefAjoute"
-      />
+        <!-- ══ CHEFS ══ -->
+        <AjouterChef
+          v-else-if="currentPage === 'chef-create'"
+          @chef-ajoute="onChefAjoute"
+        />
 
-      <ListeChefs
-        v-else-if="currentPage === 'chef-list'"
-        key="chef-list"
-        @toast="onToastEvent"
-        @create="navigate('chef-create')"
-      />
+        <ListeChefs
+          v-else-if="currentPage === 'chef-list'"
+          @toast="onToastEvent"
+          @create="navigate('chef-create')"
+        />
 
-      <!-- GRILLES (en attente + validees) -->
-      <ValidationGrilles
-        v-else-if="currentPage === 'grilles-validation' || currentPage === 'grilles-validees'"
-        :key="currentPage"
-        :current-page="currentPage"
-        @toast="onToastEvent"
-        @grilles-count="grillesEnAttenteCount = $event"
-      />
+        <!-- ══ GRILLES (en attente + validées) ══ -->
+        <ValidationGrilles
+          v-else-if="currentPage === 'grilles-validation' || currentPage === 'grilles-validees'"
+          @toast="onToastEvent"
+          @grilles-count="grillesEnAttenteCount = $event"
+        />
 
-      <!-- ══ ARCHIVES PFE ══ (NEW) -->
-      <Archives
-        v-else-if="currentPage === 'archives'"
-        key="archives"
-        role="directeur"
-      />
+        <!-- ══ ARCHIVES PFE ══ -->
+        <Archives
+          v-else-if="currentPage === 'archives'"
+          role="directeur"
+        />
 
-      <!-- ══ MESSAGERIE ══ -->
-      <Messagerie v-else-if="currentPage === 'messagerie'" key="messagerie" />
+        <!-- ══ MESSAGERIE ══ -->
+        <Messagerie v-else-if="currentPage === 'messagerie'" />
 
-      <!-- ══ PROFIL ══ -->
-      <ConsulterProfil
-        v-else-if="currentPage === 'profil'"
-        key="profil"
-        @modifier="navigate('profil-edit')"
-      />
-      <ModifierProfil
-        v-else-if="currentPage === 'profil-edit'"
-        key="profil-edit"
-        @annuler="navigate('profil')"
-        @sauvegarde="navigate('profil')"
-      />
+        <!-- ══ PROFIL ══ -->
+        <ConsulterProfil
+          v-else-if="currentPage === 'profil'"
+          @modifier="navigate('profil-edit')"
+        />
+        <ModifierProfil
+          v-else-if="currentPage === 'profil-edit'"
+          @annuler="navigate('profil')"
+          @sauvegarde="navigate('profil')"
+        />
 
+        <!-- catch-all: prevents blank view on unknown/transitioning page key -->
+        <div v-else style="min-height: 1px;" />
+
+      </div>
     </Transition>
 
   </AppShell>
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import { useToast, schedulePendingToast } from '@/composables/useToast'
 import { useAuth  } from '@/composables/useAuth'
 
 import AppShell              from './AppShell.vue'
 import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
-import DashboardDirecteurHome   from './DashboardDirecteurHome.vue'
 import Messagerie            from './GestionArchivageCommunication/Messagerie.vue'
 import ConsulterProfil       from './ConsulterProfil.vue'
 import ModifierProfil        from './ModifierProfil.vue'
 
-// Existing folders — untouched
 import Creerspecialite  from './gestionSpecialite/Creerspecialite.vue'
 import Listespecialites from './gestionSpecialite/Listespecialites.vue'
 import AjouterChef      from './gestionChefs/Ajouterchef.vue'
 import ListeChefs       from './gestionChefs/ListeChefs.vue'
-
-// ── NEW ──────────────────────────────────────────────────────────────────────
 import Archives          from './GestionArchivageCommunication/Archives.vue'
 import ValidationGrilles from './directeur/ValidationGrilles.vue'
-// ─────────────────────────────────────────────────────────────────────────────
 
 const BREADCRUMBS = {
   'spec-create':        'Créer une spécialité',
@@ -141,7 +133,9 @@ export default {
   name: 'DashboardDirecteur',
 
   components: {
-    AppShell, NotificationsDropdown, DashboardDirecteurHome,
+    AppShell, NotificationsDropdown,
+    // Registered inline as async to break the circular module reference
+    DashboardDirecteurHome: defineAsyncComponent(() => import('./DashboardDirecteurHome.vue')),
     Messagerie, ConsulterProfil, ModifierProfil,
     Creerspecialite, Listespecialites, AjouterChef, ListeChefs,
     Archives, ValidationGrilles,
@@ -155,9 +149,9 @@ export default {
 
   data () {
     return {
-      currentPage:         'home',
+      currentPage:           'home',
       grillesEnAttenteCount: 0,
-      pendingSpecToast:    null,
+      pendingSpecToast:      null,
     }
   },
 
@@ -200,12 +194,10 @@ export default {
             { page: 'grilles-validees',   label: 'Grilles validées' },
           ],
         },
-        // ── NEW ──────────────────────────────────────────────────────────────
         {
           page: 'archives', label: 'Archives PFE',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
         },
-        // ─────────────────────────────────────────────────────────────────────
         { type: 'category', label: 'Communication' },
         {
           page: 'messagerie', label: 'Messagerie',
@@ -218,14 +210,18 @@ export default {
   async mounted () {},
 
   methods: {
+    // $nextTick guard: prevents page switch firing mid-render, which causes
+    // the blank view race with out-in transition.
     navigate (page) {
-      this.currentPage = page
+      if (!page) return
+      this.$nextTick(() => {
+        this.currentPage = page
+      })
     },
 
     onSpecCreee ({ toastMessage }) {
       this.pendingSpecToast = toastMessage
       this.navigate('spec-list')
-      // Clear after toast duration so re-navigating doesn't re-show it
       setTimeout(() => { this.pendingSpecToast = null }, 4000)
     },
 
@@ -233,7 +229,6 @@ export default {
       schedulePendingToast(`${chef.prenom} ${chef.nom} promu(e) chef de département ✓`, 'ok')
       this.navigate('chef-list')
     },
-
   },
 }
 </script>

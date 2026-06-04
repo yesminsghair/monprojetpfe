@@ -224,26 +224,28 @@
 
 <script>
 import api from '@/services/api.js'
+//les composants enfants de composant liste (parent)
 import ModifierSpecialite from './ModifierSpecialite.vue'
 import SupprimerSpecialite from './SupprimerSpecialite.vue'
-import { useToast, consumePendingToast } from '@/composables/useToast.js'
-
+//composable qui gére les notification toast
+import { useToast, consumePendingToast } from '@/composables/useToast.js'//la fonct consumependingtoast recupere et supprimme un toast en attente 
+//palette: les couleur des cartes se changen selon les id 
 const PALETTE = ['#3d6080','#2f4f6a','#5a7fa0','#c9a100','#f5a623','#3a5f7d','#243d52']
 
 export default {
   name: 'ListeSpecialites',
-  components: { ModifierSpecialite, SupprimerSpecialite },
+  components: { ModifierSpecialite, SupprimerSpecialite }, 
 
   props: {
-    pendingToast: { type: String, default: null },
+    pendingToast: { type: String, default: null }, //msg toast recus 
   },
 
   setup() {
-    const { toast, showToast } = useToast(3500)
+    const { toast, showToast } = useToast(3500)//duré inirialisé du toast 3.5sec
     return { toast, showToast }
   },
 
-  data() {
+  data() {//etat initiale du composant 
     return {
       specialites: [], loading: false, search: '', filtreStatut: '',
       specialiteAModifier: null,
@@ -251,7 +253,7 @@ export default {
     }
   },
 
-  computed: {
+  computed: {//prop cal de recherche 
     specialitesFiltrees() {
       return this.specialites.filter(s => {
         if (this.search) {
@@ -267,8 +269,7 @@ export default {
   },
 
   async mounted() {
-    await this.charger()
-    // Pending toast from navigation (ex: après création via AjouterChef)
+    await this.charger()//req get
     const pending = consumePendingToast()
     if (pending) {
       this.$nextTick(() => this.showToast(pending.message, pending.type))

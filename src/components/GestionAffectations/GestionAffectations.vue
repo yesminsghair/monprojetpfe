@@ -1039,10 +1039,34 @@ export default {
         // Notify all students and encadrants about the chosen mode
         await api.post('/affectations/notifier-mode', { mode: this.modeChoisi })
         await this.loadEtudiants()
+        this.genererCapOverrides()
         this.etape = 'contraintes'
       } catch (e) {
         this.handleError(e, 'Impossible d\'enregistrer le mode. Veuillez réessayer.')
       }
+    },
+
+    // ── Auto-generate cap_override contraintes so totalSlots === totalEtudiants ──
+    genererCapOverrides () {
+      if (!this.totalEtudiants || !this.encadrantsActifs.length) return
+
+      // Keep non-cap_override contraintes added manually
+      const autresContraintes = this.contraintes.filter(c => c.type !== 'cap_override')
+
+      const encs    = this.encadrantsActifs
+      const total   = this.totalEtudiants
+      const base    = Math.floor(total / encs.length)
+      let   reste   = total % encs.length
+
+      const capOverrides = encs.map(enc => ({
+        type:         'cap_override',
+        encadrant_id: enc.id,
+        etudiant_id:  null,
+        cap:          base + (reste-- > 0 ? 1 : 0),
+        raison:       'Répartition automatique',
+      }))
+
+      this.contraintes = [...autresContraintes, ...capOverrides]
     },
 
     async retourVersMode () {
@@ -1050,17 +1074,16 @@ export default {
         try { await api.post('/affectations/save-mode', { mode: this.modeChoisi }) }
         catch (e) { console.error(e) }
       }
+      this.contraintes = []
       this.etape = 'mode'
     },
 
     async allerAffectation () {
       try {
-        if (this.contraintes.length > 0 || (this.modeChoisi === 'manuel' && this.dateLimite)) {
-          await api.post('/affectations/contraintes', {
-            contraintes: this.contraintes,
-            date_limite: this.modeChoisi === 'manuel' ? (this.dateLimite || null) : null,
-          })
-        }
+        await api.post('/affectations/contraintes', {
+          contraintes: this.contraintes,
+          date_limite: this.modeChoisi === 'manuel' ? (this.dateLimite || null) : null,
+        })
       } catch (e) {
         this.handleError(e, 'Impossible d\'enregistrer les contraintes. Veuillez réessayer.')
         return

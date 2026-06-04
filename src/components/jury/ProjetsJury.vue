@@ -62,10 +62,26 @@
               {{ p.date_soutenance }}<span v-if="p.heure_debut"> à {{ p.heure_debut }}</span><span v-if="p.salle"> · {{ p.salle }}</span>
             </div>
 
+            <!-- ── Résultat de l'évaluation (si déjà évalué) ── -->
+            <div v-if="p.evalue && p.note_finale !== null" class="pj-eval-result">
+              <div class="pj-eval-result__note">
+                <span class="pj-eval-result__label">Note soumise</span>
+                <span
+                  class="pj-eval-result__val"
+                  :class="p.note_finale >= 14 ? 'pj-note--high' : p.note_finale >= 10 ? 'pj-note--mid' : 'pj-note--low'"
+                >{{ parseFloat(p.note_finale).toFixed(2) }}<small> / 20</small></span>
+              </div>
+              <div v-if="p.commentaire" class="pj-eval-result__comment">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>{{ p.commentaire }}</span>
+              </div>
+            </div>
+
             <!-- Lock notice when soutenance not started yet -->
             <div v-if="!p.peutEvaluer" class="pj-lock-notice">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span v-if="p.statut !== 'publie'">Soutenance non encore publiée</span>
+              <span v-if="!p.publie">Composition du jury non encore publiée</span>
+              <span v-else-if="p.statut !== 'publie'">Soutenance non encore publiée</span>
               <span v-else>Disponible après la fin de la soutenance</span>
             </div>
 
@@ -73,6 +89,10 @@
               <button class="pj-btn pj-btn--livrable" @click="ouvrirLivrable(p)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 Livrable final
+              </button>
+              <button class="pj-btn pj-btn--dl" @click="telechargerLivrable(p)" :disabled="p._downloading" :title="'Télécharger le livrable de ' + p.etudiant_nom">
+                <svg v-if="!p._downloading" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span v-else class="vld-spinner-sm" style="border-color:rgba(61,96,128,.3);border-top-color:var(--pj-blue);"></span>
               </button>
 
               <!-- Evaluate button — only when allowed -->
@@ -237,7 +257,7 @@ export default {
 
     noteTotale () {
       return this.evalCategories.reduce(
-        (s, cat) => s + cat.criteres.reduce((cs, c) => cs + (c.note || 0), 0), 0
+        (s, cat) => s + cat.criteres.reduce((cs, c) => cs + (parseFloat(c.note) || 0), 0), 0
       )
     },
     noteColor () {
@@ -264,13 +284,30 @@ export default {
         const jurys = juryRes.status === 'fulfilled' ? juryRes.value.data : []
         const evals = evalRes.status === 'fulfilled' ? evalRes.value.data : []
 
+        // Build map of soutenance_id → eval data for enriching cards
+        const evalMap = {}
+        evals.forEach(ev => { evalMap[ev.jury_id] = ev })
+        const evaluatedIds = new Set(evals.map(ev => ev.jury_id))
+
         this.projets = jurys
-          .filter(j => (j.membres || []).some(m => m.enseignant_id === userId))
+          // The API returns flat fields: encadrant_id, president_id, examinateur_id
+          .filter(j =>
+            j.encadrant_id   === userId ||
+            j.president_id   === userId ||
+            j.examinateur_id === userId
+          )
           .map(j => {
-            const monMembre = (j.membres || []).find(m => m.enseignant_id === userId)
-            const peutEvaluer = this.evaluerAutorise(j)
+            const isPresident   = j.president_id   === userId
+            const isEncadrant   = j.encadrant_id   === userId
+            const monRole       = isPresident  ? 'president'
+                                : isEncadrant  ? 'encadrant'
+                                :                'examinateur'
+            const soutenanceId  = j.soutenance_id || j.id
+            const peutEvaluer   = this.evaluerAutorise(j)
+            const evalData      = evalMap[soutenanceId] || null
             return {
               id:              j.id,
+              soutenance_id:   soutenanceId,
               titre:           j.projet_titre || 'Projet #' + j.id,
               etudiant_id:     j.etudiant_id  || null,
               etudiant_nom:    j.etudiant_nom  || '—',
@@ -280,8 +317,11 @@ export default {
               heure_fin:       j.heure_fin   ? j.heure_fin.substring(0, 5)   : null,
               salle:           j.salle || null,
               statut:          j.statut || null,
-              evalue:          evals.some(ev => ev.jury_id === j.id),
-              monRole:         monMembre?.fonction || 'examinateur',
+              publie:          j.publie === true || j.publie === 1,
+              evalue:          evaluatedIds.has(soutenanceId),
+              note_finale:     evalData ? parseFloat(evalData.note) || null : null,
+              commentaire:     evalData?.commentaire || null,
+              monRole,
               president_id:    j.president_id || null,
               peutEvaluer,
             }
@@ -293,12 +333,17 @@ export default {
 
     /**
      * A président may evaluate only when:
-     *  1. The jury's soutenance statut === 'publie'
-     *  2. The scheduled end time (date_soutenance + heure_fin) has already passed
+     *  1. The jury composition is published (publie === true/1)
+     *  2. The soutenance is in statut 'publie' (session is scheduled & confirmed)
+     *  3. The scheduled end time has already passed
      */
     evaluerAutorise (jury) {
+      // Guard 1: jury composition must be published
+      if (!jury.publie && jury.publie !== 1) return false
+      // Guard 2: soutenance session must be published
       if (jury.statut !== 'publie') return false
-      if (!jury.date_soutenance)    return false
+      // Guard 3: must have a scheduled date
+      if (!jury.date_soutenance) return false
 
       const heureStr = jury.heure_fin
         ? jury.heure_fin.substring(0, 5)
@@ -329,8 +374,8 @@ export default {
       this.showLivrableModal = true
       this.loadingLivrable   = true
       try {
-        const res      = await api.get(`/livrables/etudiant/${projet.etudiant_id}`)
-        const livrables = res.data || []
+        const res      = await api.get(`/livrables/soutenance/${projet.soutenance_id}`)
+        const livrables = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : [])
         const livrable  = livrables.find(l =>
           (l.phase_nom || l.phase?.nom || '').toLowerCase().includes('livrable')
         ) || livrables[livrables.length - 1]
@@ -354,6 +399,35 @@ export default {
       this.livrableProjet    = null
     },
 
+    // ── Téléchargement direct du livrable ──────────────────────────
+    async telechargerLivrable (projet) {
+      if (projet._downloading) return
+      projet._downloading = true
+      try {
+        const res      = await api.get(`/livrables/soutenance/${projet.soutenance_id}`)
+        const livrables = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : [])
+        const livrable  = livrables.find(l =>
+          (l.phase_nom || l.phase?.nom || '').toLowerCase().includes('livrable')
+        ) || livrables[livrables.length - 1]
+        if (!livrable) {
+          this.$emit('toast', { message: "Aucun livrable final trouvé.", type: 'err' })
+          return
+        }
+        const url = `/api/livrables/${livrable.id}/download`
+        const a   = document.createElement('a')
+        a.href    = url
+        a.download = `livrable_${projet.etudiant_nom.replace(/\s+/g, '_')}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } catch (e) {
+        this.$emit('toast', { message: "Impossible de télécharger le livrable.", type: 'err' })
+        console.error(e)
+      } finally {
+        projet._downloading = false
+      }
+    },
+
     // ── Évaluation président ────────────────────────────────────────
     async ouvrirEvaluation (projet) {
       // Extra safety: prevent opening if no longer authorised
@@ -372,7 +446,9 @@ export default {
       this.loadingGrille  = true
       try {
         const res    = await api.get('/grilles')
-        const grille = (res.data || []).find(g => g.statut === 'publie' || g.statut === 'verrouille') || res.data?.[0]
+        const grille = (res.data || []).find(g => g.statut === 'verrouille')
+                    || (res.data || []).find(g => g.statut === 'publie')
+                    || res.data?.[0]
         if (grille) {
           const detail = await api.get(`/grilles/${grille.id}`)
           this.evalCategories = (detail.data.categories || []).map(cat => ({
@@ -383,12 +459,13 @@ export default {
           }))
           if (projet.evalue) {
             try {
-              const existing = await api.get(`/jurys-pfe/${projet.id}/ma-note`)
+              // Route binding is `Soutenance $juryPfe` → must use soutenance_id
+              const existing = await api.get(`/jurys-pfe/${projet.soutenance_id}/ma-note`)
               if (existing.data?.criteres?.length) {
                 existing.data.criteres.forEach(ec => {
                   this.evalCategories.forEach(cat => {
                     const cr = cat.criteres.find(c => c.id === ec.critere_id)
-                    if (cr) cr.note = ec.note
+                    if (cr) cr.note = parseFloat(ec.note) || 0
                   })
                 })
               }
@@ -401,7 +478,7 @@ export default {
     },
 
     catTotal (cat) {
-      return cat.criteres.reduce((s, c) => s + (c.note || 0), 0)
+      return cat.criteres.reduce((s, c) => s + (parseFloat(c.note) || 0), 0)
     },
 
     async soumettre () {
@@ -417,7 +494,7 @@ export default {
         const criteres = this.evalCategories.flatMap(cat =>
           cat.criteres.map(c => ({ critere_id: c.id, note: c.note }))
         )
-        await api.post(`/jurys-pfe/${this.evalProjet.id}/notes`, {
+        await api.post(`/jurys-pfe/${this.evalProjet.soutenance_id}/notes`, {
           enseignant_id: this.currentUser.id,
           note:          parseFloat(this.noteTotale.toFixed(2)),
           commentaire:   this.commentaire,
@@ -425,7 +502,11 @@ export default {
           criteres,
         })
         const idx = this.projets.findIndex(p => p.id === this.evalProjet.id)
-        if (idx !== -1) this.projets[idx].evalue = true
+        if (idx !== -1) {
+          this.projets[idx].evalue      = true
+          this.projets[idx].note_finale = parseFloat(this.noteTotale.toFixed(2))
+          this.projets[idx].commentaire = this.commentaire || null
+        }
         this.$emit('toast', { message: 'Évaluation soumise avec succès.', type: 'ok' })
         this.showEvalModal = false
       } catch (e) {
@@ -537,6 +618,54 @@ export default {
 }
 .pj-card__meta:last-of-type { margin-bottom: 12px; }
 
+/* ── Eval result summary (on card) ──────────────────────────────── */
+.pj-eval-result {
+  background: var(--pj-gold-tint);
+  border: 1.5px solid rgba(245,166,35,.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pj-eval-result__note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pj-eval-result__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pj-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.pj-eval-result__val {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+.pj-eval-result__val small {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: .7;
+  margin-left: 1px;
+}
+.pj-eval-result__comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--pj-muted);
+  font-style: italic;
+  line-height: 1.4;
+  border-top: 1px solid rgba(245,166,35,.2);
+  padding-top: 6px;
+}
+.pj-eval-result__comment svg { flex-shrink: 0; margin-top: 1px; stroke: var(--pj-gold-dark); }
+.pj-eval-result__comment span { word-break: break-word; }
+
 /* ── Lock notice ───────────────────────────────────────────────── */
 .pj-lock-notice {
   display: flex; align-items: center; gap: 6px;
@@ -560,6 +689,16 @@ export default {
   border: 1.5px solid rgba(61,96,128,.25);
 }
 .pj-btn--livrable:hover { background: var(--pj-blue); color: #fff; }
+
+.pj-btn--dl {
+  flex: unset; width: 34px; height: 34px; padding: 0;
+  background: var(--pj-blue-tint); color: var(--pj-blue);
+  border: 1.5px solid rgba(61,96,128,.25); border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .2s; flex-shrink: 0;
+}
+.pj-btn--dl:hover:not(:disabled) { background: var(--pj-blue); color: #fff; }
+.pj-btn--dl:disabled { opacity: .6; cursor: not-allowed; }
 
 .pj-btn--eval {
   background: linear-gradient(160deg, var(--pj-gold), var(--pj-gold-dark));

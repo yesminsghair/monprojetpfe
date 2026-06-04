@@ -343,9 +343,10 @@
 </template>
 
 <script>
+//importe l'instance d'axios
 import api from '@/services/api.js'
 
-const ROLE_LABELS = {
+const ROLE_LABELS = { //convertit les roles pour l'affichage 
   admin:      'Administrateur',
   directeur:  'Directeur de stage',
   chef:       'Chef de département',
@@ -354,7 +355,7 @@ const ROLE_LABELS = {
   jury:       'Jury',
   etudiant:   'Étudiant',
 }
-const ROLE_BADGES = {
+const ROLE_BADGES = {//badges des roles pour associer chaque role à un couleur 
   admin:      'cp-badge--red',
   directeur:  'cp-badge--gold',
   chef:       'cp-badge--green',
@@ -364,53 +365,54 @@ const ROLE_BADGES = {
   etudiant:   'cp-badge--slate',
 }
 
-// Rôles pour lesquels le domaine d'expertise est pertinent
+// roles possedent domaine expertise
 const ROLES_EXPERTISE = ['encadrant', 'enseignant', 'chef', 'jury', 'directeur']
 
 export default {
   name: 'ConsulterProfil',
-  emits: ['modifier'],
+  emits: ['modifier'],//evenenmrnt de lmodification 
 
-  data () {
+  data () {//afficher spinner de charg et creer un objet de user 
     return { loading: true, userData: {}, specialiteNom: '' }
   },
 
-  computed: {
+  computed: {//prop cal pour les lettres de nom de user 
     initiales () {
       return ((this.userData.prenom?.[0] || '') + (this.userData.nom?.[0] || '')).toUpperCase() || '?'
     },
-    roleLabel ()      { return ROLE_LABELS[this.userData.role] || this.userData.role || 'Utilisateur' },
-    roleBadgeClass () { return ROLE_BADGES[this.userData.role]  || 'cp-badge--slate' },
-    showDomaineField () {
+    roleLabel ()      { return ROLE_LABELS[this.userData.role] || this.userData.role || 'Utilisateur' },//retourne la role à afficher
+    roleBadgeClass () { return ROLE_BADGES[this.userData.role]  || 'cp-badge--slate' },//la couleur de badge à afficher 
+    showDomaineField () {//si cette role require a domaine
       return ROLES_EXPERTISE.includes(this.userData.role)
     },
-    showDomaineInHero () {
+    showDomaineInHero () {//retourne true s'il possede
       return ROLES_EXPERTISE.includes(this.userData.role) && !!this.userData.domaine_expertise
     },
   },
-
+//mounted s'execute auto quand le comp est chargé
   async mounted () { await this.chargerProfil() },
 
   methods: {
+    //recup des données de l'utilisateur connecté
     async chargerProfil () {
       try {
         const res = await api.get('/me')
-        this.userData = res.data
-        if (this.userData.specialite_id) {
-          try {
+        this.userData = res.data //stocke données depuis la reponse res 
+        if (this.userData.specialite_id) {//si l'utilisateurpossede une specialité
+          try {//on cherche son nom
             const sp = await api.get(`/specialites/${this.userData.specialite_id}`)
             this.specialiteNom = sp.data?.nom || ''
-          } catch { /* pas grave */ }
+          } catch { } //si non c'edt pas grave
         }
-      } catch (e) {
+      } catch (e) {//utilsisateur non connecté 
         if (e.response?.status === 401) {
-          localStorage.removeItem('user')
-          this.$router?.push('/login')
+          localStorage.removeItem('user')//le upprime de localst
+          this.$router?.push('/login')//redrection vers login
         }
-      } finally { this.loading = false }
+      } finally { this.loading = false }//desactive le chragement
     },
 
-    formatDate (d) {
+    formatDate (d) {//transforme lla date en francais 
       if (!d) return '—'
       return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     },

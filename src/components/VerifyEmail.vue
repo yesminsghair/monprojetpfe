@@ -47,18 +47,18 @@ const api = axios.create({
 export default {
   name: 'VerifyEmail',
   data() {
-    return { status: 'loading' }
+    return { status: 'loading' }//fonction qui retourne le statut de composant ici loading càd verifi en cours
   },
-  async mounted() {
-    const token = this.$route.params.token
+  async mounted() {//hook de cycle de vie
+    const token = this.$route.params.token//objet de vue router contenant les infos de la route actuelle 
     try {
-      await api.get(`/verify-email/${token}`)
-      this.status = 'success'
-    } catch (e) {
-      if (e.response?.status === 410 || e.response?.data?.message === 'expired') {
-        this.status = 'expired'
+      await api.get(`/verify-email/${token}`)//on prend le token et l'envoi au backend pour l'informer que l'utilisateur a clické le lien
+      this.status = 'success'//si req reussie en change le statut en succes pour afficher le templace de reussi
+    } catch (e) {//une erreu se produise
+      if (e.response?.status === 410 || e.response?.data?.message === 'expired') {//si 410: gone email l'utilisateur n'a pas verifé son email et son compte à ete supprimé
+        this.status = 'expired'//statut expired on affiche le template d'expiration
       } else {
-        this.status = 'error'
+        this.status = 'error'//else erreur de connexion..
       }
     }
   },

@@ -14,114 +14,108 @@
       <NotificationsDropdown />
     </template>
 
+    <!-- Single keyed wrapper: gives <Transition mode="out-in"> one stable root
+         child so it never blanks out during navigation. -->
     <Transition name="page" mode="out-in">
+      <div :key="currentPage" class="vld-page-wrapper">
 
-      <!-- ACCUEIL — KPIs + raccourcis (sans graphiques) -->
-      <DashboardEncadrantHome
-        v-if="currentPage === 'home'"
-        key="home"
-        page-mode="home"
-        :current-user="currentUser"
-        @navigate="navigate"
-      />
+        <!-- ACCUEIL — KPIs + raccourcis (sans graphiques) -->
+        <DashboardEncadrantHome
+          v-if="currentPage === 'home'"
+          page-mode="home"
+          :current-user="currentUser"
+          @navigate="navigate"
+        />
 
-      <!-- TABLEAU DE BORD — graphiques & analyses complètes -->
-      <DashboardEncadrantHome
-        v-else-if="currentPage === 'tableau-de-bord'"
-        key="tableau-de-bord"
-        page-mode="dashboard"
-        :current-user="currentUser"
-        @navigate="navigate"
-      />
+        <!-- TABLEAU DE BORD — graphiques & analyses complètes -->
+        <DashboardEncadrantHome
+          v-else-if="currentPage === 'tableau-de-bord'"
+          page-mode="dashboard"
+          :current-user="currentUser"
+          @navigate="navigate"
+        />
 
-      <VoeuxEncadrant
-        v-else-if="currentPage === 'voeux'"
-        key="voeux"
-        :formulaire-actif="formulaireActif"
-        :voeux-soumis="voeuxSoumis"
-        :voeux-data="voeuxData"
-        :date-soumission="dateSoumission"
-        @voeux-soumis="onVoeuxSoumis"
-        @toast="onToastEvent"
-      />
+        <VoeuxEncadrant
+          v-else-if="currentPage === 'voeux'"
+          :formulaire-actif="formulaireActif"
+          :voeux-soumis="voeuxSoumis"
+          :voeux-data="voeuxData"
+          :date-soumission="dateSoumission"
+          @voeux-soumis="onVoeuxSoumis"
+          @toast="onToastEvent"
+        />
 
-      <DemandesEncadrement
-        v-else-if="currentPage === 'demandes'"
-        key="demandes"
-        @nb-en-attente="nb => nbEnAttente = nb"
-        @toast="onToastEvent"
-      />
+        <DemandesEncadrement
+          v-else-if="currentPage === 'demandes'"
+          @nb-en-attente="nb => nbEnAttente = nb"
+          @toast="onToastEvent"
+        />
 
-      <EtudiantsAffectes
-        v-else-if="currentPage === 'affectes'"
-        key="affectes"
-        :etudiants="etudiantsAffectes"
-        @toast="onToastEvent"
-      />
+        <EtudiantsAffectes
+          v-else-if="currentPage === 'affectes'"
+          :etudiants="etudiantsAffectes"
+          @toast="onToastEvent"
+        />
 
-      <SuiviEncadrant
-        v-else-if="currentPage === 'suivi'"
-        key="suivi"
-        @toast="onToastEvent"
-      />
+        <SuiviEncadrant
+          v-else-if="currentPage === 'suivi'"
+          @toast="onToastEvent"
+        />
 
-      <ReunionEncadrant
-        v-else-if="currentPage === 'reunions'"
-        key="reunions"
-        @toast="onToastEvent"
-      />
+        <ReunionEncadrant
+          v-else-if="currentPage === 'reunions'"
+          @toast="onToastEvent"
+        />
 
-      <CalendrierSoutenance
-        v-else-if="currentPage === 'calendrier-soutenance'"
-        key="calendrier-soutenance"
-        :current-user="currentUser"
-        @toast="onToastEvent"
-      />
+        <CalendrierSoutenance
+          v-else-if="currentPage === 'calendrier-soutenance'"
+          :current-user="currentUser"
+          @toast="onToastEvent"
+        />
 
-      <ProposerPlan
-        v-else-if="currentPage === 'proposer-plan'"
-        key="proposer-plan"
-        :current-user="currentUser"
-        :etudiants-affectes="etudiantsAffectes"
-        @toast="onToastEvent"
-      />
+        <ProposerPlan
+          v-else-if="currentPage === 'proposer-plan'"
+          :current-user="currentUser"
+          :etudiants-affectes="etudiantsAffectes"
+          @toast="onToastEvent"
+        />
 
-      <ProjetsJury
-        v-else-if="currentPage === 'projets-a-evaluer'"
-        key="projets-a-evaluer"
-        :current-user="currentUser"
-        @toast="onToastEvent"
-      />
+        <ProjetsJury
+          v-else-if="currentPage === 'projets-a-evaluer'"
+          :current-user="currentUser"
+          @toast="onToastEvent"
+        />
 
-      <MesEvaluations
-        v-else-if="currentPage === 'mes-evaluations'"
-        key="mes-evaluations"
-        :current-user="currentUser"
-      />
+        <MesEvaluations
+          v-else-if="currentPage === 'mes-evaluations'"
+          :current-user="currentUser"
+        />
 
-      <Messagerie
-        v-else-if="currentPage === 'messagerie'"
-        key="messagerie"
-      />
+        <Messagerie
+          v-else-if="currentPage === 'messagerie'"
+        />
 
-      <ConsulterProfil
-        v-else-if="currentPage === 'profil'"
-        key="profil"
-        @modifier="navigate('profil-edit')"
-      />
+        <ConsulterProfil
+          v-else-if="currentPage === 'profil'"
+          @modifier="navigate('profil-edit')"
+        />
 
-      <ModifierProfil
-        v-else-if="currentPage === 'profil-edit'"
-        key="profil-edit"
-        @annuler="navigate('profil')"
-        @sauvegarde="navigate('profil')"
-      />
+        <ModifierProfil
+          v-else-if="currentPage === 'profil-edit'"
+          @annuler="navigate('profil')"
+          @sauvegarde="navigate('profil')"
+        />
 
+        <!-- catch-all: prevents blank view on unknown/transitioning page key -->
+        <div v-else style="min-height: 1px;" />
+
+      </div>
     </Transition>
   </AppShell>
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import api from '@/services/api.js'
 import { useToast } from '@/composables/useToast'
 import { useAuth  } from '@/composables/useAuth'
@@ -131,7 +125,6 @@ import AppShell              from './AppShell.vue'
 import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
 
 // Existing components — untouched
-import DashboardEncadrantHome from './DashboardEncadrantHome.vue'
 import DemandesEncadrement    from './GestionDemandes/DemandesEncadrement.vue'
 import SuiviEncadrant         from './Suiviencadrant.vue'
 import ReunionEncadrant       from './Reunionencadrant.vue'
@@ -168,7 +161,9 @@ export default {
 
   components: {
     AppShell, NotificationsDropdown,
-    DashboardEncadrantHome, DemandesEncadrement,
+    // Registered inline as async to break the circular module reference
+    DashboardEncadrantHome: defineAsyncComponent(() => import('./DashboardEncadrantHome.vue')),
+    DemandesEncadrement,
     SuiviEncadrant, ReunionEncadrant,
     Messagerie, ConsulterProfil, ModifierProfil,
     VoeuxEncadrant, EtudiantsAffectes,
@@ -269,7 +264,14 @@ export default {
   },
 
   methods: {
-    navigate (page) { if (page) this.currentPage = page },
+    // $nextTick guard: prevents page switch firing mid-render, which causes
+    // the blank view race with out-in transition.
+    navigate (page) {
+      if (!page) return
+      this.$nextTick(() => {
+        this.currentPage = page
+      })
+    },
 
     async chargerFormulaireActif () {
       try {
@@ -297,8 +299,6 @@ export default {
         const arr = Array.isArray(raw) ? raw : (raw?.id ? [raw] : [])
         this.etudiantsAffectes = arr.map(a => ({
           id:             a.etudiant_id,
-          // Use dedicated fields when available (avoids splitting on spaces,
-          // which breaks compound first/last names like "Jean-Marie Dupont").
           prenom:         a.prenom         ?? a.etudiant?.split(' ')[0]                ?? '',
           nom:            a.nom            ?? a.etudiant?.split(' ').slice(1).join(' ') ?? '',
           matricule:      a.matricule      ?? '',

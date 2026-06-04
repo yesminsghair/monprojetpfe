@@ -53,26 +53,51 @@
             {{ pc.etudiant_nom }}
           </div>
 
-          <!-- Note preview -->
-          <div v-if="pc.presidentEvalue" class="ce-note-preview">
-            <span class="ce-note-label">Note du président</span>
-            <span class="ce-note-val">{{ pc.noteAffichee }}<span class="ce-note-denom">/20</span></span>
+          <!-- Note preview (when evaluated) -->
+          <div v-if="pc.presidentEvalue && pc.noteAffichee != null" class="ce-note-preview">
+            <div class="ce-note-preview__left">
+              <span class="ce-note-label">Note du président</span>
+              <span class="ce-note-val">{{ pc.noteAffichee }}<span class="ce-note-denom">/20</span></span>
+            </div>
+            <!-- Visibility badge -->
+            <span class="ce-vis-badge" :class="pc.visibilite === 'encadrant_jury' ? 'ce-vis-badge--full' : 'ce-vis-badge--partial'">
+              <svg v-if="pc.visibilite === 'encadrant_jury'" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              {{ pc.visibilite === 'encadrant_jury' ? 'Grille complète' : 'Note finale' }}
+            </span>
+          </div>
+
+          <!-- Not yet evaluated notice -->
+          <div v-if="!pc.presidentEvalue" class="ce-pending-notice">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            L'évaluation du président n'a pas encore eu lieu.
+          </div>
+
+          <!-- President comment preview (encadrant_jury only, when evaluated) -->
+          <div v-if="pc.presidentEvalue && pc.visibilite === 'encadrant_jury' && pc.commentairePreview" class="ce-comment-preview">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>{{ pc.commentairePreview }}</span>
+          </div>
+
+          <!-- Submission date (when evaluated) -->
+          <div v-if="pc.presidentEvalue && pc.soumisLe" class="ce-card__date">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Soumis le {{ pc.soumisLe }}
           </div>
 
           <!-- Actions -->
           <div class="ce-card__actions">
-            <!-- Visualiser livrable final -->
-            <button class="ce-btn ce-btn--livrable" @click="ouvrirLivrable(pc)" :title="'Visualiser le livrable final de ' + pc.etudiant_nom">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Livrable final
-            </button>
-
             <!-- Consulter évaluation -->
-            <button v-if="pc.presidentEvalue" class="ce-btn ce-btn--consult" @click="consulter(pc)">
+            <button
+              class="ce-btn ce-btn--consult"
+              :class="{ 'ce-btn--disabled': !pc.presidentEvalue }"
+              :disabled="!pc.presidentEvalue"
+              :title="!pc.presidentEvalue ? 'Le président n\'a pas encore soumis son évaluation' : 'Consulter l\'évaluation du président'"
+              @click="pc.presidentEvalue && consulter(pc)"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Voir l'évaluation
+              Consulter l'évaluation
             </button>
-            <span v-else class="ce-btn-disabled">En attente du président</span>
           </div>
 
         </div>
@@ -137,6 +162,10 @@
                 <span class="ce-modal__role-chip">
                   {{ activeProjet?.monRole === 'encadrant' ? 'Encadrant' : 'Examinateur' }}
                 </span>
+                <span v-if="activeNote" class="ce-modal__vis-chip"
+                  :class="activeNote.visibilite === 'encadrant_jury' ? 'ce-modal__vis-chip--full' : 'ce-modal__vis-chip--partial'">
+                  {{ activeNote.visibilite === 'encadrant_jury' ? '👁 Grille complète' : '🔒 Note finale uniquement' }}
+                </span>
               </p>
             </div>
             <button class="ce-modal__close" @click="showModal = false">
@@ -149,39 +178,84 @@
               <div class="vld-spinner mx-auto mb-2"></div>
               <p>Chargement de l'évaluation…</p>
             </div>
+
             <template v-else-if="activeNote">
-              <div v-if="activeNote.categories && activeNote.categories.length">
-                <div v-for="cat in activeNote.categories" :key="cat.id" class="ce-grille-cat">
-                  <div class="ce-grille-cat__header">
-                    <span>{{ cat.nom }}</span>
-                    <span>{{ Number(cat.note).toFixed(2) }} / {{ cat.bareme }} pts</span>
-                  </div>
-                  <div v-for="c in cat.criteres" :key="c.id" class="ce-critere-row">
-                    <span class="ce-critere-nom">{{ c.nom }}</span>
-                    <div class="ce-critere-bar">
-                      <div class="ce-critere-bar__track">
-                        <div class="ce-critere-bar__fill"
-                          :style="{ width: (c.bareme ? c.note / c.bareme * 100 : 0) + '%' }"></div>
-                      </div>
-                    </div>
-                    <span class="ce-critere-val">{{ Number(c.note).toFixed(2) }}/{{ c.bareme }}</span>
+
+              <!-- ── jury_only mode: note finale only ── -->
+              <template v-if="activeNote.visibilite === 'jury_only'">
+                <div class="ce-jury-only-banner">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22"/></svg>
+                  <div>
+                    <strong>Visibilité restreinte</strong>
+                    <p>Le chef de département a défini une visibilité « jury uniquement ». Seule la note finale est accessible.</p>
                   </div>
                 </div>
-              </div>
-              <div v-else class="ce-no-detail">Aucun détail par critère disponible.</div>
+                <div class="ce-note-only-card">
+                  <div class="ce-note-only__circle">
+                    <span class="ce-note-only__val">{{ safeNote(activeNote.note_totale) !== null ? safeNote(activeNote.note_totale).toFixed(2) : '—' }}</span>
+                    <span class="ce-note-only__denom">/20</span>
+                  </div>
+                  <div class="ce-note-only__info">
+                    <div class="ce-note-only__mention" :class="getMentionClass(activeNote.note_totale)">
+                      {{ getMention(activeNote.note_totale) }}
+                    </div>
+                    <div class="ce-note-only__label">Note finale soumise par le président</div>
+                    <div v-if="activeNote.soumis_le" class="ce-note-only__date">Soumis le {{ activeNote.soumis_le }}</div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- ── encadrant_jury mode: full grille ── -->
+              <template v-else>
+                <!-- Grille par catégorie -->
+                <div v-if="activeNote.categories && activeNote.categories.length">
+                  <div v-for="cat in activeNote.categories" :key="cat.id" class="ce-grille-cat">
+                    <div class="ce-grille-cat__header">
+                      <span>{{ cat.nom }}</span>
+                      <span>{{ Number(cat.note).toFixed(2) }} / {{ cat.bareme }} pts</span>
+                    </div>
+                    <div v-for="c in cat.criteres" :key="c.id" class="ce-critere-row">
+                      <span class="ce-critere-nom">{{ c.nom }}</span>
+                      <div class="ce-critere-bar">
+                        <div class="ce-critere-bar__track">
+                          <div class="ce-critere-bar__fill"
+                            :style="{ width: (c.bareme ? c.note / c.bareme * 100 : 0) + '%' }"></div>
+                        </div>
+                      </div>
+                      <span class="ce-critere-val">{{ Number(c.note).toFixed(2) }}/{{ c.bareme }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="ce-no-detail">Aucun détail par critère disponible.</div>
+              </template>
+
             </template>
-            <div v-else class="ce-no-detail">Impossible de charger l'évaluation.</div>
+
+            <div v-else class="ce-no-detail">Le président n'a pas encore soumis son évaluation.</div>
           </div>
 
+          <!-- Footer with note + comment (hidden for jury_only comment, shown for encadrant_jury) -->
           <div v-if="activeNote && !loadingDetail" class="ce-modal__footer">
             <div class="ce-total-bar">
               <span class="ce-total-bar__label">Note totale du président</span>
-              <strong class="ce-total-bar__val">{{ Number(activeNote.note_totale).toFixed(2) }} / 20</strong>
+              <strong class="ce-total-bar__val">{{ safeNote(activeNote.note_totale) !== null ? safeNote(activeNote.note_totale).toFixed(2) : '—' }} / 20</strong>
             </div>
-            <div v-if="activeNote.commentaire" class="ce-comment">
+
+            <!-- Comment: shown for encadrant_jury (with or without text) -->
+            <div v-if="activeNote.visibilite === 'encadrant_jury'" class="ce-comment">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <span>{{ activeNote.commentaire }}</span>
+              <div>
+                <div class="ce-comment__label">Commentaire du président</div>
+                <span v-if="activeNote.commentaire">{{ activeNote.commentaire }}</span>
+                <span v-else style="font-style:italic;color:var(--vd-muted)">Aucun commentaire saisi.</span>
+              </div>
             </div>
+
+            <div v-if="activeNote.soumis_le" class="ce-modal__submitted">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Soumis le {{ activeNote.soumis_le }}
+            </div>
+
             <div class="ce-modal__actions">
               <button class="ce-btn ce-btn--close" @click="showModal = false">Fermer</button>
             </div>
@@ -228,36 +302,92 @@ export default {
     async charger () {
       this.loading = true
       try {
-        const userId   = this.currentUser.id
-        const jurysRes = await api.get('/jurys-pfe')
-        const jurys    = jurysRes.data || []
+        const userId = this.currentUser.id
+
+        const [jurysRes, notesRes] = await Promise.allSettled([
+          api.get('/jurys-pfe'),
+          api.get('/jurys-pfe/mes-notes'),
+        ])
+        const jurys    = jurysRes.status  === 'fulfilled' ? jurysRes.value.data  : []
+        const mesNotes = notesRes.status  === 'fulfilled' ? notesRes.value.data  : []
+
+        const soutenanceIdsWithMyNote = new Set(mesNotes.map(n => n.jury_id))
 
         this.projetsConsult = jurys
           .filter(j => {
-            // Only show jurys where:
-            //  1. The current user is a non-president member (encadrant / examinateur)
-            //  2. The soutenance is published (statut === 'publie')
-            const moi = (j.membres || []).find(m => m.enseignant_id === userId)
-            return moi && moi.fonction !== 'president' && j.statut === 'publie'
+            const isEncadrant    = j.encadrant_id    === userId
+            const isExaminateur  = j.examinateur_id  === userId
+            const isPresident    = j.president_id    === userId
+            const juryPublie     = j.publie === true || j.publie === 1
+            return (isEncadrant || isExaminateur) && !isPresident && juryPublie
           })
           .map(j => {
-            const moi = (j.membres || []).find(m => m.enseignant_id === userId)
-            const presidentEvalue = (j.nb_fiches || 0) > 0
+            const isEncadrant   = j.encadrant_id === userId
+            const monRole       = isEncadrant ? 'encadrant' : 'examinateur'
+
             return {
-              jury_id:        j.id,
-              projet_titre:   j.projet_titre || '—',
-              etudiant_id:    j.etudiant_id  || null,
-              etudiant_nom:   j.etudiant_nom  || '—',
-              president_id:   j.president_id  || null,
-              monRole:        moi?.fonction || 'examinateur',
-              presidentEvalue,
-              noteAffichee:   presidentEvalue ? '—' : null,
+              jury_id:            j.id,  // card key — also the soutenance ID
+              soutenance_id:      j.soutenance_id, // confirmed from API: separate field
+              projet_titre:       j.projet_titre  || '—',
+              etudiant_id:        j.etudiant_id   || null,
+              etudiant_nom:       j.etudiant_nom  || '—',
+              president_id:       j.president_id  || null,
+              monRole,
+              // Will be set to true by chargerCarteInfo() when the API confirms
+              // a finalised president evaluation exists. Never rely on the jury
+              // list fields (president_note_id etc.) — those don't exist on the
+              // Soutenance resource returned by /jurys-pfe.
+              presidentEvalue:    false,
+              noteAffichee:       null,
+              visibilite:         null,
+              commentairePreview: null,
+              soumisLe:           null,
             }
           })
+
+        // Call chargerCarteInfo for ALL cards — the API response itself tells us
+        // whether the president has submitted (non-null = submitted). We cannot
+        // rely on the jury list payload to know this in advance.
+        await Promise.allSettled(
+          this.projetsConsult.map(pc => this.chargerCarteInfo(pc))
+        )
       } catch (e) {
         console.error(e)
       } finally {
         this.loading = false
+      }
+    },
+
+    // Loads card-level info by calling the evaluation-recue endpoint.
+    // If the president has not yet submitted, the endpoint returns null and
+    // presidentEvalue stays false. If it returns data, we set presidentEvalue = true
+    // so the card and "Consulter" button become visible.
+    async chargerCarteInfo (pc) {
+      try {
+        const res  = await api.get(`/jurys-pfe/${pc.soutenance_id}/evaluation-recue`)
+        const data = res.data
+        // null, or object without soumis_le → president hasn't submitted yet
+        if (!data || !data.soumis_le) return
+
+        // Use index-based replacement so Vue's reactivity detects the change.
+        const idx = this.projetsConsult.findIndex(p => p.jury_id === pc.jury_id)
+        if (idx === -1) return
+
+        const commentairePreview = (data.visibilite === 'encadrant_jury' && data.commentaire)
+          ? (data.commentaire.length > 80 ? data.commentaire.slice(0, 80) + '\u2026' : data.commentaire)
+          : null
+
+        this.projetsConsult.splice(idx, 1, {
+          ...this.projetsConsult[idx],
+          presidentEvalue:    true,
+          noteAffichee:       (parseFloat(String(data.note).replace(',','.')) || 0).toFixed(2),
+          visibilite:         data.visibilite || 'jury_only',
+          soumisLe:           data.soumis_le  || null,
+          commentairePreview,
+        })
+      } catch (e) {
+        // Non-blocking — 403 means we're not in this jury or president hasn't submitted
+        console.warn('chargerCarteInfo:', e)
       }
     },
 
@@ -269,13 +399,12 @@ export default {
       this.showLivrableModal = true
       this.loadingLivrable   = true
       try {
-        const res      = await api.get(`/livrables/etudiant/${pc.etudiant_id}`)
-        const livrables = res.data || []
+        const res      = await api.get(`/livrables/soutenance/${pc.soutenance_id}`)
+        const livrables = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : [])
 
-        // Find the livrable belonging to the phase named "livrables" (case-insensitive)
         const livrable = livrables.find(l =>
           (l.phase_nom || l.phase?.nom || '').toLowerCase().includes('livrable')
-        ) || livrables[livrables.length - 1] // fallback: last submitted
+        ) || livrables[livrables.length - 1]
 
         if (!livrable) {
           this.livrableErreur = "Aucun livrable final trouvé pour cet étudiant."
@@ -299,23 +428,34 @@ export default {
 
     // ── Consulter évaluation ────────────────────────────────────────
     async consulter (pc) {
+      if (!pc.presidentEvalue) return   // guard: no published result yet
       this.activeProjet  = pc
       this.activeNote    = null
       this.showModal     = true
       this.loadingDetail = true
       try {
-        const res   = await api.get(`/jurys-pfe/${pc.jury_id}/notes`)
-        const notes = res.data || []
-        const presNote = notes.find(n => n.enseignant_id === pc.president_id)
-                      || notes.find(n => n.fonction === 'president')
-                      || notes[0]
-        if (presNote) {
+        // Use the dedicated evaluation-recue endpoint which respects visibility rules
+        const res  = await api.get(`/jurys-pfe/${pc.soutenance_id}/evaluation-recue`)
+        const data = res.data
+
+        if (data && data.soumis_le) {
           this.activeNote = {
-            note_totale: presNote.note,
-            commentaire: presNote.commentaire || '',
-            categories:  presNote.categories || [],
+            visibilite:  data.visibilite  || 'jury_only',
+            note_totale: data.note,
+            commentaire: data.commentaire || null,
+            soumis_le:   data.soumis_le   || null,
+            // categories only present for encadrant_jury
+            categories:  data.categories  || [],
           }
-          pc.noteAffichee = Number(presNote.note).toFixed(2)
+          // Update card with fresh data
+          pc.noteAffichee = (parseFloat(String(data.note).replace(',','.')) || 0).toFixed(2)
+          pc.visibilite   = data.visibilite || 'jury_only'
+          pc.soumisLe     = data.soumis_le  || null
+          if (data.visibilite === 'encadrant_jury' && data.commentaire) {
+            pc.commentairePreview = data.commentaire.length > 80
+              ? data.commentaire.slice(0, 80) + '…'
+              : data.commentaire
+          }
         }
       } catch (e) {
         console.error(e)
@@ -323,6 +463,32 @@ export default {
       } finally {
         this.loadingDetail = false
       }
+    },
+
+    // Safely parse a note value from the API (may be string, null, or numeric)
+    safeNote (val) {
+      const n = parseFloat(String(val).replace(',', '.'))
+      return isNaN(n) ? null : n
+    },
+
+    getMention (note) {
+      const n = this.safeNote(note)
+      if (n === null) return '—'
+      if (n >= 16) return 'Très bien'
+      if (n >= 14) return 'Bien'
+      if (n >= 12) return 'Assez bien'
+      if (n >= 10) return 'Passable'
+      return 'Insuffisant'
+    },
+
+    getMentionClass (note) {
+      const n = this.safeNote(note)
+      if (n === null) return ''
+      if (n >= 16) return 'ce-mention--tresb'
+      if (n >= 14) return 'ce-mention--bien'
+      if (n >= 12) return 'ce-mention--assezb'
+      if (n >= 10) return 'ce-mention--passable'
+      return 'ce-mention--insuf'
     },
   },
 }
@@ -344,6 +510,7 @@ export default {
   --vd-gold-tint: #fef9ed;
   --vd-surface:   var(--vld-surface, #fff);
   --vd-red:       #ef4444;
+  --vd-green:     #059669;
 }
 
 /* ── Page header ────────────────────────────────────────────────── */
@@ -401,6 +568,8 @@ export default {
 .ce-card:hover .ce-card__meta svg { stroke: rgba(255,255,255,0.7); }
 .ce-card:hover .ce-note-label { color: rgba(255,255,255,0.7); }
 .ce-card:hover .ce-note-val   { color: var(--vd-gold); }
+.ce-card:hover .ce-card__date { color: rgba(255,255,255,0.55); }
+.ce-card:hover .ce-card__date svg { stroke: rgba(255,255,255,0.5); }
 
 .ce-card__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
@@ -427,17 +596,46 @@ export default {
 }
 .ce-card__meta svg { stroke: var(--vd-muted); transition: stroke 0.3s; }
 
+.ce-card__date {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--vd-muted); margin-bottom: 10px; transition: color 0.3s;
+}
+
 /* Note preview */
 .ce-note-preview {
   display: flex; align-items: center; justify-content: space-between;
   background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3);
-  border-radius: 10px; padding: 8px 12px; margin-bottom: 14px;
+  border-radius: 10px; padding: 8px 12px; margin-bottom: 10px;
   transition: background 0.3s, border-color 0.3s;
 }
 .ce-card:hover .ce-note-preview { background: rgba(245,166,35,0.15); border-color: rgba(245,166,35,0.4); }
+.ce-note-preview__left { display: flex; flex-direction: column; gap: 2px; }
 .ce-note-label { font-size: 11.5px; font-weight: 600; color: var(--vd-muted); transition: color 0.3s; }
 .ce-note-val   { font-size: 18px; font-weight: 800; color: var(--vd-blue); transition: color 0.3s; }
 .ce-note-denom { font-size: 12px; font-weight: 600; opacity: 0.7; }
+
+/* Visibility badge on card */
+.ce-vis-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+  white-space: nowrap;
+}
+.ce-vis-badge--full    { background: rgba(5,150,105,0.12); color: #065f46; border: 1px solid rgba(5,150,105,0.25); }
+.ce-vis-badge--partial { background: rgba(245,166,35,0.12); color: #92400e; border: 1px solid rgba(245,166,35,0.3); }
+.ce-card:hover .ce-vis-badge--full    { background: rgba(5,150,105,0.2); }
+.ce-card:hover .ce-vis-badge--partial { background: rgba(245,166,35,0.2); }
+
+/* Comment preview on card */
+.ce-comment-preview {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11.5px; color: var(--vd-muted); font-style: italic;
+  margin-bottom: 10px; line-height: 1.45; transition: color 0.3s;
+  background: rgba(61,96,128,0.06); border-radius: 8px; padding: 7px 10px;
+  border: 1px solid rgba(61,96,128,0.12);
+}
+.ce-comment-preview svg { flex-shrink: 0; margin-top: 2px; stroke: var(--vd-muted); transition: stroke 0.3s; }
+.ce-card:hover .ce-comment-preview { color: rgba(255,255,255,0.65); background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+.ce-card:hover .ce-comment-preview svg { stroke: rgba(255,255,255,0.5); }
 
 /* Actions */
 .ce-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -486,12 +684,21 @@ export default {
   box-shadow: 0 5px 16px rgba(245,166,35,0.35); transform: translateY(-1px);
 }
 
-.ce-btn-disabled {
-  font-size: 12px; color: var(--vd-muted); font-style: italic;
-  display: flex; align-items: center; width: 100%; justify-content: center;
-  padding: 7px 0; transition: color 0.3s;
+.ce-btn--disabled,
+.ce-btn--disabled:hover {
+  opacity: 0.42; cursor: not-allowed; pointer-events: none;
+  transform: none !important; box-shadow: none !important;
 }
-.ce-card:hover .ce-btn-disabled { color: rgba(255,255,255,0.5); }
+
+/* Pending notice on card */
+.ce-pending-notice {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--vd-muted); font-style: italic;
+  padding: 7px 10px; border-radius: 8px;
+  background: rgba(0,0,0,0.04); border: 1px dashed var(--vd-border);
+  margin-top: 2px;
+}
+.ce-pending-notice svg { flex-shrink: 0; stroke: var(--vd-muted); }
 
 /* ── Modal overlay ──────────────────────────────────────────────── */
 .ce-overlay {
@@ -523,6 +730,11 @@ export default {
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
   background: rgba(245,166,35,.25); color: var(--vd-gold); border: 1px solid rgba(245,166,35,.4);
 }
+.ce-modal__vis-chip {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+}
+.ce-modal__vis-chip--full    { background: rgba(5,150,105,.25); color: #6ee7b7; border: 1px solid rgba(5,150,105,.4); }
+.ce-modal__vis-chip--partial { background: rgba(239,68,68,.2); color: #fca5a5; border: 1px solid rgba(239,68,68,.35); }
 .ce-modal__close {
   background: rgba(255,255,255,.12); border: none; border-radius: 9px;
   width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
@@ -535,6 +747,10 @@ export default {
 .ce-modal__loading { padding: 40px; text-align: center; color: var(--vd-muted); }
 .ce-modal__footer  { padding: 18px 26px; border-top: 1.5px solid var(--vd-border); }
 .ce-modal__actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+.ce-modal__submitted {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--vd-muted); margin-top: 10px;
+}
 
 /* ── PDF viewer ─────────────────────────────────────────────────── */
 .ce-pdf-frame {
@@ -570,6 +786,42 @@ export default {
 
 .ce-no-detail { font-size: 13px; color: var(--vd-muted); padding: 16px; background: var(--vd-card); border-radius: 10px; text-align: center; }
 
+/* ── jury_only mode ─────────────────────────────────────────────── */
+.ce-jury-only-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;
+  color: var(--vd-text);
+}
+.ce-jury-only-banner svg { flex-shrink: 0; margin-top: 2px; stroke: var(--vd-red); }
+.ce-jury-only-banner strong { font-size: 13px; font-weight: 700; color: var(--vd-red); display: block; margin-bottom: 3px; }
+.ce-jury-only-banner p { font-size: 12.5px; color: var(--vd-muted); margin: 0; line-height: 1.5; }
+
+.ce-note-only-card {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--vd-gold-tint); border: 1.5px solid rgba(245,166,35,0.35);
+  border-radius: 16px; padding: 20px 24px;
+}
+.ce-note-only__circle {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--vd-gold), var(--vd-gold-dark));
+  display: flex; align-items: center; justify-content: center; gap: 1px;
+  flex-shrink: 0; box-shadow: 0 6px 20px rgba(245,166,35,0.35);
+}
+.ce-note-only__val   { font-size: 24px; font-weight: 900; color: #fff; line-height: 1; }
+.ce-note-only__denom { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.75); line-height: 1; align-self: flex-end; padding-bottom: 2px; }
+.ce-note-only__info  { display: flex; flex-direction: column; gap: 4px; }
+.ce-note-only__mention { font-size: 15px; font-weight: 800; }
+.ce-note-only__label  { font-size: 12px; color: var(--vd-muted); }
+.ce-note-only__date   { font-size: 11px; color: var(--vd-muted); margin-top: 2px; }
+
+/* Mention colors */
+.ce-mention--tresb   { color: var(--vd-green); }
+.ce-mention--bien    { color: #0891b2; }
+.ce-mention--assezb  { color: var(--vd-blue); }
+.ce-mention--passable{ color: var(--vd-gold-dark); }
+.ce-mention--insuf   { color: var(--vd-red); }
+
 /* ── Total & comment ────────────────────────────────────────────── */
 .ce-total-bar {
   display: flex; justify-content: space-between; align-items: center;
@@ -581,11 +833,12 @@ export default {
 
 .ce-comment {
   display: flex; align-items: flex-start; gap: 9px;
-  padding: 11px 14px; border-radius: 10px; margin-bottom: 16px;
+  padding: 11px 14px; border-radius: 10px; margin-bottom: 12px;
   background: var(--vd-blue-tint); font-size: 13px; color: var(--vd-text);
   border: 1px solid rgba(61,96,128,.2);
 }
 .ce-comment svg { flex-shrink: 0; margin-top: 2px; color: var(--vd-blue); }
+.ce-comment__label { font-size: 10.5px; font-weight: 700; color: var(--vd-blue); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
 
 /* ── Transition ─────────────────────────────────────────────────── */
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity .22s, transform .22s; }

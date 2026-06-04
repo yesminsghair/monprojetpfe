@@ -217,21 +217,21 @@
 </template>
 
 <script>
-import api from '@/services/api.js'
-import { useToast } from '@/composables/useToast'
-
+import api from '@/services/api.js' // instance axios configuré 
+import { useToast } from '@/composables/useToast'//composable pour gérer les notif
+//liste des roles qui peuvent avoir un dommaine expertise
 const ROLES_EXPERTISE = ['encadrant', 'enseignant', 'chef', 'jury', 'directeur']
 
 export default {
   name: 'ModifierProfil',
   emits: ['annuler', 'sauvegarde'],
 
-  props: {
+  props: {//recu les données de l'utilisateur depuis le composant parent 
     user: { type: Object, default: () => ({}) },
   },
 
-  setup () {
-    const { toast, showToast } = useToast()
+  setup () { 
+    const { toast, showToast } = useToast() //hook qui retourne les fonct de toast 
     return { toast, showToast }
   },
 
@@ -241,7 +241,7 @@ export default {
     const src    = (this.user && Object.keys(this.user).length) ? this.user : stored
 
     return {
-      saving:   false,
+      saving:   false,//pour afficher le spinner
       userRole: src.role || stored.role || '',
       showPw:   { current: false, new: false, confirm: false },
       errors:   {},
@@ -261,14 +261,14 @@ export default {
   },
 
   computed: {
-    showDomaineField () {
+    showDomaineField () { //domaine affiché que lorsque l'utili possede le role 
       return ROLES_EXPERTISE.includes(this.userRole)
     },
   },
 
   methods: {
     valider () {
-      this.errors = {}
+      this.errors = {}//on vide l'objet errors des messages precedentes
       if (!this.form.prenom.trim()) this.errors.prenom = 'Le prénom est requis.'
       if (!this.form.nom.trim())    this.errors.nom    = 'Le nom est requis.'
       if (!this.form.email.trim())  this.errors.email  = "L'email est requis."
@@ -299,11 +299,12 @@ export default {
     },
 
     async sauvegarder () {
-      if (!this.valider()) return
-      this.saving = true
-      const stored = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!this.valider()) return //si la valid des données est echoué elle s'arrete 
+      this.saving = true//sinon on active le soinner 
+      const stored = JSON.parse(localStorage.getItem('user') || '{}')//recupere don user 
       try {
-        const res = await api.put(`/utilisateurs/${stored.id}`, {
+        const res = await api.put(`/utilisateurs/${stored.id}`, {//envoi une req avec l'id de l'utilisateur 
+        //req put remplace loa ressource 
           nom:               this.form.nom.trim(),
           prenom:            this.form.prenom.trim(),
           email:             this.form.email.trim(),
@@ -312,21 +313,21 @@ export default {
           etablissement:     this.form.etablissement.trim(),
           domaine_expertise: this.form.domaine_expertise.trim(),
         })
-
+//si l'utilisateur a saisie un nv mot de passe une req post pour changer 
         if (this.form.nouveauMotDePasse) {
           await api.post('/change-password', {
             current_password: this.form.motDePasseActuel,
             password:         this.form.nouveauMotDePasse,
           })
         }
-
+//une fois les 2 req reussie on fusionne les nv données
         const updated = { ...stored, ...res.data }
-        localStorage.setItem('user', JSON.stringify(updated))
-        this.showToast('Profil mis à jour avec succès !', 'ok')
-        this.$emit('sauvegarde', updated)
-        setTimeout(() => this.$emit('annuler'), 1600)
+        localStorage.setItem('user', JSON.stringify(updated))//mis à jour le loclst
+        this.showToast('Profil mis à jour avec succès !', 'ok')//affichage du toast de succé
+        this.$emit('sauvegarde', updated)//et envois l'evenement vers composant parent 
+        setTimeout(() => this.$emit('annuler'), 1600) // emet l'annulation pour fermet le form apres 1.6 sec
 
-      } catch (e) {
+      } catch (e) {//rec des message d'erreur 
         const msg  = e.response?.data?.message || ''
         const errs = e.response?.data?.errors   || {}
         if (errs.email)    this.errors.email    = errs.email[0]

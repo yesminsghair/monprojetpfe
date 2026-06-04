@@ -14,207 +14,189 @@
       <NotificationsDropdown />
     </template>
 
+    <!-- FIX: wrap all pages in a single keyed div so <Transition mode="out-in">
+         always has exactly one stable root child, preventing the blank-page race. -->
     <Transition name="page" mode="out-in">
+      <div :key="currentPage" class="vld-page-wrapper">
 
-      <!-- ACCUEIL — KPIs + raccourcis (sans graphiques) -->
-      <DashboardChefHome
-        v-if="currentPage === 'home'"
-        key="home"
-        page-mode="home"
-        :current-user="currentUser"
-        @navigate="navigate"
-      />
+        <!-- ACCUEIL — KPIs + raccourcis (sans graphiques) -->
+        <DashboardChefHome
+          v-if="currentPage === 'home'"
+          page-mode="home"
+          :current-user="currentUser"
+          @navigate="navigate"
+        />
 
-      <!-- TABLEAU DE BORD — graphiques & analyses complètes -->
-      <DashboardChefHome
-        v-else-if="currentPage === 'tableau-de-bord'"
-        key="tableau-de-bord"
-        page-mode="dashboard"
-        :current-user="currentUser"
-        @navigate="navigate"
-      />
+        <!-- TABLEAU DE BORD — graphiques & analyses complètes -->
+        <DashboardChefHome
+          v-else-if="currentPage === 'tableau-de-bord'"
+          page-mode="dashboard"
+          :current-user="currentUser"
+          @navigate="navigate"
+        />
 
-      <!-- ══════════════ CHEF PAGES ══════════════ -->
+        <!-- ══════════════ CHEF PAGES ══════════════ -->
 
-      <CreerFormulaire
-        v-else-if="currentPage === 'voeux-creer'"
-        key="voeux-creer"
-        :enseignants="enseignants"
-        :formulaire-a-modifier="formulaireAModifier"
-        @form-cree="onFormulaireCree"
-        @navigate="navigate"
-      />
+        <CreerFormulaire
+          v-else-if="currentPage === 'voeux-creer'"
+          :enseignants="enseignants"
+          :formulaire-a-modifier="formulaireAModifier"
+          @form-cree="onFormulaireCree"
+          @navigate="navigate"
+        />
 
-      <ListeFormulaires
-        v-else-if="currentPage === 'voeux-liste'"
-        key="voeux-liste"
-        @modifier="onModifierFormulaire"
-        @navigate="navigate"
-      />
+        <ListeFormulaires
+          v-else-if="currentPage === 'voeux-liste'"
+          @modifier="onModifierFormulaire"
+          @navigate="navigate"
+        />
 
-      <GestionAffectations
-        v-else-if="currentPage === 'affectation'"
-        key="affectation"
-        @toast="onToastEvent"
-      />
+        <GestionAffectations
+          v-else-if="currentPage === 'affectation'"
+          @toast="onToastEvent"
+        />
 
-      <!-- Mon département -->
-      <MonDepartement
-        v-else-if="currentPage === 'mon-departement'"
-        key="mon-departement"
-        :etudiants="etudiants"
-        :enseignants="enseignants"
-        :encadrants="encadrants"
-        :loading-etudiants="loadingEtudiants"
-        :loading-encadrants="loadingEncadrants"
-      />
+        <!-- Mon département -->
+        <MonDepartement
+          v-else-if="currentPage === 'mon-departement'"
+          :etudiants="etudiants"
+          :enseignants="enseignants"
+          :encadrants="encadrants"
+          :loading-etudiants="loadingEtudiants"
+          :loading-encadrants="loadingEncadrants"
+        />
 
-      <GestionPhases
-        v-else-if="currentPage === 'phases'"
-        key="phases"
-        @toast="onToastEvent"
-      />
+        <GestionPhases
+          v-else-if="currentPage === 'phases'"
+          @toast="onToastEvent"
+        />
 
-      <GestionGrille
-        v-else-if="currentPage === 'grille'"
-        key="grille"
-        @toast="onToastEvent"
-      />
+        <GestionGrille
+          v-else-if="currentPage === 'grille'"
+          @toast="onToastEvent"
+        />
 
-      <GestionJury
-        v-else-if="currentPage === 'jury'"
-        key="jury"
-        @toast="onToastEvent"
-      />
+        <GestionJury
+          v-else-if="currentPage === 'jury'"
+          @toast="onToastEvent"
+        />
 
-      <GestionSoutenance
-        v-else-if="currentPage === 'soutenance'"
-        key="soutenance"
-        @toast="onToastEvent"
-      />
+        <GestionSoutenance
+          v-else-if="currentPage === 'soutenance'"
+          @toast="onToastEvent"
+        />
 
-      <FichesEvaluation
-        v-else-if="currentPage === 'fiches-evaluation'"
-        key="fiches-evaluation"
-        @toast="onToastEvent"
-      />
+        <FichesEvaluation
+          v-else-if="currentPage === 'fiches-evaluation'"
+          @toast="onToastEvent"
+        />
 
-      <!-- ✅ Replaced DeliberationResultats with ConsulterResultatFinal -->
-      <ConsulterResultatFinal
-        v-else-if="currentPage === 'deliberation-resultats'"
-        key="deliberation-resultats"
-        @toast="onToastEvent"
-      />
+        <ConsulterResultatFinal
+          v-else-if="currentPage === 'deliberation-resultats'"
+          @toast="onToastEvent"
+        />
 
-      <!-- ── Archivage ── -->
-      <ArchivesPfe
-        v-else-if="currentPage === 'archivage-archives'"
-        key="archivage-archives"
-        role="chef"
-        @toast="onToastEvent"
-      />
+        <!-- ── Archivage ── -->
+        <ArchivesPfe
+          v-else-if="currentPage === 'archivage-archives'"
+          role="chef"
+          @toast="onToastEvent"
+        />
 
-      <BiblioPfe
-        v-else-if="currentPage === 'archivage-bibliotheque'"
-        key="archivage-bibliotheque"
-        @toast="onToastEvent"
-      />
+        <BiblioPfe
+          v-else-if="currentPage === 'archivage-bibliotheque'"
+          @toast="onToastEvent"
+        />
 
-      <!-- ══════════════ ENCADRANT PAGES ══════════════ -->
+        <!-- ══════════════ ENCADRANT PAGES ══════════════ -->
 
-      <VoeuxEncadrant
-        v-else-if="currentPage === 'enc-voeux'"
-        key="enc-voeux"
-        :formulaire-actif="formulaireActif"
-        :voeux-soumis="voeuxSoumis"
-        :voeux-data="voeuxData"
-        :date-soumission="dateSoumission"
-        @voeux-soumis="onVoeuxSoumis"
-        @toast="onToastEvent"
-      />
+        <VoeuxEncadrant
+          v-else-if="currentPage === 'enc-voeux'"
+          :formulaire-actif="formulaireActif"
+          :voeux-soumis="voeuxSoumis"
+          :voeux-data="voeuxData"
+          :date-soumission="dateSoumission"
+          @voeux-soumis="onVoeuxSoumis"
+          @toast="onToastEvent"
+        />
 
-      <DemandesEncadrement
-        v-else-if="currentPage === 'enc-demandes'"
-        key="enc-demandes"
-        @nb-en-attente="nb => nbEnAttente = nb"
-        @toast="onToastEvent"
-      />
+        <DemandesEncadrement
+          v-else-if="currentPage === 'enc-demandes'"
+          @nb-en-attente="nb => nbEnAttente = nb"
+          @toast="onToastEvent"
+        />
 
-      <EtudiantsAffectes
-        v-else-if="currentPage === 'enc-affectes'"
-        key="enc-affectes"
-        :etudiants="etudiantsAffectes"
-        @toast="onToastEvent"
-      />
+        <EtudiantsAffectes
+          v-else-if="currentPage === 'enc-affectes'"
+          :etudiants="etudiantsAffectes"
+          @toast="onToastEvent"
+        />
 
-      <SuiviEncadrant
-        v-else-if="currentPage === 'enc-suivi'"
-        key="enc-suivi"
-        @toast="onToastEvent"
-      />
+        <SuiviEncadrant
+          v-else-if="currentPage === 'enc-suivi'"
+          @toast="onToastEvent"
+        />
 
-      <ReunionEncadrant
-        v-else-if="currentPage === 'enc-reunions'"
-        key="enc-reunions"
-        @toast="onToastEvent"
-      />
+        <ReunionEncadrant
+          v-else-if="currentPage === 'enc-reunions'"
+          @toast="onToastEvent"
+        />
 
-      <CalendrierSoutenance
-        v-else-if="currentPage === 'enc-calendrier'"
-        key="enc-calendrier"
-        :current-user="currentUser"
-        @toast="onToastEvent"
-      />
+        <CalendrierSoutenance
+          v-else-if="currentPage === 'enc-calendrier'"
+          :current-user="currentUser"
+          @toast="onToastEvent"
+        />
 
-      <ProposerPlan
-        v-else-if="currentPage === 'enc-proposer-plan'"
-        key="enc-proposer-plan"
-        :current-user="currentUser"
-        :etudiants-affectes="etudiantsAffectes"
-        @toast="onToastEvent"
-      />
+        <ProposerPlan
+          v-else-if="currentPage === 'enc-proposer-plan'"
+          :current-user="currentUser"
+          :etudiants-affectes="etudiantsAffectes"
+          @toast="onToastEvent"
+        />
 
-      <!-- ══════════════ JURY PAGES ══════════════ -->
+        <!-- ══════════════ JURY PAGES ══════════════ -->
 
-      <ProjetsJury
-        v-else-if="currentPage === 'jury-projets'"
-        key="jury-projets"
-        :current-user="currentUser"
-        @toast="onToastEvent"
-      />
+        <ProjetsJury
+          v-else-if="currentPage === 'jury-projets'"
+          :current-user="currentUser"
+          @toast="onToastEvent"
+        />
 
-      <MesEvaluations
-        v-else-if="currentPage === 'jury-notes'"
-        key="jury-notes"
-        :current-user="currentUser"
-        @toast="onToastEvent"
-      />
+        <MesEvaluations
+          v-else-if="currentPage === 'jury-notes'"
+          :current-user="currentUser"
+          @toast="onToastEvent"
+        />
 
-      <!-- ══════════════ SHARED ══════════════ -->
+        <!-- ══════════════ SHARED ══════════════ -->
 
-      <Messagerie
-        v-else-if="currentPage === 'messagerie'"
-        key="messagerie"
-      />
+        <Messagerie
+          v-else-if="currentPage === 'messagerie'"
+        />
 
-      <ConsulterProfil
-        v-else-if="currentPage === 'profil'"
-        key="profil"
-        @modifier="navigate('profil-edit')"
-      />
+        <ConsulterProfil
+          v-else-if="currentPage === 'profil'"
+          @modifier="navigate('profil-edit')"
+        />
 
-      <ModifierProfil
-        v-else-if="currentPage === 'profil-edit'"
-        key="profil-edit"
-        @annuler="navigate('profil')"
-        @sauvegarde="navigate('profil')"
-      />
+        <ModifierProfil
+          v-else-if="currentPage === 'profil-edit'"
+          @annuler="navigate('profil')"
+          @sauvegarde="navigate('profil')"
+        />
 
+        <!-- FIX: catch-all fallback — prevents blank view when currentPage
+             doesn't match any known key (e.g. during async re-renders) -->
+        <div v-else style="min-height: 1px;" />
+
+      </div>
     </Transition>
   </AppShell>
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue'
 import api from '@/services/api.js'
 import { useToast } from '@/composables/useToast'
 import { useAuth  } from '@/composables/useAuth'
@@ -222,9 +204,6 @@ import { useAuth  } from '@/composables/useAuth'
 // Shell
 import AppShell              from './AppShell.vue'
 import NotificationsDropdown from './GestionArchivageCommunication/Notifications.vue'
-
-// Chef pages
-import DashboardChefHome    from './DashboardChefHome.vue'
 import CreerFormulaire      from './GestionFormulaires/CreerFormulaire.vue'
 import ListeFormulaires     from './GestionFormulaires/ListeFormulaires.vue'
 import GestionAffectations  from './GestionAffectations/GestionAffectations.vue'
@@ -293,10 +272,11 @@ export default {
 
   components: {
     AppShell, NotificationsDropdown,
-    DashboardChefHome, CreerFormulaire, ListeFormulaires,
+    // Registered inline as async to break the circular module reference with DashboardChef.vue
+    DashboardChefHome: defineAsyncComponent(() => import('./DashboardChefHome.vue')),
+    CreerFormulaire, ListeFormulaires,
     GestionAffectations, GestionPhases, GestionGrille,
     GestionJury, GestionSoutenance, FichesEvaluation,
-    // ✅ Registered under new name
     ConsulterResultatFinal, ArchivesPfe, BiblioPfe,
     DemandesEncadrement, SuiviEncadrant, ReunionEncadrant,
     MonDepartement, VoeuxEncadrant, EtudiantsAffectes,
@@ -368,7 +348,7 @@ export default {
           type: 'group', key: 'voeux', label: "Vœux d'encadrement",
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
           children: [
-            { page: 'voeux-creer', label: 'Créer un formulaire' },
+            { page: 'voeux-creer', label: 'Nouveau formulaire' },
             { page: 'voeux-liste', label: 'Suivi & réponses'    },
           ],
         },
@@ -376,7 +356,7 @@ export default {
           type: 'group', key: 'aff', label: 'Affectation',
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
           children: [
-            { page: 'affectation', label: 'Gérer les affectations' },
+            { page: 'affectation', label: 'Affectations' },
           ],
         },
         {
@@ -392,7 +372,7 @@ export default {
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
           children: [
             { page: 'jury',       label: 'Composition des jurys'     },
-            { page: 'soutenance', label: 'Planifier les soutenances' },
+            { page: 'soutenance', label: 'Planning des soutenances' },
           ],
         },
         {
@@ -418,13 +398,13 @@ export default {
         },
         {
           page: 'enc-voeux',
-          label: this.voeuxSoumis ? 'Ma fiche' : 'Remplir le formulaire',
+          label: this.voeuxSoumis ? 'Ma fiche' : 'Formulaire de vœux',
           badge: !this.voeuxSoumis && this.formulaireActif ? '!' : null,
           badgeCheck: this.voeuxSoumis,
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
         },
         {
-          page: 'enc-demandes', label: 'Gérer les demandes',
+          page: 'enc-demandes', label: 'Demandes',
           badge: this.nbEnAttente > 0 ? this.nbEnAttente : null,
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
         },
@@ -445,7 +425,7 @@ export default {
           icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
           children: [
             { page: 'enc-calendrier',    label: 'Calendrier'       },
-            { page: 'enc-proposer-plan', label: 'Proposer un plan' },
+            { page: 'enc-proposer-plan', label: 'Proposition de plan' },
           ],
         },
         // ── Jury section ──────────────────────────────────────
@@ -482,13 +462,16 @@ export default {
   },
 
   methods: {
+    // FIX: use $nextTick so Vue finishes the current render cycle before
+    // switching pages — prevents the blank-view race with out-in transition.
     navigate (page, payload) {
       if (!page) return
       if (page === 'voeux-creer') {
-        // payload is the formulaire to edit, or null/undefined for a new one
         this.formulaireAModifier = payload || null
       }
-      this.currentPage = page
+      this.$nextTick(() => {
+        this.currentPage = page
+      })
     },
 
     // ── Chef ──────────────────────────────────────────────────
@@ -546,8 +529,6 @@ export default {
         const res = await api.get('/formulaires-voeux')
         const liste = res.data || []
 
-        // Sort descending by created_at so we always pick the most recent
-        // active formulaire, not just whichever happens to be first in the array.
         const actifs = liste
           .filter(f => f.statut === 'publie' || f.statut === 'verrouille')
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -575,16 +556,16 @@ export default {
         const raw = affRes.data
         const arr = Array.isArray(raw) ? raw : (raw?.id ? [raw] : [])
         this.etudiantsAffectes = arr.map(a => ({
-  id:             a.etudiant_id,
-  prenom:         a.etudiant?.split(' ')[0]                ?? '',
-  nom:            a.etudiant?.split(' ').slice(1).join(' ') ?? '',
-  matricule:      a.matricule      ?? '',
-  specialite:     a.specialite     ?? '',
-  email:          a.email          ?? '',   
-  telephone:      a.telephone      ?? '',   
-  date_naissance: a.date_naissance ?? '',   
-  adresse:        a.adresse        ?? '',   
-}))
+          id:             a.etudiant_id,
+          prenom:         a.etudiant?.split(' ')[0]                ?? '',
+          nom:            a.etudiant?.split(' ').slice(1).join(' ') ?? '',
+          matricule:      a.matricule      ?? '',
+          specialite:     a.specialite     ?? '',
+          email:          a.email          ?? '',
+          telephone:      a.telephone      ?? '',
+          date_naissance: a.date_naissance ?? '',
+          adresse:        a.adresse        ?? '',
+        }))
         this.nbEnAttente = (demRes.data || []).filter(d => d.statut === 'en_attente').length
       } catch (e) { console.error('données encadrant:', e) }
     },

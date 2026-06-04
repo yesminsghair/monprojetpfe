@@ -192,7 +192,7 @@ export default {
       specialiteChoisie: '',
       errSpec:           '',
       saving:            false,
-      confirmStep:       false,   // true when we show the replace-confirmation step
+      confirmStep:       false,   
     }
   },
 
@@ -204,46 +204,47 @@ export default {
     avatarColor() {
       return COLORS[(this.chef?.id || 0) % COLORS.length]
     },
+    //detection si la specialité a déjà un chef 
     conflitChef() {
       if (!this.specialiteChoisie) return null
       return this.chefs.find(
         c => c.specialiteId === this.specialiteChoisie && c.id !== this.chef?.id
       ) || null
     },
-    specialiteSelectionnee() {
+    specialiteSelectionnee() {//retourne lobjet du specialité choisi 
       return this.specialites.find(s => s.id === this.specialiteChoisie) || null
     },
   },
 
-  watch: {
+  watch: {//surveillance : le chef change on reinitialise le formulaire , specialité change on retourne à la ére etape
     chef() { this.specialiteChoisie = ''; this.errSpec = ''; this.confirmStep = false },
     specialiteChoisie() { this.errSpec = ''; this.confirmStep = false },
   },
 
-  methods: {
+  methods: {//validation de selection
     passer() {
-      this.errSpec = ''
+      this.errSpec = ''//vide les err perece
       if (!this.specialiteChoisie) {
         this.errSpec = 'Veuillez choisir une spécialité.'
         return
       }
-      // If there's a conflict, go to confirmation step (per spec 5.a)
+      // s'ilya un conflit on retourne à l'etape de confirm
       if (this.conflitChef) {
         this.confirmStep = true
         return
       }
-      // No conflict → affecter directly
+      //sinon on affecte
       this.confirmer()
     },
 
     async confirmer() {
-      this.saving = true
-      try {
+      this.saving = true//spinner 
+      try {//requete post avec id chef et id sepec
         const r = await api.post(`/chefs/${this.chef.id}/affecter`, {
           specialiteId: this.specialiteChoisie,
         })
-        this.$emit('affecte', r.data)
-        this.$emit('fermer')
+        this.$emit('affecte', r.data)//emet even au parent
+        this.$emit('fermer')//et on ferme le modal
       } catch (e) {
         this.errSpec = e.response?.data?.message || "Erreur lors de l'affectation."
         this.confirmStep = false

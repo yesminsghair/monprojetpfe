@@ -67,8 +67,11 @@
     <!-- Empty -->
     <div v-else class="mr-empty">
       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <p class="mr-empty__title">Résultats non encore publiés</p>
-      <p class="mr-empty__sub">Vous serez notifié(e) dès que le chef de département publie les résultats.</p>
+      <p class="mr-empty__title">Résultats non encore disponibles</p>
+      <p class="mr-empty__sub">
+        La délibération est en cours ou n'a pas encore eu lieu.
+        Vous serez notifié(e) dès que le chef de département publie vos résultats.
+      </p>
     </div>
 
   </div>
@@ -82,17 +85,22 @@ export default {
   props: {
     currentUser: { type: Object, required: true },
   },
-  data() { return { resultat: null, loading: false } },
+  data() { return { resultat: null, loading: false, notFound: false } },
   async mounted() { await this.charger() },
   methods: {
     async charger() {
       this.loading = true
       try {
-        const res  = await api.get('/resultats-pfe')
-        const list = Array.isArray(res.data) ? res.data : []
-        this.resultat = list.find(r => r.etudiant_id === this.currentUser?.id) || null
-      } catch (e) { this.resultat = null }
-      finally { this.loading = false }
+        const res = await api.get('/deliberation-pfe/mon-resultat')
+        // Only show if we got a real result with a note
+        this.resultat = (res.data && res.data.note_finale != null) ? res.data : null
+      } catch (e) {
+        // 404 = not published yet, any other error = same fallback
+        this.resultat = null
+        this.notFound = e.response?.status === 404
+      } finally {
+        this.loading = false
+      }
     },
     mention(n) {
       if (n >= 16) return 'Très bien'

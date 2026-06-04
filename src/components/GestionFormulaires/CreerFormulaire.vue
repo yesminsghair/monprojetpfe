@@ -330,7 +330,7 @@
 
 <script>
 import api from '@/services/api.js'
-import { schedulePendingToast } from '@/composables/useToast.js'
+import { schedulePendingToast } from '@/composables/useToast.js'//fonct pour aff le toast dans la page suivant
 export default {
   name: 'CreerFormulaire',
   props: { formulaireAModifier: { type: Object, default: null } },
@@ -351,13 +351,15 @@ export default {
     }
   },
   computed: {
-    today() { return new Date().toISOString().split('T')[0] },
+    today() { return new Date().toISOString().split('T')[0] },//retourne la date d'aujourdhui utiliser pour eviter de choisir une date passé
     enseignantsFiltres() {
+      //recherche
       if (!this.searchEns) return this.enseignants
       const q = this.searchEns.toLowerCase()
       return this.enseignants.filter(e => `${e.prenom} ${e.nom} ${e.email}`.toLowerCase().includes(q))
     },
   },
+  //hook de cycle de vie 
   async created() {
     await this.loadEnseignants()
     this.populateForm(this.formulaireAModifier)

@@ -662,14 +662,13 @@ body {
   margin-bottom:  14px;
   display:        flex;
   align-items:    center;
-  gap:            8px;
+  gap:            10px;
 }
 .vld-section-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--vld-border), transparent);
-  max-width: 60px;
+  content:    '';
+  flex:       1;
+  height:     1px;
+  background: var(--vld-border);
 }
 .vld-page-header {
   display:         flex;
@@ -685,34 +684,56 @@ body {
 /* ════════════════════════════════════════════════════════════
    9. KPI CARD (vld- prefixed)
    ════════════════════════════════════════════════════════════ */
+
+/* ── Tokens propres aux KPI ── */
+:root {
+  --vld-kpi-gold-accent:   #d98e1a;
+  --vld-kpi-green-accent:  #1a9958;
+  --vld-kpi-slate-accent:  #7a9ab4;
+  --vld-kpi-teal-accent:   #13a89a;
+  --vld-kpi-red-accent:    #c0392b;
+  --vld-kpi-purple-accent: #7d5fd3;
+}
+
 .vld-kpi {
   background:    var(--vld-surface);
   border:        1.5px solid var(--vld-border);
   border-radius: var(--vld-r-xl);
-  padding:       1.2rem 1.1rem;
+  padding:       1.25rem 1.1rem 1rem;
   display:       flex;
-  align-items:   center;
-  gap:           .9rem;
+  flex-direction: column;
+  gap:           .75rem;
   box-shadow:    var(--vld-shadow-card);
   height:        100%;
-  transition:    box-shadow var(--vld-t-base), transform var(--vld-t-base), border-color var(--vld-t-base);
+  transition:    box-shadow var(--vld-t-base) var(--vld-ease),
+                 transform  var(--vld-t-base) var(--vld-ease),
+                 border-color var(--vld-t-base);
   position:      relative;
   overflow:      hidden;
 }
+
+/* Accent line en haut — colorée par variante */
 .vld-kpi::before {
-  content:       '';
-  position:      absolute;
-  top:           0;
-  left:          0;
-  right:         0;
-  height:        2px;
-  background:    linear-gradient(90deg, transparent, rgba(61,96,128,.15), transparent);
-  border-radius: var(--vld-r-xl) var(--vld-r-xl) 0 0;
+  content:  '';
+  position: absolute;
+  top:      0; left: 14px; right: 14px;
+  height:   2.5px;
+  border-radius: 0 0 3px 3px;
+  background: var(--vld-kpi-color, rgba(61,96,128,.25));
+  opacity:  .85;
 }
+
 .vld-kpi:hover {
   box-shadow:   var(--vld-shadow-card-hover);
-  transform:    translateY(-2px);
+  transform:    translateY(-3px);
   border-color: var(--vld-border-strong);
+}
+
+/* Ligne du haut : icône + éventuel badge tendance */
+.vld-kpi__top {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
 }
 
 .vld-kpi__icon {
@@ -723,15 +744,89 @@ body {
   align-items:   center;
   justify-content: center;
   flex-shrink:   0;
-  position:      relative;
+  transition:    transform var(--vld-t-base) var(--vld-ease);
+  background:    var(--vld-kpi-icon-bg, rgba(61,96,128,.10));
+  color:         var(--vld-kpi-color, var(--vld-primary));
+  border:        1px solid var(--vld-kpi-icon-border, rgba(61,96,128,.16));
 }
-.vld-kpi__icon--gold  { background: linear-gradient(135deg, rgba(245,166,35,.18), rgba(245,166,35,.08)); color: #d98e1a; border: 1px solid rgba(245,166,35,.22); }
-.vld-kpi__icon--blue  { background: linear-gradient(135deg, rgba(61,96,128,.18), rgba(61,96,128,.08));  color: var(--vld-primary); border: 1px solid rgba(61,96,128,.18); }
-.vld-kpi__icon--green { background: linear-gradient(135deg, rgba(30,158,96,.18), rgba(30,158,96,.08));  color: #1a9958; border: 1px solid rgba(30,158,96,.20); }
-.vld-kpi__icon--slate { background: linear-gradient(135deg, rgba(74,90,106,.14), rgba(74,90,106,.06));  color: #7a9ab4; border: 1px solid rgba(74,90,106,.16); }
+.vld-kpi:hover .vld-kpi__icon { transform: scale(1.07); }
 
-.vld-kpi__value { font-family: var(--vld-font-display); font-size: 26px; font-weight: 700; color: var(--vld-text-strong); line-height: 1; letter-spacing: -.02em; }
-.vld-kpi__label { font-size: 11.5px; color: var(--vld-text-muted); margin-top: 4px; font-weight: 500; letter-spacing: .01em; }
+/* Couleurs par variante — utilise la même variable --vld-kpi-color
+   pour la ligne d'accent ET l'icône, donc un seul point de contrôle. */
+.vld-kpi--gold   {
+  --vld-kpi-color:       var(--vld-kpi-gold-accent);
+  --vld-kpi-icon-bg:     rgba(245,166,35,.12);
+  --vld-kpi-icon-border: rgba(245,166,35,.22);
+}
+.vld-kpi--blue, .vld-kpi__icon--blue {
+  --vld-kpi-color:       var(--vld-primary);
+  --vld-kpi-icon-bg:     rgba(61,96,128,.12);
+  --vld-kpi-icon-border: rgba(61,96,128,.18);
+}
+.vld-kpi--green  {
+  --vld-kpi-color:       var(--vld-kpi-green-accent);
+  --vld-kpi-icon-bg:     rgba(30,158,96,.11);
+  --vld-kpi-icon-border: rgba(30,158,96,.20);
+}
+.vld-kpi--slate  {
+  --vld-kpi-color:       var(--vld-kpi-slate-accent);
+  --vld-kpi-icon-bg:     rgba(74,90,106,.10);
+  --vld-kpi-icon-border: rgba(74,90,106,.16);
+}
+.vld-kpi--teal   {
+  --vld-kpi-color:       var(--vld-kpi-teal-accent);
+  --vld-kpi-icon-bg:     rgba(20,184,166,.11);
+  --vld-kpi-icon-border: rgba(20,184,166,.20);
+}
+.vld-kpi--red    {
+  --vld-kpi-color:       var(--vld-kpi-red-accent);
+  --vld-kpi-icon-bg:     rgba(192,57,43,.10);
+  --vld-kpi-icon-border: rgba(192,57,43,.18);
+}
+.vld-kpi--purple {
+  --vld-kpi-color:       var(--vld-kpi-purple-accent);
+  --vld-kpi-icon-bg:     rgba(125,95,211,.10);
+  --vld-kpi-icon-border: rgba(125,95,211,.18);
+}
+
+/* Rétrocompatibilité : anciennes classes --icon uniquement */
+.vld-kpi__icon--gold   { --vld-kpi-color: var(--vld-kpi-gold-accent);   --vld-kpi-icon-bg: rgba(245,166,35,.12);  --vld-kpi-icon-border: rgba(245,166,35,.22); }
+.vld-kpi__icon--green  { --vld-kpi-color: var(--vld-kpi-green-accent);  --vld-kpi-icon-bg: rgba(30,158,96,.11);   --vld-kpi-icon-border: rgba(30,158,96,.20); }
+.vld-kpi__icon--slate  { --vld-kpi-color: var(--vld-kpi-slate-accent);  --vld-kpi-icon-bg: rgba(74,90,106,.10);   --vld-kpi-icon-border: rgba(74,90,106,.16); }
+.vld-kpi__icon--teal   { --vld-kpi-color: var(--vld-kpi-teal-accent);   --vld-kpi-icon-bg: rgba(20,184,166,.11);  --vld-kpi-icon-border: rgba(20,184,166,.20); }
+.vld-kpi__icon--red    { --vld-kpi-color: var(--vld-kpi-red-accent);    --vld-kpi-icon-bg: rgba(192,57,43,.10);   --vld-kpi-icon-border: rgba(192,57,43,.18); }
+
+.vld-kpi__value {
+  font-family:    var(--vld-font-display);
+  font-size:      27px;
+  font-weight:    700;
+  color:          var(--vld-text-strong);
+  line-height:    1;
+  letter-spacing: -.025em;
+}
+.vld-kpi__label {
+  font-size:   11.5px;
+  color:       var(--vld-text-muted);
+  margin-top:  3px;
+  font-weight: 500;
+  letter-spacing: .01em;
+  line-height: 1.3;
+}
+
+/* Barre de progression fine en bas de la card (optionnelle) */
+.vld-kpi__bar {
+  height:        3px;
+  border-radius: var(--vld-r-full);
+  background:    var(--vld-border);
+  overflow:      hidden;
+  margin-top:    auto;
+}
+.vld-kpi__bar-fill {
+  height:     100%;
+  border-radius: var(--vld-r-full);
+  background: var(--vld-kpi-color, var(--vld-primary));
+  transition: width .55s var(--vld-ease);
+}
 
 
 /* ════════════════════════════════════════════════════════════
@@ -1474,39 +1569,144 @@ body {
 .qa-card:hover .qa-arrow,
 .qa-card:hover .qa-arr  { transform: translateX(4px); color: var(--vld-primary); }
 
-/* ── Chart cards ────────────────────────────────────────── */
-.chart-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 10px; }
-.chart-row:not(.three-cols) { grid-template-columns: 1fr 1fr 2fr; }
+/* ════════════════════════════════════════════════════════════
+   CHART CARDS — dashboard graphiques
+   ════════════════════════════════════════════════════════════ */
+
+/* Grille de colonnes */
+.chart-row                    { display: grid; grid-template-columns: 1fr 1fr 1fr;    gap: 18px; margin-bottom: 10px; }
+.chart-row:not(.three-cols)   { grid-template-columns: 1fr 1fr 2fr; }
+
+/* Card conteneur */
 .chart-card {
-  background: var(--vld-surface);
-  border: 1.5px solid var(--vld-border);
-  border-radius: var(--vld-r-xl); padding: 22px;
-  box-shadow: var(--vld-shadow-card);
-  transition: box-shadow var(--vld-t-base);
+  background:    var(--vld-surface);
+  border:        1.5px solid var(--vld-border);
+  border-radius: var(--vld-r-xl);
+  box-shadow:    var(--vld-shadow-card);
+  display:       flex;
+  flex-direction: column;
+  overflow:      hidden;
+  transition:    box-shadow var(--vld-t-base) var(--vld-ease),
+                 border-color var(--vld-t-base),
+                 transform var(--vld-t-base) var(--vld-ease);
 }
-.chart-card:hover { box-shadow: var(--vld-shadow-card-hover); }
-.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-.chart-title  { font-size: 13px; font-weight: 700; color: #18232e; letter-spacing: .005em; }
-.chart-badge  { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: var(--vld-r-full); background: rgba(61,96,128,.12); color: #3d6080; letter-spacing: .04em; }
-.chart-badge-green  { background: rgba(30,158,96,.12);  color: #1a9958; }
-.chart-badge-blue   { background: rgba(61,96,128,.12);  color: #3d6080; }
-.chart-badge-purple { background: rgba(142,68,173,.12); color: #7c3fa0; }
-.chart-area   { height: 200px; position: relative; }
-.chart-footer { margin-top: 12px; font-size: 12px; color: #6e8499; text-align: center; font-weight: 400; }
+.chart-card:hover {
+  box-shadow:   var(--vld-shadow-card-hover);
+  border-color: var(--vld-border-strong);
+  transform:    translateY(-2px);
+}
+
+/* Header séparé du body */
+.chart-header {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  padding:         16px 20px 0;
+  flex-shrink:     0;
+}
+
+/* Titre */
+.chart-title {
+  font-size:      13px;
+  font-weight:    700;
+  color:          var(--vld-text-strong);
+  letter-spacing: .005em;
+  line-height:    1.3;
+}
+
+/* Badges de type graphique */
+.chart-badge {
+  font-size:      10px;
+  font-weight:    700;
+  padding:        3px 10px;
+  border-radius:  var(--vld-r-full);
+  letter-spacing: .05em;
+  white-space:    nowrap;
+  background:     rgba(61,96,128,.10);
+  color:          var(--vld-primary);
+  border:         1px solid rgba(61,96,128,.14);
+}
+.chart-badge-blue   { background: rgba(61,96,128,.10);  color: var(--vld-primary);       border-color: rgba(61,96,128,.16); }
+.chart-badge-green  { background: rgba(30,158,96,.10);  color: var(--vld-success);        border-color: rgba(30,158,96,.18); }
+.chart-badge-gold   { background: rgba(224,144,32,.10); color: var(--vld-warning);        border-color: rgba(224,144,32,.18); }
+.chart-badge-red    { background: rgba(217,64,64,.10);  color: var(--vld-danger);         border-color: rgba(217,64,64,.16); }
+.chart-badge-purple { background: rgba(142,68,173,.10); color: #7c3fa0;                   border-color: rgba(142,68,173,.16); }
+.chart-badge-teal   { background: rgba(20,184,166,.10); color: var(--vld-kpi-teal-accent);border-color: rgba(20,184,166,.18); }
+
+/* Zone canvas */
+.chart-area {
+  height:   200px;
+  position: relative;
+  padding:  14px 16px 4px;
+  flex:     1;
+}
+
+/* Footer légende */
+.chart-footer {
+  padding:     10px 20px 14px;
+  font-size:   12px;
+  color:       var(--vld-text-muted);
+  font-weight: 400;
+  display:     flex;
+  align-items: center;
+  flex-wrap:   wrap;
+  gap:         14px;
+  border-top:  1px solid var(--vld-border);
+}
+.chart-footer--center { justify-content: center; }
 
 /* ── Gauge ──────────────────────────────────────────────── */
 .gauge-wrap {
-  position: relative; height: 180px;
-  display: flex; align-items: center; justify-content: center;
+  position:        relative;
+  height:          190px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         14px 16px 0;
 }
-.gauge-center { position: absolute; text-align: center; top: 52%; transform: translateY(-50%); pointer-events: none; }
-.gauge-pct    { font-family: var(--vld-font-display); font-size: 28px; font-weight: 700; color: #18232e; letter-spacing: -.02em; }
-.gauge-lbl    { font-size: 11.5px; color: #6e8499; margin-top: 2px; letter-spacing: .01em; }
-.planif-details { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
-.pd-item        { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #6e8499; }
-.dot            { width: 8px; height: 8px; border-radius: 50%; }
-.dot-green      { background: #1e9e60; }
-.dot-red        { background: #d94040; }
+.gauge-center {
+  position:      absolute;
+  text-align:    center;
+  top:           52%;
+  transform:     translateY(-50%);
+  pointer-events: none;
+}
+.gauge-pct {
+  font-family:    var(--vld-font-display);
+  font-size:      28px;
+  font-weight:    700;
+  color:          var(--vld-text-strong);
+  letter-spacing: -.025em;
+  line-height:    1;
+}
+.gauge-lbl {
+  font-size:   11.5px;
+  color:       var(--vld-text-muted);
+  margin-top:  4px;
+  letter-spacing: .01em;
+}
+
+/* ── Légende dots inline ────────────────────────────────── */
+.planif-details {
+  display:         flex;
+  justify-content: center;
+  gap:             20px;
+  padding:         8px 16px 12px;
+}
+.pd-item {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  font-size:   12.5px;
+  color:       var(--vld-text-muted);
+}
+.dot          { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green    { background: var(--vld-success); }
+.dot-teal     { background: var(--vld-kpi-teal-accent); }
+.dot-gold     { background: var(--vld-warning); }
+.dot-red      { background: var(--vld-danger); }
+.dot-blue     { background: var(--vld-primary); }
+.dot-slate    { background: var(--vld-kpi-slate-accent); }
 
 /* ── Status card (EtudiantHome) ─────────────────────────── */
 .status-card {
@@ -1667,12 +1867,15 @@ body {
    ════════════════════════════════════════════════════════════ */
 @media (max-width: 1300px) {
   .kpi-row   { grid-template-columns: repeat(3, 1fr); }
+  /* chart-row passe en 2 colonnes avant de tomber à 1 */
   .chart-row,
-  .chart-row:not(.three-cols) { grid-template-columns: 1fr; }
+  .chart-row:not(.three-cols) { grid-template-columns: 1fr 1fr; }
   .qa-grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 1100px) {
   .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .chart-row,
+  .chart-row:not(.three-cols) { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
   .vld-content    { padding: 1.25rem; }

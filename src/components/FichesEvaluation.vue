@@ -15,7 +15,11 @@
         </div>
         <div>
           <h2 class="fe-page-title">Fiches d'évaluation</h2>
-          <p class="fe-page-sub">Notes soumises par les membres du jury</p>
+          <p class="fe-page-sub">Notes soumises par les présidents de jury</p>
+          <div v-if="departementNom" class="fe-dept-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Département — {{ departementNom }}
+          </div>
         </div>
       </div>
 
@@ -51,6 +55,19 @@
     <div v-if="loadingFiches" class="fe-state">
       <div class="fe-spinner"></div>
       <p class="fe-state__label">Chargement…</p>
+    </div>
+
+    <!-- ── Server error ── -->
+    <div v-else-if="erreur" class="fe-state fe-state--err">
+      <div class="fe-state__icon fe-state__icon--err">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <p class="fe-state__title">Chargement impossible</p>
+      <p class="fe-state__sub">{{ erreur }}</p>
+      <button class="fe-retry-btn" @click="chargerFiches">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Réessayer
+      </button>
     </div>
 
     <!-- ── Empty ── -->
@@ -269,6 +286,9 @@ import api from '@/services/api.js'
 export default {
   name: 'FichesEvaluation',
   emits: ['toast'],
+  props: {
+    currentUser: { type: Object, default: null },
+  },
 
   data () {
     return {
@@ -277,10 +297,17 @@ export default {
       openGroupes:    [],
       expandedFiches: [],
       searchFiche:    '',
+      erreur:         null,
     }
   },
 
   computed: {
+    departementNom () {
+      return this.currentUser?.specialite_nom
+          || this.currentUser?.departement_nom
+          || this.currentUser?.specialite
+          || null
+    },
     ficheStats () {
       return {
         total:    this.ficheGroupes.length,
@@ -338,11 +365,21 @@ export default {
     },
     async chargerFiches () {
       this.loadingFiches = true
+      this.erreur        = null
       try {
         const r = await api.get('/fiches-evaluation')
-        this.ficheGroupes = r.data
-      } catch {
-        this.$emit('toast', { type: 'toast-err', message: 'Erreur chargement des fiches.' })
+        this.ficheGroupes = Array.isArray(r.data) ? r.data : []
+      } catch (e) {
+        const status = e?.response?.status
+        if (status === 500) {
+          this.erreur = "Erreur serveur lors du chargement des fiches (500). Contactez l'administrateur."
+        } else if (status === 403) {
+          this.erreur = "Accès refusé. Vous n'avez pas les droits pour consulter ces fiches."
+        } else {
+          this.erreur = "Impossible de charger les fiches d'évaluation."
+        }
+        this.$emit('toast', { type: 'toast-err', message: this.erreur })
+        console.error('[FichesEvaluation]', e)
       } finally {
         this.loadingFiches = false
       }
@@ -362,7 +399,17 @@ export default {
 .fe-header__left { display:flex; align-items:center; gap:.9rem; }
 .fe-header__icon-wrap { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:var(--vld-r-md); flex-shrink:0; background:linear-gradient(135deg, var(--vld-primary), var(--vld-primary-dark)); color:#fff; box-shadow:0 4px 12px rgba(61,96,128,.30); }
 .fe-page-title { font-family:var(--vld-font-display); font-size:1.35rem; font-weight:800; color:var(--vld-text-strong); margin:0; line-height:1.2; }
-.fe-page-sub   { font-size:.83rem; color:var(--vld-text-muted); margin:.15rem 0 0; }
+.fe-page-sub   { font-size:.83rem; color:var(--vld-text-muted); margin:.15rem 0 .35rem; }
+
+.fe-dept-badge {
+  display:inline-flex; align-items:center; gap:.38rem;
+  padding:.22rem .75rem; border-radius:var(--vld-r-full);
+  background:linear-gradient(135deg, rgba(61,96,128,.1), rgba(61,96,128,.06));
+  border:1.5px solid rgba(61,96,128,.22);
+  font-size:.75rem; font-weight:700; color:var(--vld-primary-dark);
+  letter-spacing:.02em;
+}
+.fe-dept-badge svg { flex-shrink:0; stroke:var(--vld-primary); }
 
 /* Stat pills */
 .fe-stat-pills { display:flex; gap:.5rem; flex-wrap:wrap; }
@@ -386,12 +433,22 @@ export default {
 
 /* State */
 .fe-state { display:flex; flex-direction:column; align-items:center; padding:3.5rem 1rem; gap:.75rem; color:var(--vld-text-muted); text-align:center; }
+.fe-state--err { gap:.6rem; }
 .fe-state__icon { width:72px; height:72px; display:flex; align-items:center; justify-content:center; border-radius:var(--vld-r-xl); background:var(--vld-surface-alt); border:1.5px solid var(--vld-border); color:var(--vld-text-faint); }
+.fe-state__icon--err { background:var(--vld-danger-bg); border-color:rgba(217,64,64,.22); color:var(--vld-danger); }
 .fe-state__title { font-size:1rem; font-weight:700; color:var(--vld-text-strong); margin:0; }
-.fe-state__sub   { font-size:.83rem; margin:0; }
+.fe-state__sub   { font-size:.83rem; margin:0; max-width:360px; }
 .fe-spinner { width:32px; height:32px; border:3px solid var(--vld-border); border-top-color:var(--vld-primary); border-radius:50%; animation:fe-spin .75s linear infinite; }
 @keyframes fe-spin { to { transform:rotate(360deg); } }
 .fe-state__label { font-size:.85rem; color:var(--vld-text-muted); margin:0; }
+.fe-retry-btn {
+  display:inline-flex; align-items:center; gap:.45rem;
+  margin-top:.25rem; padding:.45rem 1.1rem; border-radius:var(--vld-r-lg);
+  background:var(--vld-primary); color:#fff; border:none;
+  font-size:.82rem; font-weight:700; cursor:pointer; font-family:var(--vld-font-body);
+  transition:background var(--vld-t-fast);
+}
+.fe-retry-btn:hover { background:var(--vld-primary-dark); }
 
 /* Card list */
 .fe-list { display:flex; flex-direction:column; gap:.7rem; }

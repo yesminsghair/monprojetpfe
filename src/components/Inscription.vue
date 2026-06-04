@@ -199,41 +199,6 @@
     </div>
     </transition>
 
-    <!-- SUCCÈS -->
-    <transition name="fade-slide">
-    <div v-if="etape === 'succes'" class="status-card">
-      <div class="status-logo"><span class="logo-white">Vers le</span><span class="logo-gold"> Diplôme</span></div>
-      <div class="s-icon-wrap s-green">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-      </div>
-      <span class="s-badge s-badge-ok">Compte activé</span>
-      <h3>Bienvenue !</h3>
-      <p>Votre inscription est confirmée.<br/>Vous pouvez maintenant vous connecter.</p>
-      <button class="btn-gold" @click="redirectConnexion">Se connecter</button>
-    </div>
-    </transition>
-
-    <!-- LIEN EXPIRÉ -->
-    <transition name="fade-slide">
-    <div v-if="etape === 'expire'" class="status-card">
-      <div class="status-logo"><span class="logo-white">Vers le</span><span class="logo-gold"> Diplôme</span></div>
-      <div class="s-icon-wrap s-red">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      </div>
-      <span class="s-badge s-badge-err">Lien expiré</span>
-      <h3>Lien invalide</h3>
-      <p>Votre lien de validation a expiré.<br/>Veuillez recommencer l'inscription.</p>
-      <button class="btn-gold" @click="etape = 'formulaire'">Retour au formulaire</button>
-    </div>
-    </transition>
-
     <!-- ══════════════ CONDITIONS MODAL ══════════════ -->
     <transition name="modal-fade">
       <div v-if="showConditionsModal" class="modal-overlay" @click.self="closeConditions">
@@ -343,7 +308,6 @@ export default {
       roles: [//tab des roles
         { value: 'etudiant',   label: 'Étudiant' },
         { value: 'enseignant', label: 'Enseignant' },
-        { value: 'encadrant',  label: 'Encadrant' },
       ],
       specialitesDisponibles: [],//tab specialites from back
       form: {//objet js contient les données de form saisi par uti
@@ -357,8 +321,8 @@ export default {
 
   async mounted() {//fonct automatique s'execute au charg de page
     try {
-      const { data } = await api.get('/specialites')//send a http get req to back, l'exec de la req que lorsque la reponse est recu
-      this.specialitesDisponibles = data.map(sp => ({ value: sp.id, label: sp.nom }))//reponse stocke dans data et parcouru avec map puis transformé et stocke dans cet objet 
+      const { data } = await api.get('/specialites')
+      this.specialitesDisponibles = data.map(sp => ({ value: sp.id, label: sp.nom }))// parcour du data par le clé sp et stoke id dans value et nom dans label tous dans l'objet specdispo
     } catch {
       // catch vide c'est à dire un fallback silencieux 
     }
